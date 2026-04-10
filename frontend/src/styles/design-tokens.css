@@ -1,0 +1,285 @@
+/**
+ * Task Manager - Neo-Tokyo Retro-Futurist Design System
+ * Direction: Urban street culture meets 2007 tech optimism
+ * Vibe: TWEWY meets retro-future, rockstar-nerd energy
+ */
+
+/* ======================== ANIMATIONS ======================== */
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes page-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-12px) scale(0.98); }
+}
+
+@keyframes bounce-in {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  60% { transform: scale(1.05) translateY(-4px); }
+  80% { transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes button-press {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+@keyframes input-focus-glow {
+  0% { box-shadow: 0 0 0 0 var(--color-accent-glow); border-color: var(--color-accent); }
+  50% { box-shadow: 0 0 0 4px var(--color-accent-glow); }
+  100% { box-shadow: 0 0 0 0 var(--color-accent-glow); }
+}
+
+@keyframes check-bounce {
+  0% { transform: scale(0) rotate(-10deg); }
+  60% { transform: scale(1.15) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+@keyframes scanline-move {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.97; }
+  50% { opacity: 1; }
+  100% { opacity: 0.98; }
+}
+
+@keyframes noise-grain {
+  0% { background-position: 0 0; }
+  100% { background-position: 150px 150px; }
+}
+
+/* ======================== ANIMATION CLASSES ======================== */
+
+.animate-slide-in { animation: slide-in-right 0.25s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; }
+.animate-fade-in { animation: fade-in 0.15s ease-out forwards; }
+.animate-fade-in-up { animation: fade-in-up 0.25s ease-out forwards; }
+.animate-pulse-subtle { animation: pulse-subtle 2s ease-in-out infinite; }
+.animate-shimmer { animation: shimmer 1.5s ease-in-out infinite; }
+.animate-scale-in { animation: scale-in 0.2s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; }
+.animate-page-enter { animation: page-enter 0.3s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; }
+.animate-page-exit { animation: page-exit 0.15s ease-in forwards; }
+.animate-bounce-in { animation: bounce-in 0.4s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-button-press { animation: button-press 0.12s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; }
+.animate-input-focus { animation: input-focus-glow 0.3s ease-out forwards; }
+.animate-check-bounce { animation: check-bounce 0.3s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; }
+
+.stagger-children > * { animation: bounce-in 0.35s cubic-bezier(0.34, 1.1, 0.64, 1) forwards; opacity: 0; }
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 40ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 280ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 320ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 360ms; }
+
+/* ======================== DESIGN TOKENS ======================== */
+
+:root {
+  /* Typography */
+  --font-display: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-body: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  
+  /* Text Hierarchy - Light Mode */
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a4a68;
+  --text-tertiary: #7a7a8c;
+  --text-muted: #a0a0b0;
+  
+  /* Backgrounds - Light Mode */
+  --bg-base: #f8f9fc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f0f1f5;
+  
+  /* Surface & Elevation */
+  --surface-base: #ffffff;
+  --surface-elevated: #f5f6fa;
+  --surface-overlay: #ffffff;
+  
+  /* Borders */
+  --border-subtle: rgba(26, 26, 46, 0.06);
+  --border-default: rgba(26, 26, 46, 0.12);
+  --border-emphasis: rgba(26, 26, 46, 0.20);
+  --border-focus: var(--color-accent);
+  
+  /* Semantic Colors */
+  --color-primary: #00e5ff;
+  --color-primary-hover: #00b8cc;
+  --color-primary-muted: rgba(0, 229, 255, 0.12);
+  
+  --color-accent: #ff2d92;
+  --color-accent-hover: #e6007a;
+  --color-accent-glow: rgba(255, 45, 146, 0.4);
+  --color-accent-muted: rgba(255, 45, 146, 0.12);
+  
+  /* Additional Neo-Tokyo Colors */
+  --color-lime: #b6ff00;
+  --color-lime-muted: rgba(182, 255, 0, 0.15);
+  --color-violet: #9d4edd;
+  --color-violet-muted: rgba(157, 78, 221, 0.15);
+  --color-orange: #ff6b35;
+  --color-orange-muted: rgba(255, 107, 53, 0.15);
+  --color-blue: #3a86ff;
+  --color-blue-muted: rgba(58, 134, 255, 0.15);
+  
+  --color-success: #00ff88;
+  --color-success-muted: rgba(0, 255, 136, 0.12);
+  
+  --color-warning: #ffe600;
+  --color-warning-muted: rgba(255, 230, 0, 0.12);
+  
+  --color-danger: #ff3366;
+  --color-danger-hover: #e6004d;
+  --color-danger-muted: rgba(255, 51, 102, 0.12);
+  
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+  --space-12: 96px;
+  
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-glow: 0 0 20px var(--color-accent-glow);
+  
+  /* Transitions */
+  --transition-fast: 120ms cubic-bezier(0.34, 1.1, 0.64, 1);
+  --transition-base: 200ms cubic-bezier(0.34, 1.1, 0.64, 1);
+  --transition-slow: 300ms cubic-bezier(0.34, 1.1, 0.64, 1);
+}
+
+/* ======================== DARK MODE ======================== */
+
+.dark {
+  /* Text Hierarchy */
+  --text-primary: #f0f0f5;
+  --text-secondary: #c8c8d4;
+  --text-tertiary: #9898a8;
+  --text-muted: #686878;
+  
+  /* Backgrounds */
+  --bg-base: #0a0a0f;
+  --bg-surface: #12121a;
+  --bg-elevated: #1a1a24;
+  
+  --surface-base: #0e0e14;
+  --surface-elevated: #16161e;
+  --surface-overlay: #1e1e28;
+  
+  /* Borders */
+  --border-subtle: rgba(240, 240, 250, 0.04);
+  --border-default: rgba(240, 240, 250, 0.08);
+  --border-emphasis: rgba(240, 240, 250, 0.14);
+  --border-focus: var(--color-accent);
+  
+  /* Shadows - Glow for dark */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 30px var(--color-accent-glow);
+}
+
+/* ======================== NOISE TEXTURE ======================== */
+
+.noise-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Dark mode - subtle TV noise grain */
+.dark .noise-overlay {
+  opacity: 0.10;
+  background-size: 150px 150px;
+  animation: noise-grain 0.3s steps(5) infinite;
+}
+
+/* ======================== CRT EFFECTS ======================== */
+
+.scanlines::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0, 0, 0, 0.03) 1px, rgba(0, 0, 0, 0.03) 2px);
+  animation: scanline-move 8s linear infinite;
+}
+
+.crt-vignette::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 9997;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.25) 100%);
+}
+
+.crt-flicker { animation: crt-flicker 0.15s infinite; }
+
+/* ======================== DISABLED VIEW TRANSITIONS ======================== */
