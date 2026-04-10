@@ -1,0 +1,45 @@
+# Environment variables
+.env
+*.local
+.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+frontend/dist/
+backend/target/
+build/
+
+# Java
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test
+coverage/
+
+# Misc
+*.bak
+*.tmp
+
+# Zips
+*.zip
