@@ -9,7 +9,7 @@ A full-stack task manager application with a Neo-Tokyo inspired design system.
 
 - **Backend**: Java 17 + Spring Boot 3 + PostgreSQL + JWT Authentication
 - **Frontend**: React 18 + TypeScript + TailwindCSS + Zustand + React Query
-- **Build**: Maven (backend) + Vite (frontend)
+- **Build**: Maven (backend) + Vite (frontend) + Docker
 
 ## Features
 
