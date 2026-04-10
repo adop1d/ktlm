@@ -16,8 +16,8 @@ public class TaskService {
         this.taskRepository = taskRepository;
     }
 
-    public List<Task> getAllTasks() {
-        return taskRepository.findAll();
+    public List<Task> getAllTasksByUser(Long userId) {
+        return taskRepository.findByUserId(userId);
     }
 
     public List<Task> getTasksByCompletionStatus(boolean completed) {

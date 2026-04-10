@@ -52,7 +52,7 @@ public class AuthController {
         User user = new User(request.username(), passwordEncoder.encode(request.password()), request.email());
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRoles());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getId(), user.getRoles());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new AuthResponse(token, "Bearer", user.getUsername(), user.getEmail(), List.copyOf(user.getRoles())));
     }
@@ -70,7 +70,7 @@ public class AuthController {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRoles());
+        String token = jwtUtil.generateToken(user.getUsername(), user.getId(), user.getRoles());
         return ResponseEntity.ok(new AuthResponse(token, "Bearer", user.getUsername(), user.getEmail(), List.copyOf(user.getRoles())));
     }
 }

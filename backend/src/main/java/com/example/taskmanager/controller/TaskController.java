@@ -1,11 +1,14 @@
 package com.example.taskmanager.controller;
 
 import com.example.taskmanager.model.Task;
+import com.example.taskmanager.security.JwtUtil;
 import com.example.taskmanager.service.TaskService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -13,15 +16,34 @@ import org.springframework.web.bind.annotation.*;
 public class TaskController {
 
     private final TaskService taskService;
+    private final JwtUtil jwtUtil;
 
-    public TaskController(TaskService taskService) {
+    public TaskController(TaskService taskService, JwtUtil jwtUtil) {
         this.taskService = taskService;
+        this.jwtUtil = jwtUtil;
+    }
+
+    private Long getCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getCredentials() != null) {
+            String token = auth.getCredentials().toString();
+            try {
+                return jwtUtil.extractUserId(token);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public List<Task> getAllTasks() {
-        return taskService.getAllTasks();
+        Long userId = getCurrentUserId();
+        if (userId != null) {
+            return taskService.getAllTasksByUser(userId);
+        }
+        return taskService.getAllTasksByUser(1L); // Temporal
     }
 
     @GetMapping("/{id}")
@@ -35,6 +57,10 @@ public class TaskController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public Task createTask(@Valid @RequestBody Task task) {
+        Long userId = getCurrentUserId();
+        if (userId != null) {
+            task.setUserId(userId);
+        }
         return taskService.createTask(task);
     }
 
@@ -50,7 +76,7 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         try {
             taskService.deleteTask(id);

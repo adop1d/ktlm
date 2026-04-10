@@ -37,16 +37,16 @@ class TaskServiceTest {
     @Test
     void getAllTasks_ShouldReturnAllTasks() {
         // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(sampleTask));
+        when(taskRepository.findByUserId(1L)).thenReturn(Arrays.asList(sampleTask));
 
         // Act
-        List<Task> tasks = taskService.getAllTasks();
+        List<Task> tasks = taskService.getAllTasksByUser(1L);
 
         // Assert
         assertFalse(tasks.isEmpty());
         assertEquals(1, tasks.size());
         assertEquals("Sample Task", tasks.get(0).getTitle());
-        verify(taskRepository, times(1)).findAll();
+        verify(taskRepository, times(1)).findByUserId(1L);
     }
 
     @Test
