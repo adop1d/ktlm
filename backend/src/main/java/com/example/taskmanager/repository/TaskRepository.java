@@ -10,4 +10,7 @@ import java.util.List;
 public interface TaskRepository extends JpaRepository<Task, Long> {
     // Find tasks by completion status
     List<Task> findByCompleted(boolean completed);
+
+    // Find tasks by user ID
+    List<Task> findByUserId(Long userId);
 }

@@ -36,6 +36,8 @@ public class Task {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    private Long userId;  // Para asociar tarea con usuario
+
     public enum Priority {
         LOW, MEDIUM, HIGH
     }
@@ -123,6 +125,14 @@ public class Task {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     // Methods
