@@ -4,7 +4,6 @@
 
 A full-stack task manager application with a Neo-Tokyo inspired design system.
 
-<img width="1440" height="818" alt="Captura de pantalla 2026-04-10 a la(s) 7 45 17 p  m" src="https://github.com/user-attachments/assets/db24a169-ede1-4911-b2a4-2e5550fd5829" />
 
 
 ## Tech Stack
