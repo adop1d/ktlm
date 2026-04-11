@@ -1,4 +1,6 @@
-# Task Manager
+<img width="128" alt="favicon" src="https://github.com/user-attachments/assets/2b9e7761-bdfd-4e0d-af9f-4ffe89b5213e" />  
+
+# KTM (Task Manager)
 
 A full-stack task manager application with a Neo-Tokyo inspired design system.
 
