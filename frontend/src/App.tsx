@@ -63,16 +63,7 @@ function App() {
         <div className="noise-overlay" />
         <div className="scanlines" />
         <div className="crt-vignette" />
-        {/* Y2K Decoration */}
-        <img 
-          src="/bg.png" 
-          alt=""
-          className="fixed bottom-4 right-4 w-24 opacity-30 dark:opacity-50 rotated-y2k pointer-events-none z-10"
-          style={{
-            transform: 'rotate(-12deg)',
-            width: '80px',
-          }}
-        />
+        
         <Routes>
           <Route 
             path="/login" 
