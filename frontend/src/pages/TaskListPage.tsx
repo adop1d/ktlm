@@ -6,6 +6,8 @@ import { TaskForm } from '../components/task/TaskForm';
 import { Header } from '../components/common/Header';
 import { TaskListSkeleton, TaskFormSkeleton, PageHeaderSkeleton } from '../components/common/Skeleton';
 import { Task, TaskFilter, TaskSort } from '../types/task';
+import { TodoFileBar } from '../file/TodoFileBar';
+import { useTodoFile } from '../file/useTodoFile';
 import { useUIStore } from '../stores/uiStore';
 import { useToastStore } from '../stores/toastStore';
 import { PlusIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -46,6 +48,7 @@ export const TaskListPage: FC = () => {
   const toggleDark = useUIStore(state => state.toggleDarkMode);
   const addToast = useToastStore(state => state.addToast);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const todoFile = useTodoFile();
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -147,6 +150,11 @@ export const TaskListPage: FC = () => {
     <>
       <Header />
       <section className="max-w-2xl mx-auto py-8 px-4">
+        <TodoFileBar
+          onOpen={() => void todoFile.openAndLink()}
+          onSaveAs={() => void todoFile.saveAs()}
+          onDetach={todoFile.detach}
+        />
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <div>
