@@ -14,6 +14,16 @@ const UNDO_DEPTH = 50;
 export const POLL_INTERVAL_MS = 400;
 const FLUSH_DEBOUNCE_MS = 400;
 
+/**
+ * Cierre de escritura pendiente. El sondeo debe respetarlo: un parche local marca el hash
+ * como inválido, y sin este cerrojo el siguiente tick leería el archivo viejo, lo tomaría
+ * por un cambio externo y desharía lo que el usuario acababa de escribir.
+ */
+let writePending = false;
+
+export const isWritePending = (): boolean => writePending;
+
+
 /** FNV-1a: rápido y suficiente para detectar si el texto cambió. */
 export const hashText = (text: string): number => {
   let hash = 0x811c9dc5;
@@ -126,6 +136,9 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
     set({ handle: null, status: 'idle', message: null, history: [], selected: [], cursor: 0 }),
 
   patch: (next) => {
+    // El cerrojo se arma aquí y no en el commit: entre el parche y el commit hay un await
+    // de red, y el sondeo colándose ahí releía el archivo viejo y deshacía el parche.
+    writePending = true;
     const state = get();
     const before = snapshot(state);
     const partial = next(state);
@@ -276,15 +289,6 @@ export const todoDocMutations = {
 };
 
 // --- Escritura al archivo -----------------------------------------------------------------
-
-/**
- * Cierre de escritura pendiente. El sondeo debe respetarlo: un parche local marca el hash
- * como inválido, y sin este cerrojo el siguiente tick leería el archivo viejo, lo tomaría
- * por un cambio externo y desharía lo que el usuario acababa de escribir.
- */
-let writePending = false;
-
-export const isWritePending = (): boolean => writePending;
 
 /** 0 como "sin temporizador": clearTimeout(0) no hace nada y evita arrastrar un null. */
 let flushTimer = 0;

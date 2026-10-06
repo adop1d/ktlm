@@ -7,6 +7,10 @@ type Props = {
   onToggle: (id: number) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
+  /** Fila bajo el cursor del teclado. */
+  isCursor?: boolean;
+  /** Fila marcada en modo visual. */
+  isSelected?: boolean;
 };
 
 const PRIORITY_STYLES = {
@@ -21,7 +25,14 @@ const PRIORITY_LABELS = {
   LOW: 'Baja',
 };
 
-export const TaskCard: FC<Props> = ({ task, onToggle, onEdit, onDelete }) => {
+export const TaskCard: FC<Props> = ({
+  task,
+  onToggle,
+  onEdit,
+  onDelete,
+  isCursor = false,
+  isSelected = false,
+}) => {
   const isCompleted = task.completed;
   // dueDate is a plain YYYY-MM-DD civil date from the API (LocalDate). Parsing it with
   // new Date() would interpret it as UTC midnight and shift the day in negative offsets.
@@ -51,12 +62,16 @@ export const TaskCard: FC<Props> = ({ task, onToggle, onEdit, onDelete }) => {
   };
   
   return (
-    <div 
+    <div
+      data-cursor={isCursor ? 'true' : undefined}
+      data-selected={isSelected ? 'true' : undefined}
       className={`
         group task-card flex items-start gap-4
         ${isCompleted ? 'completed' : ''}
         cursor-pointer
         relative
+        ${isCursor ? 'ring-2 ring-[var(--color-accent)] ring-offset-2 ring-offset-[var(--surface-base)] dark:ring-offset-[var(--dark-surface-base)]' : ''}
+        ${isSelected ? 'bg-[var(--color-accent)]/10' : ''}
         before:absolute
         before:top-0
         before:right-0
@@ -65,7 +80,7 @@ export const TaskCard: FC<Props> = ({ task, onToggle, onEdit, onDelete }) => {
         before:bg-[var(--color-accent)]
         before:clip-corner
         before:opacity-0
-        group-hover:before:opacity-100
+        ${isCursor ? 'before:opacity-100' : 'group-hover:before:opacity-100'}
         before:transition-opacity
         before:duration-200
       `}
