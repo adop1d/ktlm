@@ -1,7 +1,11 @@
 package com.example.taskmanager.controller;
 
+import com.example.taskmanager.dto.TaskCounts;
+import com.example.taskmanager.dto.TaskPageResponse;
 import com.example.taskmanager.dto.TaskRequest;
 import com.example.taskmanager.dto.TaskResponse;
+import com.example.taskmanager.model.TaskFilter;
+import com.example.taskmanager.model.TaskSort;
 import com.example.taskmanager.security.CurrentUser;
 import com.example.taskmanager.service.TaskService;
 import com.example.taskmanager.service.TodoTxtService;
@@ -29,10 +33,22 @@ public class TaskController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    public List<TaskResponse> getAllTasks() {
-        return taskService.getAllTasksByUser(currentUser.id()).stream()
-                .map(TaskResponse::from)
-                .toList();
+    public TaskPageResponse getTasks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "all") String filter,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String project,
+            @RequestParam(required = false) String context,
+            @RequestParam(defaultValue = "file") String sort) {
+        return taskService.getTasks(currentUser.id(), page, size,
+                TaskFilter.from(filter), q, project, context, TaskSort.from(sort));
+    }
+
+    @GetMapping("/counts")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public TaskCounts getCounts() {
+        return taskService.getCounts(currentUser.id());
     }
 
     @GetMapping("/{id}")
