@@ -8,6 +8,7 @@ import com.example.taskmanager.model.TaskFilter;
 import com.example.taskmanager.model.TaskSort;
 import com.example.taskmanager.security.CurrentUser;
 import com.example.taskmanager.service.TaskEventStream;
+import com.example.taskmanager.service.TodoStore;
 import com.example.taskmanager.service.TaskService;
 import com.example.taskmanager.service.TodoTxtService;
 import jakarta.validation.Valid;
@@ -27,17 +28,20 @@ public class TaskController {
     private final TaskService taskService;
     private final CurrentUser currentUser;
     private final TaskEventStream events;
+    private final TodoStore todoStore;
     private final TodoTxtService todoTxtService;
 
     public TaskController(
             TaskService taskService,
             CurrentUser currentUser,
             TodoTxtService todoTxtService,
-            TaskEventStream events) {
+            TaskEventStream events,
+            TodoStore todoStore) {
         this.taskService = taskService;
         this.currentUser = currentUser;
         this.todoTxtService = todoTxtService;
         this.events = events;
+        this.todoStore = todoStore;
     }
 
     /**
@@ -116,6 +120,71 @@ public class TaskController {
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public TodoTxtService.ImportResult importFile(@RequestBody String todoTxt) {
         return todoTxtService.importFile(currentUser.id(), todoTxt);
+    }
+
+    // ---------- El archivo, ahora del servidor ----------
+
+    /**
+     * El todo.txt tal cual está en disco. Es lo que consume el navegador para el espejo y
+     * lo que leería un servidor MCP: mismo archivo, mismos bytes.
+     */
+    @GetMapping(value = "/file", produces = "text/plain; charset=UTF-8")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public ResponseEntity<String> readFile() {
+        Long userId = currentUser.id();
+        todoTxtService.ensureFile(userId);
+        return ResponseEntity.ok()
+                .eTag('"' + todoTxtService.hash(userId) + '"')
+                .body(todoTxtService.export(userId));
+    }
+
+    /**
+     * Reemplaza el archivo entero. La respuesta trae el contenido reconciliado, que es el
+     * que hay que escribir: si el cliente guardara lo que envió sin más, volvería a meter
+     * los uid antiguos.
+     */
+    @PutMapping(value = "/file", consumes = "text/plain", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public String replaceFile(@RequestBody String todoTxt) {
+        return todoTxtService.importFile(currentUser.id(), todoTxt).file();
+    }
+
+    /** Reconstruye el archivo desde la base. Para cuando se edita a mano y se rompe. */
+    @PostMapping(value = "/file/rebuild", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public String rebuildFile() {
+        return todoTxtService.rebuildFile(currentUser.id());
+    }
+
+    /** Lo que hay en done.txt: la vista de archivo, ahora servida por el servidor. */
+    @GetMapping("/archived")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public List<String> archived() {
+        return todoStore.readDoneLines(currentUser.id());
+    }
+
+    /**
+     * Una línea al inbox.txt. Cualquier cosa que sepa escribir una línea ahí crea una
+     * tarea: un atajo de iOS, un cron, un `echo`.
+     */
+    @PostMapping(value = "/inbox", consumes = "text/plain", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public String appendToInbox(@RequestBody String line) {
+        Long userId = currentUser.id();
+        todoTxtService.appendInbox(userId, line);
+        return todoTxtService.drainInbox(userId);
+    }
+
+    /**
+     * Vacía el inbox pasándolo por el importador. Un archivo con mensajes esperaría al
+     * próximo ciclo; esto lo resuelve ya, que es lo que hace el servidor MCP.
+     */
+    @PostMapping(value = "/inbox/drain", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public String drainInbox() {
+        Long userId = currentUser.id();
+        todoTxtService.drainInbox(userId);
+        return todoTxtService.export(userId);
     }
 
     @PostMapping("/archive")

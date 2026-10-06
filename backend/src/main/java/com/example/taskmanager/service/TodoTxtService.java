@@ -38,21 +38,74 @@ public class TodoTxtService {
     private final TaskRepository taskRepository;
     private final TodoTxtCodec codec;
     private final ApplicationEventPublisher events;
+    private final TodoStore store;
 
     public TodoTxtService(
             TaskRepository taskRepository,
             TodoTxtCodec codec,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            TodoStore store) {
         this.taskRepository = taskRepository;
         this.codec = codec;
         this.events = events;
+        this.store = store;
     }
 
-    /** El todo.txt completo del usuario, en orden de archivo. */
+    /**
+     * El todo.txt completo del usuario.
+     *
+     * <p>Sale del archivo, no de la base: el archivo es la fuente y la tabla es el índice
+     * para poder filtrar y paginar. reconstruirlo desde la base perdería los comentarios y
+     * el formato exacto, que es justo lo que hay que conservar.
+     */
     public String export(Long userId) {
-        return codec.serialize(taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
+        return store.read(userId);
+    }
+
+    /**
+     * Crea el archivo si no existe. Lo llama el navegador al vincularse, y con esto el
+     * usuario no tiene que crear nada a mano para empezar.
+     */
+    public void ensureFile(Long userId) {
+        if (store.read(userId).isEmpty()) {
+            store.write(userId, EMPTY_FILE);
+        }
+    }
+
+    /** Reconstruye el archivo desde la base. Para cuando alguien edita el archivo a mano y se rompe. */
+    public String rebuildFile(Long userId) {
+        String content = codec.serialize(taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
                 .map(this::toParsed)
                 .toList());
+        store.write(userId, content);
+        return content;
+    }
+
+    public String hash(Long userId) {
+        return store.hash(userId);
+    }
+
+    private static final String EMPTY_FILE = "";
+
+    /**
+     * Añade una línea al inbox.txt. El servidor no la procesa todavía: es una captura, no
+     * una importación, y hacerlo sin que el cliente lo pida haría que una escritura fuera
+     * de la app apareciera de golpe.
+     */
+    public void appendInbox(Long userId, String line) {
+        store.appendInbox(userId, line);
+    }
+
+    /**
+     * Vacía el inbox y lo pasa por el importador. Devuelve el archivo reconciliado.
+     * Es idempotente: si el inbox ya estaba vacío, no toca nada.
+     */
+    public String drainInbox(Long userId) {
+        String pending = store.consumeInbox(userId);
+        if (pending.isBlank()) {
+            return export(userId);
+        }
+        return importFile(userId, pending).file();
     }
 
     /**
@@ -125,8 +178,13 @@ public class TodoTxtService {
             }
         }
 
+        String reconciled = codec.serialize(
+                taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
+                        .map(this::toParsed)
+                        .toList());
+        store.write(userId, reconciled);
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
-        return new ImportResult(imported, updated, parsed.size(), export(userId));
+        return new ImportResult(imported, updated, parsed.size(), reconciled);
     }
 
     /** La única coincidencia por contenido, o null si no hay o si hay varias. */
@@ -174,6 +232,7 @@ public class TodoTxtService {
             return new ArchiveResult(0, "");
         }
         String doneFile = codec.serialize(done.stream().map(this::toParsed).toList());
+        store.appendDone(userId, doneFile);
         taskRepository.deleteAll(done);
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
         return new ArchiveResult(done.size(), doneFile);
