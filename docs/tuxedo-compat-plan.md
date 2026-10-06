@@ -666,3 +666,66 @@ consultivo que usa el propio tuxedo al drenar `inbox.txt`.
 ### Estado
 
 Backend 39/39, frontend 66/66, `typecheck` limpio, build OK.
+---
+
+## 17. Registro de ejecución — cierre
+
+### Atajos apagados sin archivo
+
+`useKeymap` acepta `unavailable: { actions, reason }` y las ignora. Sin un todo.txt vinculado,
+`x`, `p`, `J`, `dd` y `u` no tienen uid sobre el que actuar; hasta ahora salían por el return
+temprano, en silencio. Ahora la cabecera lo dice y el overlay las lista tachadas con el motivo.
+
+Se descartó el doble fondo de escritura (mutar el archivo si lo hay, si no la API): obliga a
+decidir cuál de las dos rutas gana cuando están las dos, que es la parte difícil.
+
+### Recurrencia, paleta e inbox
+
+- `r` abre el prompt para escribir `rec:`. El spawn ya estaba; faltaba poder escribirlo.
+- `:` y Ctrl-P abren la paleta, con el ranking de tuxedo: inicio de etiqueta, frontera de
+  palabra, dentro. En cuarenta comandos la posición es el ranking.
+- Para leer `inbox.txt` hizo falta el **directorio**, no el archivo: la File System Access API
+  devuelve un handle sin decir dónde está. El selector pide una carpeta y de ahí salen
+  `todo.txt` e `inbox.txt`. Se drena en cada sondeo y se vacía **antes** de importar: vaciar
+  después dejaría las líneas ahí para la siguiente vuelta.
+
+### Deuda de las líneas sin uid: resuelta
+
+Una línea sin `uid:` no tiene identidad, así que creaba tarea nueva siempre. Ahora, si no hay
+uid, se busca por contenido y **solo se empareja si la coincidencia es única**: con dos tareas
+idénticas no se adivina. Las fechas quedan fuera de la clave, porque la de creación la sella
+el servidor y una línea de tuxedo puede no traerla.
+
+Comprobado contra el Docker: importar dos veces un archivo sin uid da 2 filas; antes, 3.
+
+### e2e reescritos
+
+Herméticos (interceptan la API) y con esperas por web. En el camino salieron tres trampas que
+conviene no volver a pisar:
+
+1. El glob `**/api/tasks**` capturaba también el módulo del propio dev server
+   (`/src/api/tasks.ts`) y lo sustituía por un `{}` que dejaba la app en blanco. Ahora es un
+   predicado de ruta.
+2. El fixture de sesión no se montaba en los tests que no lo pedían por nombre, así que
+   navegaban contra el backend real de verdad.
+3. La app es un PWA: sin `serviceWorkers: 'block'` los tests assertan contra el index
+   cacheado, no contra el build del disco.
+
+Y una comprobación de que la suite muerde: rompiendo `cursor_down` a propósito, el e2e de `j` y
+`k` falla. Es la diferencia entre tener tests y tener aserciones.
+
+### Sigue fuera de alcance, y por qué
+
+- **Sidebars (`[` y `]`).** Tuxedo tiene un panel lateral con el detalle de la tarea y otro de
+  filtros. En la web el detalle ya está en la tarjeta y los filtros son las pestañas de arriba.
+  Añadirlos sería duplicar en panel lo que ya está en la página, y el atajo no puede quedar
+ apretado a la nada: si `toggle_left_pane` no hace nada, es exactamente el atajo que finge
+  funcionar que acabamos de eliminar en la opción B. O se construye el panel, o la tecla se
+  deja sin atajo. Dime cuál y lo hago.
+- **Notas (`o` y `O`).** Enlazan `note:<ruta>` a un fichero y lo abren en `$EDITOR`. La web no
+  tiene editor ni sistema de ficheros; emularlo con descargas y `<textarea>` no es lo mismo que
+  la función. Requiere una decisión de producto de la que no hay nada escrito.
+
+### Estado
+
+Backend 41/41, frontend 58/58, e2e 17/17, `typecheck` limpio, e2e en el CI.
