@@ -215,6 +215,10 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
         if (resolved.nextChord !== null) armChord(resolved.nextChord);
         return;
       }
+      // La tecla ya la consumió el motor: si además llegara al campo que la acción acaba de
+      // abrir, se escribiría en él. Con `n` pasaba —abría el formulario con una "n" en el
+      // título— y con `e` igual.
+      event.preventDefault();
       // Una acción apagada no dispara nada ni deja rastro: la UI ya dice por qué.
       if (blocked?.actions.includes(resolved.action)) return;
       emit(resolved.action);

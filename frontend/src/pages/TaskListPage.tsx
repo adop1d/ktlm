@@ -24,11 +24,22 @@ import { Task, TaskFilter, TaskSort } from '../types/task';
 import { TodoFileBar } from '../file/TodoFileBar';
 import { useTodoFile } from '../file/useTodoFile';
 import { useTodoDoc } from '../file/todoDoc';
+import { parseTodoLine } from '../file/todoLine';
 import { useToastStore } from '../stores/toastStore';
 import { useAuthStore } from '../stores/authStore';
 import { ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const PAGE_SIZE = 20;
+
+/** El ciclo de `S`: los tres de tuxedo y los que ya tenia la app. */
+const SORT_CYCLE: Record<TaskSort, TaskSort> = {
+  file: 'priority',
+  priority: 'due',
+  due: 'file',
+  newest: 'file',
+  oldest: 'file',
+  alphabetical: 'file',
+};
 
 const FILTER_TABS: { value: TaskFilter; label: string }[] = [
   { value: 'all', label: 'Todas' },
@@ -145,11 +156,24 @@ export const TaskListPage: FC = () => {
       case 'half_page_up':
         return halfPage(-1);
       case 'begin_add':
-      case 'begin_edit':
-      case 'begin_edit_insert':
         setEditing(null);
         setShowForm(true);
         return;
+      case 'begin_edit':
+      case 'begin_edit_insert':
+        // e e i editan la tarea del cursor. Abrir el formulario en blanco aqui era abrir
+        // una tarea nueva con la tecla de editar.
+        if (!task) return;
+        setEditing(task);
+        setShowForm(true);
+        return;
+      case 'cycle_sort':
+        setSort(SORT_CYCLE[sort]);
+        return;
+      case 'copy_line':
+        return copyLine(task?.sortOrder);
+      case 'copy_body':
+        return copyBody(task?.sortOrder);
       case 'toggle_complete':
         return task ? void todoFile.toggleComplete(task.sortOrder) : undefined;
       case 'delete':
@@ -241,6 +265,29 @@ export const TaskListPage: FC = () => {
     'copy_line',
     'copy_body',
   ];
+
+  /** Copia la linea tal cual esta en el archivo: eso, y no el titulo, es lo que se lleva uno. */
+  const copyLine = async (sortOrder?: number) => {
+    if (sortOrder === undefined) return;
+    const { lines, uidByLine } = useTodoDoc.getState();
+    const index = uidByLine.findIndex((uid) => uid === String(sortOrder));
+    const line = index >= 0 ? lines[index] : undefined;
+    if (!line) return;
+    await navigator.clipboard.writeText(line);
+    addToast('success', 'Línea copiada');
+  };
+
+  /** Copia solo el cuerpo, sin prioridad, fechas ni etiquetas. */
+  const copyBody = async (sortOrder?: number) => {
+    if (sortOrder === undefined) return;
+    const { lines, uidByLine } = useTodoDoc.getState();
+    const index = uidByLine.findIndex((uid) => uid === String(sortOrder));
+    const line = index >= 0 ? lines[index] : undefined;
+    if (!line) return;
+    const body = parseTodoLine(line).body;
+    await navigator.clipboard.writeText(body);
+    addToast('success', 'Texto copiado');
+  };
 
   const { mode, pendingChord } = useKeymap({
     keymap: DEFAULT_NORMAL_KEYMAP,
