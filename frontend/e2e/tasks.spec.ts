@@ -9,7 +9,7 @@ test.describe('lista de tareas', () => {
   test('muestra las tareas sembradas y los contadores', async ({ page }) => {
     await expect(page.getByText('Tarea 001')).toBeVisible();
     await expect(page.getByText('Tarea 003')).toBeVisible();
-    await expect(page.locator('.task-card')).toHaveCount(3);
+    await expect(page.locator('.tui-row')).toHaveCount(3);
     await expect(page.getByRole('button', { name: /^Todas/ })).toContainText('3');
   });
 
@@ -21,38 +21,43 @@ test.describe('lista de tareas', () => {
     await page.getByRole('button', { name: 'Crear tarea' }).click();
 
     await expect(page.getByText('Comprar leche')).toBeVisible();
-    await expect(page.locator('.task-card')).toHaveCount(4);
+    await expect(page.locator('.tui-row')).toHaveCount(4);
   });
 
   test('el filtro de pestañas cambia lo que se ve', async ({ page }) => {
     await page.getByRole('button', { name: /^Completadas/ }).click();
 
-    await expect(page.locator('.task-card')).toHaveCount(1);
+    await expect(page.locator('.tui-row')).toHaveCount(1);
     await expect(page.getByText('Tarea 001')).toBeVisible();
   });
 
   test('la búsqueda filtra la lista', async ({ page }) => {
     await page.getByPlaceholder(/Buscar tareas/).fill('Tarea 002');
 
-    await expect(page.locator('.task-card')).toHaveCount(1);
+    await expect(page.locator('.tui-row')).toHaveCount(1);
     await expect(page.getByText('Tarea 002')).toBeVisible();
   });
 
-  test('sin archivo vinculado, los atajos de archivo se announce apagados', async ({ page }) => {
+  test('sin archivo vinculado, los atajos de archivo se anuncian apagados', async ({ page }) => {
     // Es el contrato de la opción B: un atajo que no puede actuar se dice, no finge.
-    await expect(page.getByText(/sin archivo: x, p, J y dd están apagados/)).toBeVisible();
+    // El aviso vive ahora en la barra de estado, que es donde se lee el estado del teclado.
+    await expect(page.getByRole('status')).toContainText('x p J dd u apagados');
     await expect(page.getByText('Sin todo.txt vinculado')).toBeVisible();
   });
 });
 
 test.describe('teclado', () => {
+  // El chord tiene una ventana de 600 ms por diseño, así que el resto del reloj no se
+  // usa como referencia. El margen extra cubre laCPU cargada por los workers en paralelo
+  // sin volver el bloque serial: en serie, un solo fallo se come los cinco siguientes.
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForList(page);
   });
 
-  test('j y k mueven el cursor entre tarjetas', async ({ page }) => {
-    const cursor = page.locator('[data-cursor="true"]');
+  test('j y k mueven el cursor entre filas', async ({ page }) => {
+    const cursor = page.locator('.tui-row--cursor');
     await expect(cursor).toContainText('Tarea 001');
 
     await page.keyboard.press('j');
@@ -66,7 +71,7 @@ test.describe('teclado', () => {
   });
 
   test('G lleva a la última y gg a la primera', async ({ page }) => {
-    const cursor = page.locator('[data-cursor="true"]');
+    const cursor = page.locator('.tui-row--cursor');
 
     await page.keyboard.press('G');
     await expect(cursor).toContainText('Tarea 003');
@@ -116,7 +121,7 @@ test.describe('teclado', () => {
 
     // La acción está apagada: el contador de completadas no se mueve.
     await expect(contador).toHaveText(antes ?? '');
-    await expect(page.locator('.task-card').first()).not.toHaveClass(/line-through/);
+    await expect(page.locator('.tui-row').first()).not.toHaveClass(/line-through/);
   });
 });
 

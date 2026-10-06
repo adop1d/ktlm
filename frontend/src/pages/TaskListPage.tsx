@@ -5,8 +5,11 @@ import { useKeymap } from '../keymap/useKeymap';
 import { HelpOverlay } from '../keymap/HelpOverlay';
 import { CommandPalette } from '../keymap/CommandPalette';
 import { PromptOverlay } from '../keymap/PromptOverlay';
+import { StatusBar } from '../keymap/StatusBar';
+import { FilterPane } from '../file/FilterPane';
+import { DetailPane } from '../file/DetailPane';
 import type { ActionName } from '../keymap/actions';
-import { TaskCard } from '../components/task/TaskCard';
+import { TaskRow } from '../components/task/TaskRow';
 import { TaskForm } from '../components/task/TaskForm';
 import { Header } from '../components/common/Header';
 import { TaskListSkeleton, TaskFormSkeleton, PageHeaderSkeleton } from '../components/common/Skeleton';
@@ -15,7 +18,7 @@ import { TodoFileBar } from '../file/TodoFileBar';
 import { useTodoFile } from '../file/useTodoFile';
 import { useTodoDoc } from '../file/todoDoc';
 import { useToastStore } from '../stores/toastStore';
-import { PlusIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const PAGE_SIZE = 20;
 
@@ -35,6 +38,8 @@ const SORT_OPTIONS: { value: TaskSort; label: string }[] = [
 ];
 
 export const TaskListPage: FC = () => {
+  const [project, setProject] = useState<string | null>(null);
+  const [context, setContext] = useState<string | null>(null);
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -46,6 +51,8 @@ export const TaskListPage: FC = () => {
     filter,
     q: debouncedSearch,
     sort,
+    project: project ?? undefined,
+    context: context ?? undefined,
   });
   const [editing, setEditing] = useState<Task | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -55,6 +62,8 @@ export const TaskListPage: FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [recurrenceTarget, setRecurrenceTarget] = useState<Task | null>(null);
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [visual, setVisual] = useState<number[]>([]);
 
@@ -69,7 +78,7 @@ export const TaskListPage: FC = () => {
   // invalida la página actual y dejaría al usuario en una página vacía.
   useEffect(() => {
     setPage(0);
-  }, [filter, debouncedSearch, sort]);
+  }, [filter, debouncedSearch, sort, project, context]);
 
   useEffect(() => {
     setCursor((current) => Math.min(current, Math.max(0, rows.length - 1)));
@@ -153,6 +162,18 @@ export const TaskListPage: FC = () => {
         return;
       case 'open_help':
         setShowHelp(true);
+        return;
+      case 'toggle_left_pane':
+        setShowLeft((current) => !current);
+        return;
+      case 'toggle_right_pane':
+        setShowRight((current) => !current);
+        return;
+      case 'pick_project':
+        setShowLeft((current) => !current);
+        return;
+      case 'pick_context':
+        setShowLeft((current) => !current);
         return;
       case 'open_command_palette':
         setShowPalette(true);
@@ -260,56 +281,39 @@ export const TaskListPage: FC = () => {
           onSaveAs={() => void todoFile.saveAs()}
           onDetach={todoFile.detach}
         />
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)] dark:text-[var(--dark-text-primary)]">
-              Mis tareas
-            </h1>
-            {/* Shortcuts - compact under title */}
-            <div className="flex items-center gap-2 mt-2 text-xs text-[var(--text-muted)] dark:text-[var(--dark-text-muted)]">
-              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">n</kbd>
-              <span>nueva</span>
-              <span className="opacity-50">|</span>
-              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">j k</kbd>
-              <span>mover</span>
-              <span className="opacity-50">|</span>
-              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">x</kbd>
-              <span>completar</span>
-              <span className="opacity-50">|</span>
-              <button
-                onClick={() => setShowHelp(true)}
-                className="underline underline-offset-2 hover:text-[var(--color-accent)]"
-              >
-                ? ayuda
-              </button>
-              {!isLinked && (
-                <span className="text-xs text-[var(--color-warning)]">
-                  sin archivo: x, p, J y dd están apagados
-                </span>
-              )}
-              {pendingChord && (
-                <span className="ml-2 px-1.5 py-0.5 rounded font-mono bg-[var(--color-accent)] text-white text-[10px]">
-                  {pendingChord}…
-                </span>
-              )}
-              {mode !== 'normal' && (
-                <span className="ml-2 px-1.5 py-0.5 rounded font-mono bg-[var(--color-primary)] text-white text-[10px]">
-                  {mode}
-                </span>
-              )}
-            </div>
-          </div>
+        {/* Cabecera: una linea, como el titulo de una ventana de terminal */}
+        <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[var(--border-default)]">
+          <h1 className="text-sm font-bold tracking-wide text-[var(--text-primary)]">
+            tareas
+            <span className="ml-2 font-normal text-[var(--text-muted)]">
+              {data ? `${data.totalElements} en total` : ''}
+            </span>
+          </h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowLeft((current) => !current)}
+              aria-pressed={showLeft}
+              className="btn-ghost text-xs"
+              title="Panel de filtros ( [ )"
+            >
+              [ filtros
+            </button>
+            <button
+              onClick={() => setShowRight((current) => !current)}
+              aria-pressed={showRight}
+              className="btn-ghost text-xs"
+              title="Panel de detalle ( ] )"
+            >
+              detalle ]
+            </button>
             <button
               onClick={() => {
                 setEditing(null);
                 setShowForm(true);
               }}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary text-xs"
             >
-              <PlusIcon className="h-5 w-5" />
-              Nueva
+              + nueva
             </button>
           </div>
         </div>
@@ -380,6 +384,35 @@ export const TaskListPage: FC = () => {
           </div>
         )}
 
+        {/* Cuerpo: panel izquierdo, lista, panel derecho */}
+        <div
+          className={`tui-body tui-with-status ${
+            showLeft && showRight
+              ? 'tui-body--both'
+              : showLeft
+                ? 'tui-body--left'
+                : showRight
+                  ? 'tui-body--right'
+                  : ''
+          }`}
+        >
+          {showLeft ? (
+            <FilterPane
+              tasks={rows}
+              activeProject={project}
+              activeContext={context}
+              onPickProject={(next) => {
+                setProject(next);
+                setPage(0);
+              }}
+              onPickContext={(next) => {
+                setContext(next);
+                setPage(0);
+              }}
+            />
+          ) : null}
+
+          <div>
         {/* Content */}
         {(data?.content.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-bounce-in">
@@ -408,11 +441,15 @@ export const TaskListPage: FC = () => {
             )}
           </div>
         ) : (
-          <div className={`grid gap-3 stagger-children transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
-            {data?.content.map((t, index) => (
-              <TaskCard
-                key={t.id}
-                task={t}
+          <div className={`tui-list transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            {rows.map((task, index) => (
+              <TaskRow
+                key={task.id}
+                index={index}
+                task={task}
+                isCursor={index === cursor}
+                isSelected={visual.includes(index)}
+                onFocus={setCursor}
                 onToggle={handleToggle}
                 onEdit={(task) => {
                   setEditing(task);
@@ -420,12 +457,15 @@ export const TaskListPage: FC = () => {
                   setCursor(index);
                 }}
                 onDelete={handleDelete}
-                isCursor={index === cursor}
-                isSelected={visual.includes(index)}
               />
             ))}
           </div>
         )}
+
+          </div>
+
+          {showRight ? <DetailPane task={rows[cursor]} /> : null}
+        </div>
 
         {/* Pagination */}
         {data && data.totalPages > 1 && (
@@ -457,6 +497,25 @@ export const TaskListPage: FC = () => {
           </nav>
         )}
       </section>
+
+      <StatusBar
+        mode={mode}
+        pendingChord={pendingChord}
+        position={
+          rows.length
+            ? `${cursor + 1}/${rows.length}${data ? ` · pág ${data.page + 1}/${data.totalPages}` : ''}`
+            : '0/0'
+        }
+        counts={counts}
+        linked={isLinked}
+        hints={[
+          { keys: 'j k', label: 'mover' },
+          { keys: 'n', label: 'nueva' },
+          { keys: '[ ]', label: 'paneles' },
+          { keys: ':', label: 'paleta' },
+          { keys: '?', label: 'ayuda' },
+        ]}
+      />
 
       {showPalette && (
         <CommandPalette

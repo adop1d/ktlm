@@ -1,0 +1,495 @@
+/**
+ * Cromo de terminal: paneles con dibujo de cajas, barra de estado fija y rejilla de lista.
+ *
+ * Todo aquí es estructural. El color sigue viniendo de los tokens de design-tokens.css,
+ * para que cambiar la paleta no toque estos ficheros.
+ */
+
+/* ======================== TIPOGRAFÍA BASE ======================== */
+
+body {
+  font-family: var(--font-body);
+  font-variant-ligatures: none;
+  /* Una rejilla de terminal: los glifos ocupan la misma celda. */
+  font-feature-settings: 'calt' 0;
+}
+
+/* ======================== PANEL DE CAJA ======================== */
+
+/*
+ * El borde se dibuja con caracteres en lugar de con CSS: es lo que hace que un panel se
+ * lea como una caja de terminal y no como una tarjeta.
+ */
+.tui-panel {
+  position: relative;
+  border: 1px solid var(--panel-border);
+  background: var(--surface-base);
+}
+
+/* La esquina superior izquierda lleva el byte que abre la caja. */
+.tui-panel::before {
+  content: '┌';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  color: var(--color-accent);
+  line-height: 1;
+  padding: 0 1px;
+  background: var(--bg-base);
+}
+
+.tui-panel > .tui-panel-title {
+  display: block;
+  margin: -0.85rem 0 0.5rem 1.25rem;
+  padding: 0 0.4rem;
+  background: var(--bg-base);
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+/* ======================== BARRA DE ESTADO ======================== */
+
+/*
+ * Fija abajo, como la de vim o tuxedo. Es el sitio donde vive el modo, el chord armado y
+ * los contadores: lo que en una terminal se lee sin levantar la vista del texto.
+ */
+.tui-status {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--surface-elevated);
+  border-top: 1px solid var(--border-default);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tui-status::-webkit-scrollbar {
+  display: none;
+}
+
+.tui-status-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.tui-status-segment--mode {
+  padding: 0 0.45rem;
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.tui-status-segment--chord {
+  padding: 0 0.45rem;
+  background: var(--color-primary);
+  color: #04222a;
+  font-weight: 700;
+}
+
+.tui-status-segment--hint {
+  color: var(--text-muted);
+}
+
+.tui-status-spacer {
+  flex: 1 1 auto;
+  min-width: 0.5rem;
+}
+
+.tui-status kbd {
+  padding: 0 0.3rem;
+  border: 1px solid var(--border-emphasis);
+  color: var(--text-secondary);
+  font: inherit;
+}
+
+/* Deja hueco para la barra, para que la última fila no quede debajo. */
+.tui-with-status {
+  padding-bottom: 2.25rem;
+}
+
+/* ======================== LAYOUT DE TRES PANELES ======================== */
+
+.tui-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.tui-body--left {
+  grid-template-columns: 15rem minmax(0, 1fr);
+}
+
+.tui-body--right {
+  grid-template-columns: minmax(0, 1fr) 19rem;
+}
+
+.tui-body--both {
+  grid-template-columns: 15rem minmax(0, 1fr) 19rem;
+}
+
+@media (max-width: 900px) {
+  /* En pantallas estrechas los paneles seiations encima en vez de partir la lista. */
+  .tui-body--left,
+  .tui-body--right,
+  .tui-body--both {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ======================== REJILLA DE TARJETAS ======================== */
+
+/*
+ * La lista deja de ser una columna de tarjetas y pasa a filas alineadas: el ancho de la
+ * columna de prioridad y el de las fechas son fijos, como columnas de terminal.
+ */
+.tui-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-default);
+}
+
+.tui-row {
+  display: grid;
+  /* index · prioridad · cuerpo · meta. Los anchos son fijos: eso es una columna de
+     terminal, y es lo que hace que los ojos bajen en vertical y no en diagonal. */
+  grid-template-columns: 2.5rem 1.5rem minmax(0, 1fr) auto;
+  column-gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.tui-row:last-child {
+  border-bottom: none;
+}
+
+.tui-row--cursor {
+  background: var(--color-primary-muted);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.tui-row--selected {
+  background: var(--color-accent-muted);
+}
+
+.tui-row--done .tui-row-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.tui-row-index {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tui-row-prio {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tui-row-prio--A {
+  color: var(--color-danger);
+}
+
+.tui-row-prio--B {
+  color: var(--color-warning);
+}
+
+.tui-row-prio--C {
+  color: var(--color-success);
+}
+
+.tui-row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tui-row-meta {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tui-row-tags {
+  color: var(--color-primary);
+}
+
+/* ======================== MODALES ======================== */
+
+/*
+ * El alto máximo va en la caja, no en la tarjeta interior: si va en la tarjeta, el
+ * contenedor crece y el scroll se pierde, que es justo el fallo que tenía la ayuda.
+ */
+.tui-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgb(0 0 0 / 0.72);
+  overflow-y: auto;
+}
+
+.tui-modal {
+  width: 100%;
+  max-height: min(80vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-emphasis);
+  background: var(--surface-overlay);
+}
+
+.tui-modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 1rem 1rem;
+}
+
+.tui-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-default);
+  flex: none;
+}
+
+.tui-modal-header h2 {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* ======================== LISTAS DE LA BARRA LATERAL ======================== */
+
+.tui-pane-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tui-pane-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.15rem 0.35rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tui-pane-item:hover {
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+}
+
+.tui-pane-item[aria-pressed='true'] {
+  background: var(--color-primary-muted);
+  color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.tui-pane-item-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tui-pane-section {
+  margin-top: 0.85rem;
+}
+
+.tui-pane-section:first-child {
+  margin-top: 0;
+}
+
+.tui-pane-section-title {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tui-empty {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.15rem 0.35rem;
+}
+.tui-row-actions {
+  display: inline-flex;
+  gap: 0.15rem;
+  margin-left: 0.5rem;
+  /* Se revelan al pasar el ratón o cuando la fila tiene el cursor, como las tarjetas. */
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.tui-row:hover .tui-row-actions,
+.tui-row--cursor .tui-row-actions,
+.tui-row--selected .tui-row-actions {
+  opacity: 1;
+}
+
+.tui-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tui-row-actions button:hover {
+  border-color: var(--border-emphasis);
+  color: var(--text-primary);
+}
+
+.tui-row-actions button:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ======================== APLANADO DE CONTROLES ======================== */
+
+/*
+ * Los botones y campos vienen de una biblioteca de tarjetas con bordes redondeados. En una
+ * terminal casi nada es redondo, así que aquí se aplanan sin reescribir el marcado.
+ */
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.input-field {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-hover);
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+}
+
+.btn-ghost[aria-pressed='true'],
+.btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.input-field {
+  background: var(--surface-base);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.input-field:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* El indicador de modo va con el color de acento, que es lo que da el aire de terminal. */
+kbd {
+  font-family: var(--font-mono);
+}
+
+/* ======================== BARRA DE TÍTULO ======================== */
+
+/* Una línea, como el título de una ventana de terminal. */
+.tui-titlebar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.3rem 1rem;
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--border-default);
+  font-size: 0.78rem;
+}
+
+.tui-titlebar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  text-decoration: none;
+}
+
+.tui-titlebar-mark {
+  color: var(--color-accent);
+}
+
+.tui-titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tui-titlebar-user {
+  color: var(--text-muted);
+}
+
+.tui-titlebar-button {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tui-titlebar-button:hover {
+  border-color: var(--color-accent);
+  color: var(--text-primary);
+}
+
+.tui-titlebar-button:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}

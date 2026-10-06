@@ -1,6 +1,7 @@
 import { FC, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { ActionName } from './actions';
+import { Portal } from '../components/common/Portal';
 
 /**
  * El overlay `?` de tuxedo, generado desde la misma tabla de atajos que ejecuta el motor.
@@ -49,7 +50,6 @@ const GROUPS: { title: string; actions: readonly ActionName[] }[] = [
       'save_current_filter',
       'cycle_sort',
       'toggle_visual',
-      'toggle_selected',
       'go_list',
       'toggle_archive_view',
       'archive_completed',
@@ -123,69 +123,69 @@ export const HelpOverlay: FC<{
   }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-label="Atajos de teclado"
-    >
+    <Portal>
+    <div className="tui-overlay" onClick={onClose} role="dialog" aria-label="Atajos de teclado">
       <div
-        className="card-elevated max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+        className="tui-modal"
+        style={{ maxWidth: '48rem' }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[var(--text-primary)] dark:text-[var(--dark-text-primary)]">
-            Atajos de teclado
-          </h2>
-          <button onClick={onClose} aria-label="Cerrar ayuda" className="btn-ghost">
-            <XMarkIcon className="w-5 h-5" />
+        <div className="tui-modal-header">
+          <h2>Atajos de teclado</h2>
+          <button onClick={onClose} aria-label="Cerrar ayuda" className="btn-ghost text-xs">
+            <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
 
-        {GROUPS.map((group) => {
-          const bound = group.actions.filter((action) => (keymap[action] ?? []).length > 0);
-          if (bound.length === 0) return null;
-          const isOff = (action: ActionName) => unavailable?.actions.includes(action) === true;
-          return (
-            <section key={group.title} className="mb-4">
-              <h3 className="text-xs uppercase tracking-wide text-[var(--text-muted)] dark:text-[var(--dark-text-muted)] mb-2">
-                {group.title}
-              </h3>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                {bound.map((action) => (
-                  <li
-                    key={action}
-                    className={`flex items-baseline gap-2 text-sm ${isOff(action) ? 'opacity-40' : ''}`}
-                  >
-                    <span className="flex gap-1 shrink-0">
-                      {keymap[action].map((key) => (
-                        <kbd
-                          key={key}
-                          className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]"
-                        >
-                          {key}
-                        </kbd>
-                      ))}
-                    </span>
-                    <span className="text-[var(--text-secondary)] dark:text-[var(--dark-text-secondary)]">
-                      {LABELS[action] ?? action}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
+        <div className="tui-modal-body">
+          {GROUPS.map((group) => {
+            const bound = group.actions.filter((action) => (keymap[action] ?? []).length > 0);
+            if (bound.length === 0) return null;
+            const isOff = (action: ActionName) => unavailable?.actions.includes(action) === true;
+            return (
+              <section key={group.title} className="mb-4">
+                <h3 className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-2">
+                  {group.title}
+                </h3>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                  {bound.map((action) => (
+                    <li
+                      key={action}
+                      className={`flex items-baseline gap-2 text-sm ${
+                        isOff(action) ? 'opacity-40' : ''
+                      }`}
+                    >
+                      <span className="flex gap-1 shrink-0">
+                        {keymap[action].map((key) => (
+                          <kbd
+                            key={key}
+                            className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded-sm font-mono font-bold text-[10px]"
+                          >
+                            {key}
+                          </kbd>
+                        ))}
+                      </span>
+                      <span className="text-[var(--text-secondary)]">
+                        {LABELS[action] ?? action}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
 
-        {unavailable && (
-          <p className="text-xs text-[var(--color-warning)] mb-3">
-            Apagados: {unavailable.reason}.
+          {unavailable && (
+            <p className="text-xs text-[var(--color-warning)] mb-3">
+              Apagados: {unavailable.reason}.
+            </p>
+          )}
+          <p className="text-xs text-[var(--text-muted)]">
+            Atajos copiados de tuxedo. Pulsa <kbd>Esc</kbd> para cerrar.
           </p>
-        )}
-        <p className="text-xs text-[var(--text-muted)] dark:text-[var(--dark-text-muted)] mt-4">
-          Atajos copiados de tuxedo. Pulsa <kbd>Esc</kbd> para cerrar.
-        </p>
+        </div>
       </div>
     </div>
+  </Portal>
   );
 };

@@ -54,7 +54,7 @@ test.describe('sin sesión', () => {
     await page.getByRole('button', { name: 'Entrar' }).click();
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { name: 'Mis tareas' })).toBeVisible();
+    await expect(page.locator('.tui-titlebar')).toBeVisible();
   });
 
   test('credenciales inválidas se quedan en el login con el error visible', async ({ page }) => {
@@ -74,9 +74,9 @@ test.describe('con sesión', () => {
     await mockTasks(page, { tasks: seedTasks(3) });
 
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Mis tareas' })).toBeVisible();
+    await expect(page.locator('.tui-titlebar')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Salir' }).click();
+    await page.getByRole('button', { name: 'salir' }).click();
 
     await expect(page).toHaveURL(/\/login$/);
   });

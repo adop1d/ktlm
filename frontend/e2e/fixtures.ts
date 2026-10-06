@@ -37,8 +37,10 @@ export const seedTasks = (count: number, prefix = 'Tarea'): SeedTask[] =>
     recurrence: null,
     threshold: null,
     todoUid: String(index + 1),
-    projects: [],
-    contexts: [],
+    // Una de cada dos lleva proyecto y una de cada tres contexto: el panel de
+    // filtros necesita de dónde sacar la lista.
+    projects: index % 2 === 0 ? ['salud'] : ['casa'],
+    contexts: index % 3 === 0 ? ['oficina'] : [],
   }));
 
 export interface ApiState {
@@ -65,12 +67,16 @@ export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
       const size = Number(url.searchParams.get('size') ?? '20');
       const filter = url.searchParams.get('filter') ?? 'all';
       const term = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+      const project = url.searchParams.get('project');
+      const context = url.searchParams.get('context');
 
       // Sin esto el mock miente: devolvería la lista entera y los filtros pasarían sin
       // probar nada, que es justo lo que hacen las aserciones condicionales.
       let visible = state.tasks;
       if (filter === 'active') visible = visible.filter((task) => !task.completed);
       if (filter === 'completed') visible = visible.filter((task) => task.completed);
+      if (project) visible = visible.filter((task) => task.projects?.includes(project));
+      if (context) visible = visible.filter((task) => task.contexts?.includes(context));
       if (term) {
         visible = visible.filter(
           (task) =>
@@ -158,7 +164,12 @@ export const test = base.extend<{ api: ApiState }>({
 
 export { expect, seedSession };
 
-/** Espera a que la lista esté pintada: el skeleton es el estado de carga real. */
+/**
+ * Espera a que la lista esté pintada. Se ancla en la rejilla y no en un título: el título
+ * puede cambiar sin que la app esté rota, y el fallo que importa es "no llegó la lista".
+ */
 export const waitForList = async (page: Page) => {
-  await expect(page.getByRole('heading', { name: 'Mis tareas' })).toBeVisible();
+  // La barra de título está siempre; la rejilla solo cuando hay tareas, así que no sirve
+  // como ancla única: con la lista vacía no existe.
+  await expect(page.locator('.tui-titlebar')).toBeVisible();
 };

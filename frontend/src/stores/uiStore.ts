@@ -9,7 +9,8 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     set => ({
-      darkMode: false,
+      // Una terminal es oscura de serie. El toggle sigue ahí para quien prefiera claro.
+      darkMode: true,
       toggleDarkMode: () => set(state => ({ darkMode: !state.darkMode })),
     }),
     { name: 'ui-store' }
