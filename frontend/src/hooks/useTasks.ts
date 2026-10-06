@@ -1,39 +1,41 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/tasks';
-import { Task } from '../types/task';
+import { Task, TaskQueryParams } from '../types/task';
 
-export const useTasks = () => {
+export const useTasks = (params: TaskQueryParams) => {
   const qc = useQueryClient();
 
-  const { data: tasks, isLoading, error } = useQuery<Task[]>({
-    queryKey: ['tasks'],
-    queryFn: api.getTasks,
+  const pageQuery = useQuery({
+    queryKey: ['tasks', params],
+    queryFn: () => api.getTasks(params),
+    placeholderData: keepPreviousData,
   });
 
-  const createMut = useMutation({
-    mutationFn: api.createTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  const countsQuery = useQuery({
+    queryKey: ['task-counts'],
+    queryFn: api.getTaskCounts,
   });
 
+  // El prefijo cubre todas las páginas.
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['tasks'] });
+    qc.invalidateQueries({ queryKey: ['task-counts'] });
+  };
+
+  const createMut = useMutation({ mutationFn: api.createTask, onSuccess: invalidate });
   const updateMut = useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: Partial<Task> }) => api.updateTask(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: invalidate,
   });
-
-  const deleteMut = useMutation({
-    mutationFn: api.deleteTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
-  });
-
-  const toggleMut = useMutation({
-    mutationFn: api.toggleTask,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
-  });
+  const deleteMut = useMutation({ mutationFn: api.deleteTask, onSuccess: invalidate });
+  const toggleMut = useMutation({ mutationFn: api.toggleTask, onSuccess: invalidate });
 
   return {
-    tasks,
-    isLoading,
-    error,
+    page: pageQuery.data,
+    counts: countsQuery.data,
+    isLoading: pageQuery.isLoading,
+    isFetching: pageQuery.isFetching,
+    error: pageQuery.error,
     createTask: createMut.mutate,
     updateTask: (id: number, payload: Partial<Task>) => updateMut.mutate({ id, payload }),
     deleteTask: deleteMut.mutate,

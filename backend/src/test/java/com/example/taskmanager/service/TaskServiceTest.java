@@ -1,8 +1,12 @@
 package com.example.taskmanager.service;
 
+import com.example.taskmanager.dto.TaskCounts;
+import com.example.taskmanager.dto.TaskPageResponse;
 import com.example.taskmanager.dto.TaskRequest;
 import com.example.taskmanager.exception.ResourceNotFoundException;
 import com.example.taskmanager.model.Task;
+import com.example.taskmanager.model.TaskFilter;
+import com.example.taskmanager.model.TaskSort;
 import com.example.taskmanager.repository.TaskRepository;
 
 import java.time.LocalDate;
@@ -12,9 +16,15 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -173,4 +183,56 @@ class TaskServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> taskService.toggleTaskCompletion(1L, OTHER));
     }
 
+    @Test
+    void getTasks_ReturnsThePageAndItsMetadata() {
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(sampleTask), PageRequest.of(1, 20), 137));
+
+        TaskPageResponse page = taskService.getTasks(OWNER, 1, 20, TaskFilter.ALL, null, null, null, TaskSort.FILE);
+
+        assertEquals(1, page.content().size());
+        assertEquals(1, page.page());
+        assertEquals(20, page.size());
+        assertEquals(137, page.totalElements());
+        assertEquals(7, page.totalPages());
+        assertTrue(page.hasNext());
+        assertTrue(page.hasPrevious());
+    }
+
+    @Test
+    void getTasks_CapsThePageSizeSoARequestCannotDrainTheTable() {
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        taskService.getTasks(OWNER, 0, 100_000, TaskFilter.ALL, null, null, null, TaskSort.FILE);
+
+        var captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findAll(any(Specification.class), captor.capture());
+        assertEquals(TaskService.MAX_PAGE_SIZE, captor.getValue().getPageSize());
+    }
+
+    @Test
+    void getTasks_ClampsNegativePageAndSize() {
+        when(taskRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        taskService.getTasks(OWNER, -5, 0, TaskFilter.ALL, null, null, null, TaskSort.FILE);
+
+        var captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(taskRepository).findAll(any(Specification.class), captor.capture());
+        assertEquals(0, captor.getValue().getPageNumber());
+        assertEquals(20, captor.getValue().getPageSize());
+    }
+
+    @Test
+    void getCounts_SplitsActiveAndCompleted() {
+        when(taskRepository.countByUserId(OWNER)).thenReturn(10L);
+        when(taskRepository.countByUserIdAndCompleted(OWNER, true)).thenReturn(4L);
+
+        TaskCounts counts = taskService.getCounts(OWNER);
+
+        assertEquals(10, counts.all());
+        assertEquals(6, counts.active());
+        assertEquals(4, counts.completed());
+    }
 }

@@ -1,31 +1,62 @@
-import { FC, useState, useMemo, useRef } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import { useTasks } from '../hooks/useTasks';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { TaskCard } from '../components/task/TaskCard';
 import { TaskForm } from '../components/task/TaskForm';
 import { Header } from '../components/common/Header';
 import { TaskListSkeleton, TaskFormSkeleton, PageHeaderSkeleton } from '../components/common/Skeleton';
-import { Task } from '../types/task';
+import { Task, TaskFilter, TaskSort } from '../types/task';
 import { useUIStore } from '../stores/uiStore';
 import { useToastStore } from '../stores/toastStore';
-import { PlusIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
-type FilterType = 'all' | 'active' | 'completed';
-type SortType = 'newest' | 'oldest' | 'alphabetical';
+const PAGE_SIZE = 20;
+
+const FILTER_TABS: { value: TaskFilter; label: string }[] = [
+  { value: 'all', label: 'Todas' },
+  { value: 'active', label: 'Pendientes' },
+  { value: 'completed', label: 'Completadas' },
+];
+
+const SORT_OPTIONS: { value: TaskSort; label: string }[] = [
+  { value: 'file', label: 'Orden del archivo' },
+  { value: 'priority', label: 'Prioridad' },
+  { value: 'due', label: 'Vencimiento' },
+  { value: 'newest', label: 'Más recientes' },
+  { value: 'oldest', label: 'Más antiguas' },
+  { value: 'alphabetical', label: 'Alfabético' },
+];
 
 export const TaskListPage: FC = () => {
-  const { tasks, isLoading, error, createTask, updateTask, deleteTask, toggleTask } = useTasks();
+  const [filter, setFilter] = useState<TaskFilter>('all');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sort, setSort] = useState<TaskSort>('file');
+  const [page, setPage] = useState(0);
+  const { page: data, counts, isLoading, isFetching, error, createTask, updateTask, deleteTask, toggleTask } = useTasks({
+    page,
+    size: PAGE_SIZE,
+    filter,
+    q: debouncedSearch,
+    sort,
+  });
   const [editing, setEditing] = useState<Task | null>(null);
   const [showForm, setShowForm] = useState(false);
   const darkMode = useUIStore(state => state.darkMode);
   const toggleDark = useUIStore(state => state.toggleDarkMode);
   const addToast = useToastStore(state => state.addToast);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
-  // Filter/Search state
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<SortType>('newest');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Único sitio donde se vuelve a la primera página: cambiar qué se lista
+  // invalida la página actual y dejaría al usuario en una página vacía.
+  useEffect(() => {
+    setPage(0);
+  }, [filter, debouncedSearch, sort]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -67,56 +98,6 @@ export const TaskListPage: FC = () => {
   const handleToggle = (id: number) => {
     toggleTask(id);
   };
-
-  // Filtered and sorted tasks
-  const filteredTasks = useMemo(() => {
-    if (!tasks) return [];
-    
-    let result = [...tasks];
-    
-    // Filter by status
-    if (filter === 'active') {
-      result = result.filter(t => !t.completed);
-    } else if (filter === 'completed') {
-      result = result.filter(t => t.completed);
-    }
-    
-    // Filter by search
-    if (search.trim()) {
-      const query = search.toLowerCase();
-      result = result.filter(t => 
-        t.title.toLowerCase().includes(query) ||
-        t.description?.toLowerCase().includes(query)
-      );
-    }
-    
-    // Sort
-    result.sort((a, b) => {
-      switch (sort) {
-        case 'oldest':
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        case 'alphabetical':
-          return a.title.localeCompare(b.title);
-        case 'newest':
-        default:
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-    });
-    
-    return result;
-  }, [tasks, filter, search, sort]);
-
-  const counts = useMemo(() => ({
-    all: tasks?.length ?? 0,
-    active: tasks?.filter(t => !t.completed).length ?? 0,
-    completed: tasks?.filter(t => t.completed).length ?? 0,
-  }), [tasks]);
-
-  const FILTER_TABS: { value: FilterType; label: string }[] = [
-    { value: 'all', label: 'Todas' },
-    { value: 'active', label: 'Pendientes' },
-    { value: 'completed', label: 'Completadas' },
-  ];
 
   // Loading state with skeletons
   if (isLoading) {
@@ -207,7 +188,7 @@ export const TaskListPage: FC = () => {
             className="input-field pl-10"
             placeholder="Buscar tareas... (/)"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
@@ -215,7 +196,7 @@ export const TaskListPage: FC = () => {
         <div className="flex items-center justify-between mb-4">
           {/* Tabs */}
           <div className="flex gap-1 p-1 bg-[var(--surface-elevated)] dark:bg-[var(--dark-surface-elevated)] rounded-[var(--radius-md)]">
-            {FILTER_TABS.map(tab => (
+            {FILTER_TABS.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setFilter(tab.value)}
@@ -229,22 +210,22 @@ export const TaskListPage: FC = () => {
               >
                 {tab.label}
                 <span className="ml-1.5 text-xs opacity-70">
-                  {counts[tab.value]}
+                  {counts?.[tab.value] ?? '–'}
                 </span>
               </button>
             ))}
           </div>
-          
+
           {/* Sort dropdown */}
           <div className="relative">
             <select
               value={sort}
-              onChange={e => setSort(e.target.value as SortType)}
+              onChange={(e) => setSort(e.target.value as TaskSort)}
               className="appearance-none pl-8 pr-3 py-1.5 text-sm bg-[var(--surface-elevated)] dark:bg-[var(--dark-surface-elevated)] text-[var(--text-secondary)] dark:text-[var(--dark-text-secondary)] rounded-[var(--radius-md)] border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             >
-              <option value="newest">Más recientes</option>
-              <option value="oldest">Más antiguas</option>
-              <option value="alphabetical">Alfabético</option>
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
             </select>
             <ArrowsUpDownIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
           </div>
@@ -265,21 +246,21 @@ export const TaskListPage: FC = () => {
         )}
 
         {/* Content */}
-        {filteredTasks.length === 0 ? (
+        {(data?.content.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-bounce-in">
             <div className="w-16 h-16 mb-4 rounded-full bg-[var(--surface-elevated)] dark:bg-[var(--dark-surface-elevated)] flex items-center justify-center animate-float" style={{ animationDelay: '0.2s' }}>
               <ClipboardDocumentListIcon className="h-8 w-8 text-[var(--text-muted)]" />
             </div>
             <h3 className="text-lg font-medium text-[var(--text-primary)] dark:text-[var(--dark-text-primary)] mb-1">
-              {search || filter !== 'all' ? 'No hay resultados' : 'No hay tareas'}
+              {debouncedSearch || filter !== 'all' ? 'No hay resultados' : 'No hay tareas'}
             </h3>
             <p className="text-sm text-[var(--text-secondary)] dark:text-[var(--dark-text-secondary)] mb-4">
-              {search || filter !== 'all' 
-                ? 'Prueba con otros filtros' 
+              {debouncedSearch || filter !== 'all'
+                ? 'Prueba con otros filtros'
                 : 'Crea tu primera tarea para comenzar'
               }
             </p>
-            {!search && filter === 'all' && (
+            {!debouncedSearch && filter === 'all' && (
               <button
                 onClick={() => {
                   setEditing(null);
@@ -292,8 +273,8 @@ export const TaskListPage: FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid gap-3 stagger-children">
-            {filteredTasks.map(t => (
+          <div className={`grid gap-3 stagger-children transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            {data?.content.map((t) => (
               <TaskCard
                 key={t.id}
                 task={t}
@@ -306,6 +287,36 @@ export const TaskListPage: FC = () => {
               />
             ))}
           </div>
+        )}
+
+        {/* Pagination */}
+        {data && data.totalPages > 1 && (
+          <nav className="flex items-center justify-between gap-2 mt-6 pt-4 border-t border-[var(--border-default)]" aria-label="Paginación">
+            <span className="text-xs text-[var(--text-muted)] dark:text-[var(--dark-text-muted)]">
+              mostrando {data.page * data.size + 1}–{Math.min((data.page + 1) * data.size, data.totalElements)} de {data.totalElements}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(p - 1, 0))}
+                disabled={!data.hasPrevious || isFetching}
+                className="btn-ghost flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <ChevronLeftIcon className="w-4 h-4" />
+                Anterior
+              </button>
+              <span className="text-xs font-medium text-[var(--text-secondary)] dark:text-[var(--dark-text-secondary)] tabular-nums">
+                página {data.page + 1} de {data.totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!data.hasNext || isFetching}
+                className="btn-ghost flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Siguiente
+                <ChevronRightIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </nav>
         )}
       </section>
     </>
