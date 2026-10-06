@@ -1,12 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TaskCard } from '../TaskCard';
-import { Task } from '../../types/task';
+import { Task } from '../../../types/task';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 
 const dummyTask: Task = {
   id: 1,
   title: 'Aprender Vitest',
   description: 'Escribir tests para la app',
+  priority: 'MEDIUM',
+  sortOrder: 0,
   completed: false,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),

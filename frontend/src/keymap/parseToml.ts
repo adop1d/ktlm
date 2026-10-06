@@ -82,7 +82,11 @@ const parseValue = (raw: string): string[] | null => {
 };
 
 export const parseKeybindsToml = (source: string): ParsedKeybinds => {
-  const out: ParsedKeybinds = {};
+  // Acumulador mutable: Keymap es de solo lectura y aquí se está construyendo.
+  const out: {
+    normal?: Record<string, readonly string[]>;
+    recurrence?: Record<string, readonly string[]>;
+  } = {};
   let section: 'normal' | 'recurrence' | null = null;
 
   for (const rawLine of source.split(/\r?\n/)) {
@@ -103,8 +107,7 @@ export const parseKeybindsToml = (source: string): ParsedKeybinds => {
     if (!pair) continue;
 
     const key = pair[1];
-    const known = section === 'normal' ? KNOWN_NORMAL_ACTION : KNOWN_RECURRENCE_ACTION;
-    if (!known[key]) continue;
+    if (!(section === 'normal' ? KNOWN_NORMAL_ACTION : KNOWN_RECURRENCE_ACTION)[key]) continue;
 
     // El valor se toma literal, sin trocear por "+": `begin_prompt_project = "+"` debe dar
     // ['+'] y no una lista vacía. Tuxedo no puede escribir esa línea, pero nosotros sí
