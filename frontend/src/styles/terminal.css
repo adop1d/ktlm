@@ -465,6 +465,11 @@ kbd {
   color: var(--color-accent);
 }
 
+.tui-titlebar-logo {
+  display: block;
+  image-rendering: pixelated;
+}
+
 .tui-titlebar-actions {
   display: flex;
   align-items: center;

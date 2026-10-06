@@ -1,4 +1,4 @@
-import { FC, useEffect } from 'react';
+import { FC } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { ActionName } from './actions';
 import { Portal } from '../components/common/Portal';
@@ -113,14 +113,7 @@ export const HelpOverlay: FC<{
   /** Acciones apagadas ahora mismo, con el motivo. Se listan, pero tachadas. */
   unavailable?: { actions: readonly ActionName[]; reason: string };
 }> = ({ keymap, onClose, unavailable }) => {
-  // En modo normal el keymap trata Esc como no-op, así que el overlay cierra por su cuenta.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  // Esc lo cierra el motor de teclado, que es su dueño: ver onEscape en useKeymap.
 
   return (
     <Portal>

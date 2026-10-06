@@ -53,7 +53,8 @@ test.describe('sin sesión', () => {
     await page.getByLabel('Contraseña').fill('secret123');
     await page.getByRole('button', { name: 'Entrar' }).click();
 
-    await expect(page).toHaveURL(/\/$/);
+    // El login lleva a la app, no a la portada.
+    await expect(page).toHaveURL(/\/app$/);
     await expect(page.locator('.tui-titlebar')).toBeVisible();
   });
 

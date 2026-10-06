@@ -243,6 +243,13 @@ export const TaskListPage: FC = () => {
     keymap: DEFAULT_NORMAL_KEYMAP,
     onAction: onKeyAction,
     enabled: !isLoading,
+    // Esc cierra el overlay de arriba, en este orden: ayuda, paleta, filtro, prompt.
+    onEscape: () => {
+      setShowHelp(false);
+      setShowPicker(false);
+      setNamingFilter(false);
+      setRecurrenceTarget(null);
+    },
     unavailable: isLinked
       ? undefined
       : { actions: fileBackedActions, reason: 'Abre un todo.txt para editar sobre el archivo' },

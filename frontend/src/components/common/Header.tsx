@@ -4,9 +4,9 @@ import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 
 /**
- * La barra superior. Antes era una cabecera de tarjeta con logo y botones redondeados; aquí
- * es una línea, como el título de una ventana de terminal: el nombre a la izquierda, el
- * estado y las acciones a la derecha.
+ * La barra superior. Antes era una cabecera de tarjeta con botones redondeados; aquí es
+ * una línea, como el título de una ventana de terminal: marca a la izquierda, estado y
+ * acciones a la derecha.
  */
 export const Header: FC = () => {
   const username = useAuthStore((state) => state.username);
@@ -17,8 +17,8 @@ export const Header: FC = () => {
   return (
     <header className="tui-titlebar">
       <Link to="/" className="tui-titlebar-brand">
-        <span className="tui-titlebar-mark">▚</span>
-        <span>tareas</span>
+        <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={18} height={18} />
+        <span>ktm</span>
       </Link>
 
       <nav className="tui-titlebar-actions">

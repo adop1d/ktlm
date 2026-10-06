@@ -37,8 +37,8 @@ export const LandingPage: FC = () => (
   <div className="lp">
     <header className="tui-titlebar">
       <span className="tui-titlebar-brand">
-        <span className="tui-titlebar-mark">▚</span>
-        <span>tareas</span>
+        <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={18} height={18} />
+        <span>ktm</span>
       </span>
       <nav className="tui-titlebar-actions">
         <Link to="/app" className="tui-titlebar-button">
@@ -58,9 +58,10 @@ export const LandingPage: FC = () => (
           con teclas de terminal.
         </h1>
         <p className="lp-lead">
-          Lee y escribe <strong>el mismo archivo</strong> que ya usas. Si tienes tuxedo abierto al
-          lado, los dos ven lo mismo: cada cambio se reconcilia por su <code>uid</code>, sin
-          duplicar y sin pisarte.
+          Lee y escribe <strong>el mismo archivo</strong> que ya usas, y se
+          mantiene sincronizado con quienquiera que lo edite desde fuera. Cada cambio se
+          reconoce por su <code>uid</code>: sin duplicar y sin pisar lo que otro acaba de
+          escribir.
         </p>
 
         <div className="lp-actions">
@@ -82,7 +83,7 @@ export const LandingPage: FC = () => (
       <section className="lp-window" aria-label="Vista de la aplicación">
         <div className="tui-titlebar">
           <span className="tui-titlebar-brand">
-            <span className="tui-titlebar-mark">▚</span>
+            <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={16} height={16} />
             <span>todo.txt</span>
           </span>
           <span className="lp-window-mode">NORMAL</span>
@@ -120,10 +121,12 @@ export const LandingPage: FC = () => (
       </section>
 
       <section className="lp-keys" id="teclas">
-        <h2 className="lp-section">Los atajos son los de tuxedo</h2>
+        <h2 className="lp-section">Se maneja con el teclado</h2>
         <p className="lp-lead">
-          No inventamos un juego de teclas propio: usamos los mismos, y si ya tienes tu
-          <code> keybinds.toml</code> con tus ajustes, la web los lee.
+          Los mismos atajos que usan las TUI de tareas de la zona —<code>gg</code>,{' '}
+          <code>dd</code>, <code>fp</code>—, copiados de las TUI de tareas para que
+          quien ya los tenga en los dedos no tenga que reaprenderlos. Si tienes tu
+          <code> keybinds.toml</code> a mano, la web lo lee.
         </p>
         <dl className="lp-keymap">
           {KEYMAP.map(([keys, label]) => (
