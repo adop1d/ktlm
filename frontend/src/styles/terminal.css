@@ -493,3 +493,308 @@ kbd {
   outline: 1px solid var(--color-accent);
   outline-offset: 1px;
 }
+
+/* ======================== PORTADA ======================== */
+
+/*
+ * La portada no es una pantalla de producto con texto encima: es la ventana de la terminal
+ *ampliada a página. Por eso reutiliza el mismo cromo —filas, status line, chips de modo— en
+ * vez de inventar un lenguaje visual paralelo que luego habría que mantener.
+ */
+
+.lp {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-main {
+  flex: 1;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+  display: grid;
+  gap: 3rem;
+}
+
+.lp-copy {
+  max-width: 34rem;
+}
+
+.lp-eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lp-title {
+  margin: 0 0 1rem;
+  font-size: clamp(1.9rem, 4.4vw, 3rem);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.lp-title code {
+  color: var(--color-accent);
+  font: inherit;
+}
+
+.lp-lead {
+  margin: 0 0 1.25rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
+
+.lp-lead strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.lp-lead code {
+  color: var(--color-primary);
+}
+
+.lp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.lp-cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.lp-cta:hover {
+  background: var(--color-accent-hover);
+}
+
+.lp-cta:active {
+  transform: scale(0.97);
+}
+
+.lp-cta--ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-emphasis);
+}
+
+.lp-cta--ghost:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: transparent;
+}
+
+.lp-cta:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.lp-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  max-width: 30rem;
+}
+
+/* La ventana: el mismo cromo de la app, con una fila más de título. */
+.lp-window {
+  border: 1px solid var(--border-default);
+  background: var(--surface-base);
+  position: sticky;
+  top: 3rem;
+}
+
+.lp-window-mode {
+  color: var(--color-accent);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* La tabla de atajos ES la lista de features: no hay que repetirla en prosa. */
+.lp-keys {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.lp-section {
+  margin: 0 0 0.5rem;
+  color: var(--color-accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lp-keys .lp-lead {
+  max-width: 40rem;
+}
+
+.lp-keymap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.15rem 1.5rem;
+  margin: 1.25rem 0 0;
+}
+
+.lp-keymap-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lp-keymap-row dt {
+  flex: none;
+  min-width: 8rem;
+}
+
+.lp-keymap-row dd {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.lp-keymap kbd {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.lp-why {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-default);
+}
+
+.lp-reasons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.lp-reasons h3 {
+  margin: 0 0 0.35rem;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.lp-reasons p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.lp-reasons code {
+  color: var(--color-primary);
+}
+
+.lp-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border-default);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.lp-footer a {
+  color: var(--color-secondary);
+}
+
+@media (min-width: 62rem) {
+  /* Asimétrico a propósito: el texto va a un lado y la terminal manda. */
+  .lp-main {
+    grid-template-columns: 20rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .lp-copy {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .lp-window {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .lp-keys,
+  .lp-why {
+    grid-column: 1 / -1;
+  }
+}
+
+/*
+ * La maqueta de la portada usa la misma barra de estado, pero como parte de la ventana y no
+ * fijada al pie: heredando el `position: fixed` cruzaba la página entera.
+ */
+.tui-status--inline {
+  position: static;
+}
+
+/*
+ * La columna de metadatos no puede crecer libre: en un móvil el `auto` de la rejilla se
+ * comía el ancho y la ventana se salía de la pantalla. Se le permite encogerse y se
+ * esconde en pantallas estrechas, donde el dato no cabe sin romper la lectura.
+ */
+.tui-row-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 30rem) {
+  .tui-row {
+    grid-template-columns: 2rem 1.2rem minmax(0, 1fr);
+    column-gap: 0.5rem;
+  }
+
+  .tui-row-meta {
+    display: none;
+  }
+
+  .tui-row-actions {
+    display: none;
+  }
+
+  .lp-keymap-row dt {
+    min-width: 6.5rem;
+  }
+}
+
+/*
+ * En CSS Grid un hijo tiene `min-width: auto`, así que un contenido que no cede —una barra
+ * con `white-space: nowrap`, una fila con columnas fijas— ensancha su columna y empuja la
+ * página entera. Poner `min-width: 0` en los hijos es lo que deja que encojan.
+ */
+.tui-body > *,
+.lp-main > *,
+.lp-window {
+  min-width: 0;
+}

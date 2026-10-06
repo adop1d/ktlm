@@ -24,7 +24,7 @@ export const LoginPage: FC = () => {
         : await registerApi(username, email, password);
       setAuth(res.token, res.username, res.email, res.roles);
       addToast('success', isLogin ? '¡Bienvenido de nuevo!' : '¡Cuenta creada exitosamente!');
-      navigate('/');
+      navigate('/app');
     } catch (err) {
       addToast('error', err instanceof Error ? err.message : 'Error de autenticación');
     } finally {

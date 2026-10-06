@@ -2,7 +2,7 @@ import { expect, seedTasks, test, waitForList } from './fixtures';
 
 test.describe('lista de tareas', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await waitForList(page);
   });
 
@@ -52,7 +52,7 @@ test.describe('teclado', () => {
   // sin volver el bloque serial: en serie, un solo fallo se come los cinco siguientes.
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await waitForList(page);
   });
 
@@ -145,7 +145,7 @@ test.describe('paginación', () => {
       });
     });
 
-    await page.goto('/');
+    await page.goto('/app');
     await waitForList(page);
 
     await expect(page.getByText('mostrando 1–20 de 25')).toBeVisible();

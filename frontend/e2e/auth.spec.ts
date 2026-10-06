@@ -42,8 +42,8 @@ test.describe('sin sesión', () => {
     await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
   });
 
-  test('la raíz redirige al login', async ({ page }) => {
-    await page.goto('/');
+  test('sin sesión, /app manda al login', async ({ page }) => {
+    await page.goto('/app');
 
     await expect(page).toHaveURL(/\/login$/);
   });
@@ -73,7 +73,7 @@ test.describe('con sesión', () => {
     await mockAuth(page);
     await mockTasks(page, { tasks: seedTasks(3) });
 
-    await page.goto('/');
+    await page.goto('/app');
     await expect(page.locator('.tui-titlebar')).toBeVisible();
 
     await page.getByRole('button', { name: 'salir' }).click();
