@@ -51,7 +51,11 @@ export interface ApiState {
 export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
   // Predicado de ruta y no glob: `**/api/tasks**` también capturaba el módulo del propio
   // dev server (/src/api/tasks.ts) y lo sustituía por un `{}` que dejaba la app en blanco.
-  await page.route((url) => url.pathname.startsWith('/api/tasks'), async (route) => {
+  // El stream queda fuera a propósito: es un event-stream y el mock le devolvería un JSON
+  // de página, que es peor que no mockearlo.
+  await page.route(
+    (url) => url.pathname.startsWith('/api/tasks') && !url.pathname.endsWith('/stream'),
+    async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const method = request.method();

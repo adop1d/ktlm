@@ -4,6 +4,7 @@ import com.example.taskmanager.model.Task;
 import com.example.taskmanager.repository.TaskRepository;
 import com.example.taskmanager.todotxt.ParsedTask;
 import com.example.taskmanager.todotxt.TodoTxtCodec;
+import org.springframework.context.ApplicationEventPublisher;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -36,10 +37,15 @@ public class TodoTxtService {
 
     private final TaskRepository taskRepository;
     private final TodoTxtCodec codec;
+    private final ApplicationEventPublisher events;
 
-    public TodoTxtService(TaskRepository taskRepository, TodoTxtCodec codec) {
+    public TodoTxtService(
+            TaskRepository taskRepository,
+            TodoTxtCodec codec,
+            ApplicationEventPublisher events) {
         this.taskRepository = taskRepository;
         this.codec = codec;
+        this.events = events;
     }
 
     /** El todo.txt completo del usuario, en orden de archivo. */
@@ -119,6 +125,7 @@ public class TodoTxtService {
             }
         }
 
+        events.publishEvent(new TaskEventStream.TasksChanged(userId));
         return new ImportResult(imported, updated, parsed.size(), export(userId));
     }
 
@@ -168,6 +175,7 @@ public class TodoTxtService {
         }
         String doneFile = codec.serialize(done.stream().map(this::toParsed).toList());
         taskRepository.deleteAll(done);
+        events.publishEvent(new TaskEventStream.TasksChanged(userId));
         return new ArchiveResult(done.size(), doneFile);
     }
 

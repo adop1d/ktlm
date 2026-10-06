@@ -1,5 +1,6 @@
 import { FC, useState, useEffect, useRef } from 'react';
 import { useTasks } from '../hooks/useTasks';
+import { useTaskStream } from '../hooks/useTaskStream';
 import { DEFAULT_NORMAL_KEYMAP } from '../keymap/defaults';
 import { useKeymap } from '../keymap/useKeymap';
 import { HelpOverlay } from '../keymap/HelpOverlay';
@@ -66,6 +67,8 @@ export const TaskListPage: FC = () => {
   const addToast = useToastStore(state => state.addToast);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const todoFile = useTodoFile();
+  // Una sola escucha por pantalla: el servidor empuja, el cliente no pregunta.
+  useTaskStream();
   const [showHelp, setShowHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [recurrenceTarget, setRecurrenceTarget] = useState<Task | null>(null);
