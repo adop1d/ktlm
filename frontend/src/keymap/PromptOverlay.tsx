@@ -1,4 +1,5 @@
 import { FC, useEffect, useRef, useState } from 'react';
+import { Portal } from '../components/common/Portal';
 
 /**
  * Prompt modal para escribir un valor. Es lo que tuxedo llama overlay: una sola línea, se
@@ -23,8 +24,9 @@ export const PromptOverlay: FC<{
   }, []);
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="tui-overlay"
       role="dialog"
       aria-label={title}
       onKeyDown={(event) => {
@@ -34,11 +36,12 @@ export const PromptOverlay: FC<{
         }
       }}
     >
-      <div className="card-elevated w-full max-w-md">
-        <h2 className="text-sm font-semibold mb-2 text-[var(--text-primary)] dark:text-[var(--dark-text-primary)]">
-          {title}
-        </h2>
+      <div className="tui-modal w-full" style={{ maxWidth: '28rem' }}>
+        <div className="tui-modal-header">
+          <h2>{title}</h2>
+        </div>
         <form
+          className="tui-modal-body"
           onSubmit={(event) => {
             event.preventDefault();
             onSubmit(value.trim());
@@ -69,5 +72,6 @@ export const PromptOverlay: FC<{
         </form>
       </div>
     </div>
+  </Portal>
   );
 };

@@ -1,12 +1,15 @@
 /**
- * Neo-Tokyo Component Styles
- * 
- * Updated for Neo-Tokyo + Retro-Futurist aesthetic
- * Bold, punchy, neon accents
+ * Task Manager - estilos base.
+
+ * El cromo de terminal va tras Tailwind para poder pisar sus utilidades; los tokens de
+ color y tipografía viven aparte en design-tokens.css.
  */
 
-/* Design System Tokens */
+/* Los @import tienen que ir antes de cualquier regla: CSS los descarta si aparecen
+   despues de @tailwind, que ya expande reglas. Por eso terminal.css va aqui y no al
+   final, aunque eso le quite prioridad frente a las utilidades de Tailwind. */
 @import './design-tokens.css';
+@import './terminal.css';
 
 @tailwind base;
 @tailwind components;

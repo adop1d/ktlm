@@ -1,10 +1,37 @@
 /**
- * Task Manager - Neo-Tokyo Retro-Futurist Design System
- * Direction: Urban street culture meets 2007 tech optimism
- * Vibe: TWEWY meets retro-future, rockstar-nerd energy
+ * Task Manager - sistema visual de terminal.
+ *
+ * Dirección: la lista es el cuerpo de una TUI. Tipografía monoespaciada, paneles con
+ * caracteres de dibujo de cajas, esquinas vivas y una barra de estado fija abajo. Se
+ * conserva la paleta y los acentos, pero el cromado CRT queda como textura de fondo y
+ * no como ruido sobre el texto.
  */
 
-/* ======================== ANIMATIONS ======================== */
+/* ======================== TIPOGRAFÍA ======================== */
+
+/*
+ * Inconsolata Nerd Font (SIL OFL 1.1), subconjuntada a los rangos que la app usa de
+ * verdad: latin, dibujo de cajas, formas geometricas, flechas y glifos powerline.
+ * Autoalojada y no por CDN: la app es un PWA que debe funcionar sin red, y la licencia
+ * OFL obliga a Redistribuir el binario, no a enlazarlo.
+ */
+@font-face {
+  font-family: 'Inconsolata Nerd Font';
+  src: url('/fonts/inconsolata-nerd-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inconsolata Nerd Font';
+  src: url('/fonts/inconsolata-nerd-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ======================== ANIMACIONES ======================== */
 
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }
@@ -120,10 +147,14 @@
 /* ======================== DESIGN TOKENS ======================== */
 
 :root {
-  /* Typography */
-  --font-display: 'Orbitron', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-  --font-body: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Typography: una sola familia monoespaciada para todo, como en una terminal. */
+  --font-display: 'Inconsolata Nerd Font', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: 'Inconsolata Nerd Font', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-body: 'Inconsolata Nerd Font', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* La terminal mide en celdas: la rejilla de la lista se apoya en esto. */
+  --cell: 0.6rem;
   
   /* Text Hierarchy - Light Mode */
   --text-primary: #1a1a2e;
@@ -188,12 +219,16 @@
   --space-10: 64px;
   --space-12: 96px;
   
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 16px;
+  /* Border Radius: en terminal casi nada es redondo. */
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
   --radius-full: 9999px;
+
+  /* Paneles de caja: el borde dibujado con caracteres, no con bordes CSS. */
+  --panel-border: var(--border-emphasis);
+  --panel-chrome: var(--surface-elevated);
   
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);

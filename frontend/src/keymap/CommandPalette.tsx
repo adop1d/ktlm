@@ -1,5 +1,6 @@
 import { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionName, NORMAL_ACTIONS } from './actions';
+import { Portal } from '../components/common/Portal';
 
 /**
  * La paleta de tuxedo: `:` o Ctrl-P. Se busca por etiqueta y Enter ejecuta.
@@ -120,12 +121,14 @@ export const CommandPalette: FC<{
   }, [query]);
 
   return (
+    <Portal>
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-4 pt-24"
+      className="tui-overlay items-start"
+      style={{ paddingTop: '6rem' }}
       role="dialog"
       aria-label="Paleta de comandos"
     >
-      <div className="card-elevated w-full max-w-lg">
+      <div className="tui-modal w-full" style={{ maxWidth: '34rem' }}>
         <input
           ref={inputRef}
           type="text"
@@ -193,5 +196,6 @@ export const CommandPalette: FC<{
         )}
       </div>
     </div>
+  </Portal>
   );
 };
