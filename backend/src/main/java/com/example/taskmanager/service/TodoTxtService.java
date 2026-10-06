@@ -39,16 +39,31 @@ public class TodoTxtService {
     private final TodoTxtCodec codec;
     private final ApplicationEventPublisher events;
     private final TodoStore store;
+    private final TodoFileWatcher watcher;
 
     public TodoTxtService(
             TaskRepository taskRepository,
             TodoTxtCodec codec,
             ApplicationEventPublisher events,
-            TodoStore store) {
+            TodoStore store,
+            TodoFileWatcher watcher) {
         this.taskRepository = taskRepository;
         this.codec = codec;
         this.events = events;
         this.store = store;
+        this.watcher = watcher;
+    }
+
+    /** El archivo tal cual está en disco, sin reconciliar. */
+    public String currentFile(Long userId) {
+        return store.read(userId);
+    }
+
+    /** Escribe el archivo y avisa al vigilante de que el cambio es nuestro. */
+    private void writeFile(Long userId, String content) {
+        store.write(userId, content);
+        watcher.recordWritten(userId, content);
+        watcher.watch(userId);
     }
 
     /**
@@ -68,8 +83,9 @@ public class TodoTxtService {
      */
     public void ensureFile(Long userId) {
         if (store.read(userId).isEmpty()) {
-            store.write(userId, EMPTY_FILE);
+            writeFile(userId, EMPTY_FILE);
         }
+        watcher.watch(userId);
     }
 
     /** Reconstruye el archivo desde la base. Para cuando alguien edita el archivo a mano y se rompe. */
@@ -77,7 +93,7 @@ public class TodoTxtService {
         String content = codec.serialize(taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
                 .map(this::toParsed)
                 .toList());
-        store.write(userId, content);
+        writeFile(userId, content);
         return content;
     }
 
@@ -182,7 +198,7 @@ public class TodoTxtService {
                 taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
                         .map(this::toParsed)
                         .toList());
-        store.write(userId, reconciled);
+        writeFile(userId, reconciled);
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
         return new ImportResult(imported, updated, parsed.size(), reconciled);
     }
@@ -233,6 +249,7 @@ public class TodoTxtService {
         }
         String doneFile = codec.serialize(done.stream().map(this::toParsed).toList());
         store.appendDone(userId, doneFile);
+        watcher.recordWritten(userId, store.read(userId));
         taskRepository.deleteAll(done);
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
         return new ArchiveResult(done.size(), doneFile);
