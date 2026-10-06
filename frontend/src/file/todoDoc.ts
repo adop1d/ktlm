@@ -270,6 +270,22 @@ export const todoDocMutations = {
     return { uid, priority: next };
   },
 
+  /** Escribe o quita el token `rec:` de una línea. null la deja sin recurrencia. */
+  setRecurrence(index: number, recurrence: string | null): string | null {
+    const state = useTodoDoc.getState();
+    const raw = state.lines[index];
+    if (raw === undefined) return null;
+    const uid = state.uidByLine[index];
+    const line = parseTodoLine(raw);
+
+    state.patch((current) => {
+      const lines = [...current.lines];
+      lines[index] = formatTodoLine({ ...line, recurrence });
+      return { lines, preamble: current.preamble, uidByLine: current.uidByLine };
+    });
+    return uid;
+  },
+
   move(index: number, delta: number): string | null {
     const state = useTodoDoc.getState();
     const target = index + delta;

@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/tasks';
 import { useToastStore } from '../stores/toastStore';
 import type { TaskPriority } from '../types/task';
+import type { TodoFileHandle } from './FileHandlePort';
 import {
   isFileSystemAccessSupported,
   pickTodoFile,
@@ -25,6 +26,12 @@ import {
   todoDocMutations,
   useTodoDoc,
 } from './todoDoc';
+
+/** El nombre del hermano donde cualquier cosa puede dejar una línea para que la recojamos. */
+const INBOX_NAME = 'inbox.txt';
+
+/** Vacía un archivo hermano: el drenaje no reintenta, igual que el rename de tuxedo. */
+const EMPTY = '';
 
 const todayIso = () => {
   const now = new Date();
@@ -61,6 +68,10 @@ export const useTodoFile = () => {
       return;
     }
 
+    // El inbox se drena siempre, incluso si el todo.txt no ha cambiado: su único proposito
+    // es que alguien escriba ahi sin abrir la app.
+    await drainInbox(handle);
+
     if (hashText(content) === lastDiskHash) return;
 
     const result = await api.importTodoFile(content);
@@ -73,6 +84,33 @@ export const useTodoFile = () => {
     addToast('info', 'El todo.txt cambió fuera y se recargó');
     refresh();
   }, [addToast, refresh]);
+
+  /**
+   * Recoge lo que haya en inbox.txt y lovacía. Cualquier cosa que sepa escribir una línea
+   * ahí sirve de productor: un `echo`, un atajo de iOS, un cron.
+   */
+  const drainInbox = useCallback(
+    async (handle: TodoFileHandle) => {
+      const inbox = await handle.sibling(INBOX_NAME);
+      if (!inbox) return;
+
+      let body: string;
+      try {
+        body = await inbox.read();
+      } catch {
+        return;
+      }
+      // Vaciarlo ANTES de importar es lo que evita el bucle: si fallara la importación,
+      // las líneas ya no están en el inbox y se pierden, pero no se reprocesan para siempre.
+      if (!body.trim()) return;
+      await inbox.write(EMPTY);
+
+      await api.importTodoFile(body);
+      addToast('success', 'Tareas recibidas por inbox.txt');
+      refresh();
+    },
+    [addToast, refresh]
+  );
 
   const openAndLink = useCallback(async () => {
     const opened = await pickTodoFile();
@@ -165,6 +203,16 @@ export const useTodoFile = () => {
     [commit]
   );
 
+  const setRecurrence = useCallback(
+    async (index: number, recurrence: string | null) => {
+      const uid = todoDocMutations.setRecurrence(index, recurrence);
+      if (uid === null) return;
+      await api.updateTask(Number(uid), { recurrence }).catch(() => null);
+      await commit();
+    },
+    [commit]
+  );
+
   const move = useCallback(
     async (index: number, delta: number) => {
       const uid = todoDocMutations.move(index, delta);
@@ -201,6 +249,7 @@ export const useTodoFile = () => {
     toggleComplete,
     remove,
     cyclePriority,
+    setRecurrence,
     move,
     undo,
     archive,

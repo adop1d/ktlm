@@ -1,93 +1,83 @@
-import { test, expect } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
+import { mockTasks, seedSession, seedTasks } from './fixtures';
 
-test.describe('Authentication Flow', () => {
+/**
+ * Autenticación contra la API simulada. Este archivo NO usa el fixture de `fixtures.ts`, que
+ * siembra sesión: aquí lo que se prueba es precisamente el camino de "no hay sesión", y
+ * mezclar ambos hacía que un beforeEach borrara el token recién puesto.
+ */
+const mockAuth = (page: Page) =>
+  page.route(
+    (url) => url.pathname.startsWith('/api/auth'),
+    async (route) => {
+    const body = route.request().postDataJSON() as { username: string };
+    const ok = body.username === 'tester';
+    return route.fulfill({
+      status: ok ? 200 : 401,
+      json: ok
+        ? {
+            token: 'jwt-de-prueba',
+            type: 'Bearer',
+            username: 'tester',
+            email: 't@t.com',
+            roles: ['ROLE_USER'],
+          }
+        : { error: 'Unauthorized' },
+      });
+    }
+  );
+
+test.describe('sin sesión', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear auth state before each test
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-    });
+    await page.addInitScript(() => window.localStorage.removeItem('auth-store'));
+    await mockAuth(page);
+    await mockTasks(page, { tasks: seedTasks(3) });
+    await page.goto('/login');
   });
 
-  test('login page loads with correct elements', async ({ page }) => {
-    await page.goto('/login');
-    
-    // Check heading
-    await expect(page.getByRole('heading', { name: /Task Manager/i })).toBeVisible();
-    
-    // Check form fields exist
-    await expect(page.getByPlaceholder('Usuario')).toBeVisible();
-    await expect(page.getByPlaceholder('Contraseña')).toBeVisible();
-    
-    // Check submit button
-    await expect(page.getByRole('button', { name: /Entrar/i })).toBeVisible();
+  test('el login muestra el formulario', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Bienvenido' })).toBeVisible();
+    await expect(page.getByLabel('Usuario')).toBeVisible();
+    await expect(page.getByLabel('Contraseña')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
   });
 
-  test('can switch between login and register', async ({ page }) => {
-    await page.goto('/login');
-    
-    // Click register link
-    await page.getByRole('button', { name: /Regístrate/i }).click();
-    
-    // Verify register form appears
-    await expect(page.getByRole('heading', { name: /Registrarse/i })).toBeVisible();
-    await expect(page.getByPlaceholder('Usuario')).toBeVisible();
-    await expect(page.getByPlaceholder('Correo electrónico')).toBeVisible();
-    
-    // Switch back to login
-    await page.getByRole('button', { name: /Ya tengo cuenta/i }).click();
-    await expect(page.getByRole('heading', { name: /Task Manager/i })).toBeVisible();
+  test('la raíz redirige al login', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('shows error with empty credentials', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByRole('button', { name: /Entrar/i }).click();
-    
-    // Should show error toast or message
-    await expect(page.getByText(/Nombre de usuario es requerido|Usuario es requerido|required/i)).toBeVisible();
+  test('inicia sesión y aterriza en la lista', async ({ page }) => {
+    await page.getByLabel('Usuario').fill('tester');
+    await page.getByLabel('Contraseña').fill('secret123');
+    await page.getByRole('button', { name: 'Entrar' }).click();
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { name: 'Mis tareas' })).toBeVisible();
   });
 
-  test('shows error with invalid credentials', async ({ page }) => {
-    await page.goto('/login');
-    
-    // Fill with invalid credentials
-    await page.getByPlaceholder('Usuario').fill('invalid_user');
-    await page.getByPlaceholder('Contraseña').fill('wrong_password');
-    await page.getByRole('button', { name: /Entrar/i }).click();
-    
-    // Should show error (may take a moment for API)
-    await page.waitForTimeout(1000);
-    // Either error toast or stays on login page
-    const url = page.url();
-    expect(url).toContain('/login');
-  });
+  test('credenciales inválidas se quedan en el login con el error visible', async ({ page }) => {
+    await page.getByLabel('Usuario').fill('intruso');
+    await page.getByLabel('Contraseña').fill('malaclave');
+    await page.getByRole('button', { name: 'Entrar' }).click();
 
-  test('dark mode toggle exists', async ({ page }) => {
-    await page.goto('/login');
-    // Dark mode toggle should be visible on login page
-    await expect(page.getByTitle(/Modo/i).or(page.getByRole('button', { name: /Modo/i }))).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByText(/Unauthorized/i).first()).toBeVisible();
   });
 });
 
-test.describe('Protected Routes', () => {
-  test('redirects unauthenticated user to login', async ({ page }) => {
-    await page.goto('/');
-    await expect(page).toHaveURL(/.*\/login/);
-  });
+test.describe('con sesión', () => {
+  test('salir limpia la sesión y devuelve al login', async ({ page }) => {
+    await seedSession(page, 'jwt');
+    await mockAuth(page);
+    await mockTasks(page, { tasks: seedTasks(3) });
 
-  test('redirects to login after logout', async ({ page }) => {
-    // First login
-    await page.goto('/login');
-    await page.getByPlaceholder('Usuario').fill('testuser');
-    await page.getByPlaceholder('Contraseña').fill('testpass');
-    await page.getByRole('button', { name: /Entrar/i }).click();
-    await page.waitForTimeout(1000);
-    
-    // Then logout directly via URL (simulating logout)
-    await page.goto('/login');
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-    });
     await page.goto('/');
-    await expect(page).toHaveURL(/.*\/login/);
+    await expect(page.getByRole('heading', { name: 'Mis tareas' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Salir' }).click();
+
+    await expect(page).toHaveURL(/\/login$/);
   });
 });

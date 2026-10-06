@@ -3,6 +3,8 @@ import { useTasks } from '../hooks/useTasks';
 import { DEFAULT_NORMAL_KEYMAP } from '../keymap/defaults';
 import { useKeymap } from '../keymap/useKeymap';
 import { HelpOverlay } from '../keymap/HelpOverlay';
+import { CommandPalette } from '../keymap/CommandPalette';
+import { PromptOverlay } from '../keymap/PromptOverlay';
 import type { ActionName } from '../keymap/actions';
 import { TaskCard } from '../components/task/TaskCard';
 import { TaskForm } from '../components/task/TaskForm';
@@ -11,6 +13,7 @@ import { TaskListSkeleton, TaskFormSkeleton, PageHeaderSkeleton } from '../compo
 import { Task, TaskFilter, TaskSort } from '../types/task';
 import { TodoFileBar } from '../file/TodoFileBar';
 import { useTodoFile } from '../file/useTodoFile';
+import { useTodoDoc } from '../file/todoDoc';
 import { useToastStore } from '../stores/toastStore';
 import { PlusIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
@@ -50,6 +53,8 @@ export const TaskListPage: FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const todoFile = useTodoFile();
   const [showHelp, setShowHelp] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [recurrenceTarget, setRecurrenceTarget] = useState<Task | null>(null);
   const [cursor, setCursor] = useState(0);
   const [visual, setVisual] = useState<number[]>([]);
 
@@ -129,6 +134,10 @@ export const TaskListPage: FC = () => {
         return void todoFile.undo();
       case 'archive_completed':
         return void todoFile.archive();
+      case 'reschedule':
+        // `r` abre el prompt de recurrencia; es la tecla que tuxedo usa para el mismo builder.
+        setRecurrenceTarget(rows[cursor] ?? null);
+        return;
       case 'toggle_visual':
         setVisual((current) => (current.length > 0 ? [] : [cursor]));
         return;
@@ -145,15 +154,36 @@ export const TaskListPage: FC = () => {
       case 'open_help':
         setShowHelp(true);
         return;
+      case 'open_command_palette':
+        setShowPalette(true);
+        return;
       default:
         return;
     }
   };
 
+  // Las acciones que mutan datos pasan por el todo.txt. Sin archivo vinculado no hay uid
+  // sobre el que actuar, y fingir que funcionan es peor que mostrarlas apagadas.
+  const isLinked = useTodoDoc((state) => state.status === 'linked' || state.status === 'in-memory');
+  const fileBackedActions: readonly ActionName[] = [
+    'toggle_complete',
+    'delete',
+    'cycle_priority',
+    'move_task_down',
+    'move_task_up',
+    'undo',
+    'archive_completed',
+    'copy_line',
+    'copy_body',
+  ];
+
   const { mode, pendingChord } = useKeymap({
     keymap: DEFAULT_NORMAL_KEYMAP,
     onAction: onKeyAction,
     enabled: !isLoading,
+    unavailable: isLinked
+      ? undefined
+      : { actions: fileBackedActions, reason: 'Abre un todo.txt para editar sobre el archivo' },
   });
 
   const handleSubmit = (data: Partial<Task>) => {
@@ -253,6 +283,11 @@ export const TaskListPage: FC = () => {
               >
                 ? ayuda
               </button>
+              {!isLinked && (
+                <span className="text-xs text-[var(--color-warning)]">
+                  sin archivo: x, p, J y dd están apagados
+                </span>
+              )}
               {pendingChord && (
                 <span className="ml-2 px-1.5 py-0.5 rounded font-mono bg-[var(--color-accent)] text-white text-[10px]">
                   {pendingChord}…
@@ -423,7 +458,48 @@ export const TaskListPage: FC = () => {
         )}
       </section>
 
-      {showHelp && <HelpOverlay keymap={DEFAULT_NORMAL_KEYMAP} onClose={() => setShowHelp(false)} />}
+      {showPalette && (
+        <CommandPalette
+          keymap={DEFAULT_NORMAL_KEYMAP}
+          unavailable={
+            isLinked
+              ? undefined
+              : { actions: fileBackedActions, reason: 'sin todo.txt vinculado, no hay uid' }
+          }
+          onRun={(action) => {
+            setShowPalette(false);
+            onKeyAction(action);
+          }}
+          onClose={() => setShowPalette(false)}
+        />
+      )}
+
+      {recurrenceTarget && (
+        <PromptOverlay
+          title={`Recurrencia: ${recurrenceTarget.title}`}
+          hint="Vaciar la quita la recurrencia. Formato de tuxedo: +1d, 2w, +1m, 3b (hábiles), 1y. Con + el ancla es la fecha anterior."
+          initial={recurrenceTarget.recurrence ?? ''}
+          submitLabel="Aplicar"
+          onSubmit={(value) => {
+            const target = recurrenceTarget;
+            setRecurrenceTarget(null);
+            void todoFile.setRecurrence(target.sortOrder, value || null);
+          }}
+          onCancel={() => setRecurrenceTarget(null)}
+        />
+      )}
+
+      {showHelp && (
+        <HelpOverlay
+          keymap={DEFAULT_NORMAL_KEYMAP}
+          onClose={() => setShowHelp(false)}
+          unavailable={
+            isLinked
+              ? undefined
+              : { actions: fileBackedActions, reason: 'sin todo.txt vinculado, no hay uid' }
+          }
+        />
+      )}
     </>
   );
 };

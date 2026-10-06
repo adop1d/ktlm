@@ -12,6 +12,8 @@ const dummyTask: Task = {
   completed: false,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  projects: [],
+  contexts: [],
 };
 
 describe('TaskCard', () => {

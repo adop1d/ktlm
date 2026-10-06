@@ -1,217 +1,153 @@
-import { test, expect } from '@playwright/test';
+import { expect, seedTasks, test, waitForList } from './fixtures';
 
-test.describe('Task Management', () => {
+test.describe('lista de tareas', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear auth state
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-    });
-    
-    // Mock login - set token in localStorage
-    await page.addInitScript(() => {
-      window.localStorage.setItem('auth-store', JSON.stringify({
-        state: { token: 'fake-jwt-token', username: 'testuser', roles: ['ROLE_USER'] },
-        version: 0
-      }));
-    });
+    await page.goto('/');
+    await waitForList(page);
   });
 
-  test('task list page loads', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Should either show tasks or loading state
-    const heading = page.getByRole('heading', { name: /Mis tareas/i });
-    await expect(heading.or(page.getByText(/Cargando/))).toBeVisible();
+  test('muestra las tareas sembradas y los contadores', async ({ page }) => {
+    await expect(page.getByText('Tarea 001')).toBeVisible();
+    await expect(page.getByText('Tarea 003')).toBeVisible();
+    await expect(page.locator('.task-card')).toHaveCount(3);
+    await expect(page.getByRole('button', { name: /^Todas/ })).toContainText('3');
   });
 
-  test('can create new task via form', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Click new task button
-    const newTaskBtn = page.getByRole('button', { name: /Nueva/i });
-    if (await newTaskBtn.isVisible()) {
-      await newTaskBtn.click();
-      
-      // Fill form
-      await page.getByPlaceholder('¿Qué necesitas hacer?').fill('Test task from E2E');
-      await page.getByRole('button', { name: /Crear tarea/i }).click();
-      
-      // Should see the task or loading
-      await page.waitForTimeout(500);
-    }
+  test('crea una tarea con el atajo n y la ve en la lista', async ({ page }) => {
+    await page.keyboard.press('n');
+
+    await expect(page.getByPlaceholder('¿Qué necesitas hacer?')).toBeVisible();
+    await page.getByPlaceholder('¿Qué necesitas hacer?').fill('Comprar leche');
+    await page.getByRole('button', { name: 'Crear tarea' }).click();
+
+    await expect(page.getByText('Comprar leche')).toBeVisible();
+    await expect(page.locator('.task-card')).toHaveCount(4);
   });
 
-  test('filter tabs work', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Check filter tabs exist
-    const allTab = page.getByRole('button', { name: /Todas/i });
-    const activeTab = page.getByRole('button', { name: /Pendientes/i });
-    const completedTab = page.getByRole('button', { name: /Completadas/i });
-    
-    // At least one should be visible
-    await expect(allTab.or(activeTab).or(completedTab)).toBeVisible();
+  test('el filtro de pestañas cambia lo que se ve', async ({ page }) => {
+    await page.getByRole('button', { name: /^Completadas/ }).click();
+
+    await expect(page.locator('.task-card')).toHaveCount(1);
+    await expect(page.getByText('Tarea 001')).toBeVisible();
   });
 
-  test('search input exists', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Search should exist
-    await expect(page.getByPlaceholder(/Buscar/)).toBeVisible();
+  test('la búsqueda filtra la lista', async ({ page }) => {
+    await page.getByPlaceholder(/Buscar tareas/).fill('Tarea 002');
+
+    await expect(page.locator('.task-card')).toHaveCount(1);
+    await expect(page.getByText('Tarea 002')).toBeVisible();
   });
 
-  test('sort dropdown exists', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Sort options should be in a select
-    const sortSelect = page.locator('select');
-    await expect(sortSelect).toBeVisible();
-  });
-
-  test('dark mode toggle works', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Find and click dark mode toggle
-    const darkModeBtn = page.getByTitle(/Modo/i).first();
-    if (await darkModeBtn.isVisible()) {
-      await darkModeBtn.click();
-      // Check if dark class is added to html
-      const html = page.locator('html');
-      await expect(html).toHaveClass(/dark/);
-    }
-  });
-
-  test('keyboard shortcut hint is visible', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Keyboard hint should show "N" for new task
-    await expect(page.getByText(/N/).toBeVisible());
-  });
-
-  test('can toggle task completion', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Find a toggle button (check/uncheck icon)
-    const toggleBtns = page.locator('button').filter({ has: page.locator('svg') });
-    const firstToggle = toggleBtns.first();
-    
-    if (await firstToggle.isVisible()) {
-      await firstToggle.click();
-      await page.waitForTimeout(300);
-    }
-  });
-
-  test('edit task button exists', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Hovers to reveal edit button - simulate hover
-    const taskCard = page.locator('.card').first();
-    if (await taskCard.isVisible()) {
-      await taskCard.hover();
-      // Edit button should appear
-      await page.waitForTimeout(200);
-    }
-  });
-
-  test('delete task button exists', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Hovers to reveal delete button
-    const taskCard = page.locator('.card').first();
-    if (await taskCard.isVisible()) {
-      await taskCard.hover();
-      await page.waitForTimeout(200);
-    }
+  test('sin archivo vinculado, los atajos de archivo se announce apagados', async ({ page }) => {
+    // Es el contrato de la opción B: un atajo que no puede actuar se dice, no finge.
+    await expect(page.getByText(/sin archivo: x, p, J y dd están apagados/)).toBeVisible();
+    await expect(page.getByText('Sin todo.txt vinculado')).toBeVisible();
   });
 });
 
-test.describe('Task Form', () => {
+test.describe('teclado', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-      window.localStorage.setItem('auth-store', JSON.stringify({
-        state: { token: 'fake-jwt-token', username: 'testuser', roles: ['ROLE_USER'] },
-        version: 0
-      }));
-    });
+    await page.goto('/');
+    await waitForList(page);
   });
 
-  test('form has priority selector', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Open form
-    await page.getByRole('button', { name: /Nueva/i }).click();
-    await page.waitForTimeout(300);
-    
-    // Priority select should exist
-    await expect(page.getByLabel(/Prioridad/)).toBeVisible();
+  test('j y k mueven el cursor entre tarjetas', async ({ page }) => {
+    const cursor = page.locator('[data-cursor="true"]');
+    await expect(cursor).toContainText('Tarea 001');
+
+    await page.keyboard.press('j');
+    await expect(cursor).toContainText('Tarea 002');
+
+    await page.keyboard.press('j');
+    await expect(cursor).toContainText('Tarea 003');
+
+    await page.keyboard.press('k');
+    await expect(cursor).toContainText('Tarea 002');
   });
 
-  test('form has due date picker', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Open form
-    await page.getByRole('button', { name: /Nueva/i }).click();
-    await page.waitForTimeout(300);
-    
-    // Due date input should exist
-    await expect(page.getByLabel(/Fecha límite/)).toBeVisible();
+  test('G lleva a la última y gg a la primera', async ({ page }) => {
+    const cursor = page.locator('[data-cursor="true"]');
+
+    await page.keyboard.press('G');
+    await expect(cursor).toContainText('Tarea 003');
+
+    await page.keyboard.press('g');
+    await expect(page.getByText('g…')).toBeVisible();
+    await page.keyboard.press('g');
+    await expect(cursor).toContainText('Tarea 001');
   });
 
-  test('form can be cancelled', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(500);
-    
-    // Open form
-    await page.getByRole('button', { name: /Nueva/i }).click();
-    await page.waitForTimeout(300);
-    
-    // Click cancel
-    await page.getByRole('button', { name: /Cancelar/i }).click();
-    await page.waitForTimeout(300);
-    
-    // Form should be closed
-    await expect(page.getByPlaceholder('¿Qué necesitas hacer?')).not.toBeVisible();
+  test('? abre la ayuda y Esc la cierra', async ({ page }) => {
+    await page.keyboard.press('?');
+
+    await expect(page.getByRole('dialog', { name: 'Atajos de teclado' })).toBeVisible();
+    await expect(page.getByText('gg').first()).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Atajos de teclado' })).toBeHidden();
+  });
+
+  test('la paleta de comandos encuentra y ejecuta una acción', async ({ page }) => {
+    await page.keyboard.press(':');
+
+    const palette = page.getByRole('dialog', { name: 'Paleta de comandos' });
+    await expect(palette).toBeVisible();
+
+    await page.getByLabel('Buscar comando').fill('completar');
+    await expect(palette.getByRole('button', { name: /completar/ })).toBeVisible();
+  });
+
+  test('sin todo.txt, la paleta muestra las acciones apagadas y no las ejecuta', async ({
+    page,
+  }) => {
+    await page.keyboard.press(':');
+    await page.getByLabel('Buscar comando').fill('completar');
+
+    const entry = page.getByRole('button', { name: /completar/ });
+    await expect(entry).toBeDisabled();
+    await expect(page.getByText(/necesitan un motivo/)).toBeVisible();
+  });
+
+  test('x no hace nada sin archivo, y eso es lo pactado', async ({ page }) => {
+    const contador = page.getByRole('button', { name: /^Completadas/ });
+    const antes = await contador.textContent();
+
+    await page.keyboard.press('x');
+
+    // La acción está apagada: el contador de completadas no se mueve.
+    await expect(contador).toHaveText(antes ?? '');
+    await expect(page.locator('.task-card').first()).not.toHaveClass(/line-through/);
   });
 });
 
-test.describe('Empty States', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-      window.localStorage.setItem('auth-store', JSON.stringify({
-        state: { token: 'fake-jwt-token', username: 'testuser', roles: ['ROLE_USER'] },
-        version: 0
-      }));
+test.describe('paginación', () => {
+  test('el pie muestra el rango y avanza de página', async ({ page }) => {
+    await page.route((url) => url.pathname.startsWith('/api/tasks'), async (route) => {
+      const url = new URL(route.request().url());
+      const pageNumber = Number(url.searchParams.get('page') ?? '0');
+      const tasks = seedTasks(25);
+      const content = tasks.slice(pageNumber * 20, pageNumber * 20 + 20);
+      return route.fulfill({
+        json: {
+          content,
+          page: pageNumber,
+          size: 20,
+          totalElements: 25,
+          totalPages: 2,
+          hasNext: pageNumber === 0,
+          hasPrevious: pageNumber > 0,
+        },
+      });
     });
-  });
 
-  test('shows empty state when no tasks', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
-    
-    // Check for empty state message
-    const emptyMsg = page.getByText(/No hay tareas/i);
-    await expect(emptyMsg.or(page.getByText(/Crea tu primera/))).toBeVisible();
-  });
+    await waitForList(page);
 
-  test('shows create task button in empty state', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(1000);
-    
-    // Create task button in empty state
-    await expect(page.getByRole('button', { name: /Crear tarea/i })).toBeVisible();
+    await expect(page.getByText('mostrando 1–20 de 25')).toBeVisible();
+    await page.getByRole('button', { name: 'Siguiente' }).click();
+
+    await expect(page.getByText('página 2 de 2')).toBeVisible();
+    await expect(page.getByText('mostrando 21–25 de 25')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
   });
 });

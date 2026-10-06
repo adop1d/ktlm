@@ -1,9 +1,12 @@
 /**
- * Acceso a un todo.txt del disco.
+ * Acceso a un todo.txt del disco y a su inbox.txt hermano.
  *
- * La implementación real usa la File System Access API, que solo existe en Chromium. En
- * cualquier otro navegador, o en los tests, cae a una implementación en memoria: la app
- * sigue funcionando contra la API, pero el archivo no se sincroniza y la UI lo avisa.
+ * La File System Access API entrega un handle de archivo sin decir dónde está, así que para
+ * llegar al hermano hay que pedir el **directorio**: es el directorio el que sabe resolver
+ * nombres dentro de él. Por eso el selector elige una carpeta y no un archivo.
+ *
+ * Fuera de Chromium, o en los tests, cae a una implementación en memoria: la app sigue
+ * funcionando contra la API, pero el archivo no se sincroniza y la UI lo avisa.
  */
 
 export interface TodoFileHandle {
@@ -16,6 +19,8 @@ export interface TodoFileHandle {
    * renombra al cerrar, así que un fallo a mitad no deja el archivo truncado.
    */
   write(content: string): Promise<void>;
+  /** Otro archivo de la misma carpeta, o null si no existe. */
+  sibling(name: string): Promise<TodoFileHandle | null>;
 }
 
 interface FsaWritable {
@@ -31,20 +36,30 @@ interface FsaFileHandleLike {
   createWritable(): Promise<FsaWritable>;
 }
 
+interface FsaDirectoryHandleLike {
+  getFileHandle(name: string, options?: { create?: boolean }): Promise<FsaFileHandleLike>;
+}
+
 declare global {
   interface Window {
     showOpenFilePicker?: (options?: unknown) => Promise<FsaFileHandleLike[]>;
     showSaveFilePicker?: (options?: unknown) => Promise<FsaFileHandleLike>;
+    showDirectoryPicker?: (options?: unknown) => Promise<FsaDirectoryHandleLike>;
   }
 }
 
 export const isFileSystemAccessSupported = (): boolean =>
-  typeof window !== 'undefined' && typeof window.showOpenFilePicker === 'function';
+  typeof window !== 'undefined' &&
+  (typeof window.showDirectoryPicker === 'function' ||
+    typeof window.showOpenFilePicker === 'function');
 
-export class FsaTodoFileHandle implements TodoFileHandle {
+class FsaFileHandle implements TodoFileHandle {
   readonly persistent = true;
 
-  constructor(private readonly handle: FsaFileHandleLike) {}
+  constructor(
+    private readonly handle: FsaFileHandleLike,
+    private readonly directory: FsaDirectoryHandleLike
+  ) {}
 
   get name(): string {
     return this.handle.name;
@@ -68,6 +83,16 @@ export class FsaTodoFileHandle implements TodoFileHandle {
     await writable.close();
   }
 
+  async sibling(name: string): Promise<TodoFileHandle | null> {
+    try {
+      // create: false — el inbox solo existe si alguien escribe en él.
+      const handle = await this.directory.getFileHandle(name, { create: false });
+      return new FsaFileHandle(handle, this.directory);
+    } catch {
+      return null;
+    }
+  }
+
   private async ensurePermission(): Promise<PermissionState> {
     if (!this.handle.queryPermission) return 'granted';
     const current = await this.handle.queryPermission({ mode: 'readwrite' });
@@ -82,6 +107,7 @@ export class MemoryTodoFileHandle implements TodoFileHandle {
   readonly name: string;
 
   private content: string;
+  private readonly siblings = new Map<string, MemoryTodoFileHandle>();
 
   constructor(name: string, initial = '') {
     this.name = name;
@@ -95,6 +121,17 @@ export class MemoryTodoFileHandle implements TodoFileHandle {
   async write(content: string): Promise<void> {
     this.content = content;
   }
+
+  async sibling(name: string): Promise<TodoFileHandle | null> {
+    return this.siblings.get(name) ?? null;
+  }
+
+  /** Solo para los tests: siembra un archivo hermano. */
+  seed(name: string, content: string): MemoryTodoFileHandle {
+    const handle = new MemoryTodoFileHandle(name, content);
+    this.siblings.set(name, handle);
+    return handle;
+  }
 }
 
 export interface OpenedTodoFile {
@@ -103,30 +140,37 @@ export interface OpenedTodoFile {
   content: string;
 }
 
-/** Abre el todo.txt. Devuelve null si el usuario cancela el diálogo. */
+/**
+ * Abre la carpeta que contiene el todo.txt. El archivo se crea si no está, igual que hace
+ * tuxedo al resolver su ruta por defecto.
+ */
 export const pickTodoFile = async (): Promise<OpenedTodoFile | null> => {
-  if (!isFileSystemAccessSupported()) {
+  if (typeof window === 'undefined' || typeof window.showDirectoryPicker !== 'function') {
     return { handle: new MemoryTodoFileHandle('todo.txt'), content: '' };
   }
-  const [handle] = await window.showOpenFilePicker!({
-    multiple: false,
-    types: [{ description: 'todo.txt', accept: { 'text/plain': ['.txt'] } }],
-  });
-  if (!handle) return null;
-  const wrapped = new FsaTodoFileHandle(handle);
-  return { handle: wrapped, content: await wrapped.read() };
+
+  const directory = await window.showDirectoryPicker({ mode: 'readwrite' });
+  const raw = await directory.getFileHandle('todo.txt', { create: true });
+  const handle = new FsaFileHandle(raw, directory);
+  return { handle, content: await handle.read() };
 };
 
 /** Guarda como un todo.txt nuevo, para cuando todavía no hay archivo vinculado. */
 export const saveTodoFileAs = async (content: string): Promise<TodoFileHandle | null> => {
-  if (!isFileSystemAccessSupported() || typeof window.showSaveFilePicker !== 'function') {
-    return new MemoryTodoFileHandle('todo.txt', content);
+  if (typeof window === 'undefined' || typeof window.showSaveFilePicker !== 'function') {
+    const handle = new MemoryTodoFileHandle('todo.txt', content);
+    return handle;
   }
-  const handle = await window.showSaveFilePicker({
+  const raw = await window.showSaveFilePicker({
     suggestedName: 'todo.txt',
     types: [{ description: 'todo.txt', accept: { 'text/plain': ['.txt'] } }],
   });
-  const wrapped = new FsaTodoFileHandle(handle);
-  await wrapped.write(content);
-  return wrapped;
+  // Sin directorio no hay hermano: el handle guardado no puede resolver inbox.txt.
+  const handle = new FsaFileHandle(raw, {
+    getFileHandle: async () => {
+      throw new Error('sin directorio');
+    },
+  });
+  await handle.write(content);
+  return handle;
 };
