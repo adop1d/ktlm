@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,10 +19,10 @@ public class Task {
     private Long id;
 
     @NotBlank(message = "Title is required")
-    @Size(max = 100, message = "Title must not exceed 100 characters")
+    @Size(max = 500, message = "Title must not exceed 500 characters")
     private String title;
 
-    @Size(max = 500, message = "Description must not exceed 500 characters")
+    @Size(max = 4000, message = "Description must not exceed 4000 characters")
     private String description;
 
     private boolean completed;
@@ -29,11 +30,12 @@ public class Task {
     @Enumerated(EnumType.STRING)
     private Priority priority = Priority.MEDIUM;
 
-    private LocalDateTime dueDate;
+    private LocalDate dueDate;
 
     private Integer sortOrder = 0;
 
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 
     private Long userId;  // Para asociar tarea con usuario
@@ -111,11 +113,11 @@ public class Task {
         this.priority = priority;
     }
 
-    public LocalDateTime getDueDate() {
+    public LocalDate getDueDate() {
         return dueDate;
     }
 
-    public void setDueDate(LocalDateTime dueDate) {
+    public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
     }
 

@@ -23,17 +23,23 @@ const PRIORITY_LABELS = {
 
 export const TaskCard: FC<Props> = ({ task, onToggle, onEdit, onDelete }) => {
   const isCompleted = task.completed;
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && !isCompleted;
-  
+  // dueDate is a plain YYYY-MM-DD civil date from the API (LocalDate). Parsing it with
+  // new Date() would interpret it as UTC midnight and shift the day in negative offsets.
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const civil = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const todayISO = civil(new Date());
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowISO = civil(tomorrow);
+
+  const isOverdue = !!task.dueDate && task.dueDate < todayISO && !isCompleted;
+
   const formatDueDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.toDateString() === today.toDateString()) return 'Hoy';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Mañana';
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    if (dateStr === todayISO) return 'Hoy';
+    if (dateStr === tomorrowISO) return 'Mañana';
+    const [, month, day] = dateStr.split('-');
+    const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return `${Number(day)} ${MONTHS[Number(month) - 1]}`;
   };
   
   const formatCreatedDate = (dateStr: string) => {

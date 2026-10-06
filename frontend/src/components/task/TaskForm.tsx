@@ -19,7 +19,6 @@ export const TaskForm: FC<Props> = ({ initial = {}, onSubmit, onCancel }) => {
   const [description, setDescription] = useState(initial.description ?? '');
   const [priority, setPriority] = useState<TaskPriority>(initial.priority ?? 'MEDIUM');
   const [dueDate, setDueDate] = useState(initial.dueDate?.split('T')[0] ?? '');
-  const [isFocused, setIsFocused] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -28,7 +27,7 @@ export const TaskForm: FC<Props> = ({ initial = {}, onSubmit, onCancel }) => {
       title: title.trim(),
       description: description.trim() || undefined,
       priority,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+      dueDate: dueDate || undefined,
     };
     onSubmit(taskData);
   };
@@ -64,8 +63,6 @@ export const TaskForm: FC<Props> = ({ initial = {}, onSubmit, onCancel }) => {
             className="input-field"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
             placeholder="¿Qué necesitas hacer?"
             required
             autoFocus

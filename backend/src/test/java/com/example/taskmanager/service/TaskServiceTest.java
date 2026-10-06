@@ -1,5 +1,8 @@
 package com.example.taskmanager.service;
 
+import com.example.taskmanager.dto.TaskRequest;
+import com.example.taskmanager.exception.InvalidRequestException;
+import com.example.taskmanager.exception.ResourceNotFoundException;
 import com.example.taskmanager.model.Task;
 import com.example.taskmanager.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +21,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
+
+    private static final Long OWNER = 7L;
+    private static final Long OTHER = 8L;
 
     @Mock
     private TaskRepository taskRepository;
@@ -29,160 +35,156 @@ class TaskServiceTest {
 
     @BeforeEach
     void setUp() {
-        sampleTask = new Task("Sample Task", "This is a sample task");
+        sampleTask = new Task("Sample task", "A description");
         sampleTask.setId(1L);
-        sampleTask.setCompleted(false);
+        sampleTask.setUserId(OWNER);
     }
 
     @Test
     void getAllTasks_ShouldReturnAllTasks() {
-        // Arrange
-        when(taskRepository.findByUserId(1L)).thenReturn(Arrays.asList(sampleTask));
+        when(taskRepository.findByUserId(OWNER)).thenReturn(List.of(sampleTask));
 
-        // Act
-        List<Task> tasks = taskService.getAllTasksByUser(1L);
+        List<Task> result = taskService.getAllTasksByUser(OWNER);
 
-        // Assert
-        assertFalse(tasks.isEmpty());
-        assertEquals(1, tasks.size());
-        assertEquals("Sample Task", tasks.get(0).getTitle());
-        verify(taskRepository, times(1)).findByUserId(1L);
+        assertEquals(1, result.size());
+        assertEquals("Sample task", result.get(0).getTitle());
     }
 
     @Test
     void getTaskById_WithExistingId_ShouldReturnTask() {
-        // Arrange
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
+        when(taskRepository.findByIdAndUserId(1L, OWNER)).thenReturn(Optional.of(sampleTask));
 
-        // Act
-        Optional<Task> task = taskService.getTaskById(1L);
+        Optional<Task> result = taskService.getTaskById(1L, OWNER);
 
-        // Assert
-        assertTrue(task.isPresent());
-        assertEquals("Sample Task", task.get().getTitle());
-        verify(taskRepository, times(1)).findById(1L);
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
     }
 
     @Test
     void getTaskById_WithNonExistingId_ShouldReturnEmpty() {
-        // Arrange
-        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+        when(taskRepository.findByIdAndUserId(99L, OWNER)).thenReturn(Optional.empty());
 
-        // Act
-        Optional<Task> task = taskService.getTaskById(999L);
-
-        // Assert
-        assertTrue(task.isEmpty());
-        verify(taskRepository, times(1)).findById(999L);
+        assertTrue(taskService.getTaskById(99L, OWNER).isEmpty());
     }
 
     @Test
-    void createTask_ShouldSaveAndReturnTask() {
-        // Arrange
-        when(taskRepository.save(any(Task.class))).thenReturn(sampleTask);
+    void getTaskById_TaskOwnedBySomeoneElse_ShouldBeIndistinguishableFromMissing() {
+        when(taskRepository.findByIdAndUserId(1L, OTHER)).thenReturn(Optional.empty());
 
-        // Act
-        Task result = taskService.createTask(sampleTask);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("Sample Task", result.getTitle());
-        verify(taskRepository, times(1)).save(sampleTask);
+        assertTrue(taskService.getTaskById(1L, OTHER).isEmpty());
     }
 
     @Test
-    void updateTask_WithExistingId_ShouldUpdateAndReturnTask() {
-        // Arrange
-        Task updatedTask = new Task("Updated Task", "This task has been updated");
-        updatedTask.setId(1L);
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
-        when(taskRepository.save(any(Task.class))).thenReturn(updatedTask);
+    void createTask_ShouldStampOwnerAndPersist() {
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // Act
-        Task result = taskService.updateTask(1L, updatedTask);
+        Task created = taskService.createTask(new TaskRequest("Buy milk", null, null, null, null, null), OWNER);
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("Updated Task", result.getTitle());
-        assertEquals("This task has been updated", result.getDescription());
-        verify(taskRepository, times(1)).findById(1L);
-        verify(taskRepository, times(1)).save(any(Task.class));
+        assertEquals(OWNER, created.getUserId());
+        assertEquals("Buy milk", created.getTitle());
+        assertEquals(Task.Priority.MEDIUM, created.getPriority());
     }
 
     @Test
-    void updateTask_WithNonExistingId_ShouldThrowException() {
-        // Arrange
-        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+    void createTask_WithoutTitle_ShouldBeRejected() {
+        assertThrows(InvalidRequestException.class,
+                () -> taskService.createTask(new TaskRequest(null, null, null, null, null, null), OWNER));
+        assertThrows(InvalidRequestException.class,
+                () -> taskService.createTask(new TaskRequest("   ", null, null, null, null, null), OWNER));
+    }
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            taskService.updateTask(999L, new Task());
-        });
-        assertEquals("Task not found with id: 999", exception.getMessage());
-        verify(taskRepository, times(1)).findById(999L);
+    @Test
+    void updateTask_PartialPayload_ShouldPreservePriorityAndDueDate() {
+        sampleTask.setPriority(Task.Priority.HIGH);
+        sampleTask.setDueDate(LocalDate.of(2026, 12, 1));
+        when(taskRepository.findByIdAndUserId(1L, OWNER)).thenReturn(Optional.of(sampleTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Task updated = taskService.updateTask(1L, OWNER,
+                new TaskRequest("Renamed", null, null, null, null, null));
+
+        assertEquals("Renamed", updated.getTitle());
+        assertEquals(Task.Priority.HIGH, updated.getPriority());
+        assertEquals(LocalDate.of(2026, 12, 1), updated.getDueDate());
+    }
+
+    @Test
+    void updateTask_ExplicitPayload_ShouldOverwriteEveryField() {
+        when(taskRepository.findByIdAndUserId(1L, OWNER)).thenReturn(Optional.of(sampleTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Task updated = taskService.updateTask(1L, OWNER,
+                new TaskRequest("T", "D", true, Task.Priority.LOW, LocalDate.of(2027, 1, 2), 9));
+
+        assertEquals(Task.Priority.LOW, updated.getPriority());
+        assertEquals(LocalDate.of(2027, 1, 2), updated.getDueDate());
+        assertEquals(9, updated.getSortOrder());
+        assertTrue(updated.isCompleted());
+    }
+
+    @Test
+    void updateTask_TaskOwnedBySomeoneElse_ShouldThrowNotFound() {
+        when(taskRepository.findByIdAndUserId(1L, OTHER)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
+                () -> taskService.updateTask(1L, OTHER,
+                        new TaskRequest("hijack", null, null, null, null, null)));
+
+        assertTrue(ex.getMessage().contains("1"));
         verify(taskRepository, never()).save(any(Task.class));
     }
 
     @Test
+    void updateTask_WithNonExistingId_ShouldThrowException() {
+        when(taskRepository.findByIdAndUserId(99L, OWNER)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                taskService.updateTask(99L, OWNER, new TaskRequest("x", null, null, null, null, null)));
+    }
+
+    @Test
     void deleteTask_WithExistingId_ShouldDeleteTask() {
-        // Arrange
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
-        doNothing().when(taskRepository).delete(any(Task.class));
+        when(taskRepository.findByIdAndUserId(1L, OWNER)).thenReturn(Optional.of(sampleTask));
 
-        // Act
-        taskService.deleteTask(1L);
+        taskService.deleteTask(1L, OWNER);
 
-        // Assert
-        verify(taskRepository, times(1)).findById(1L);
-        verify(taskRepository, times(1)).delete(sampleTask);
+        verify(taskRepository).delete(sampleTask);
     }
 
     @Test
     void deleteTask_WithNonExistingId_ShouldThrowException() {
-        // Arrange
-        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+        when(taskRepository.findByIdAndUserId(99L, OWNER)).thenReturn(Optional.empty());
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            taskService.deleteTask(999L);
-        });
-        assertEquals("Task not found with id: 999", exception.getMessage());
-        verify(taskRepository, times(1)).findById(999L);
+        assertThrows(ResourceNotFoundException.class, () -> taskService.deleteTask(99L, OWNER));
         verify(taskRepository, never()).delete(any(Task.class));
     }
 
     @Test
     void toggleTaskCompletion_ShouldToggleAndReturnTask() {
-        // Arrange
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(sampleTask));
-        when(taskRepository.save(any(Task.class))).thenReturn(sampleTask);
+        when(taskRepository.findByIdAndUserId(1L, OWNER)).thenReturn(Optional.of(sampleTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // Act
-        Task result = taskService.toggleTaskCompletion(1L);
+        Task toggled = taskService.toggleTaskCompletion(1L, OWNER);
+        assertTrue(toggled.isCompleted());
 
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.isCompleted());
-        verify(taskRepository, times(1)).findById(1L);
-        verify(taskRepository, times(1)).save(any(Task.class));
+        Task toggledBack = taskService.toggleTaskCompletion(1L, OWNER);
+        assertFalse(toggledBack.isCompleted());
     }
 
     @Test
-    void getTasksByCompletionStatus_ShouldReturnFilteredTasks() {
-        // Arrange
-        Task completedTask = new Task("Completed Task", "This task is done");
-        completedTask.setId(1L);
-        completedTask.setCompleted(true);
-        
-        when(taskRepository.findByCompleted(true)).thenReturn(Arrays.asList(completedTask));
+    void toggleTaskCompletion_TaskOwnedBySomeoneElse_ShouldThrowNotFound() {
+        when(taskRepository.findByIdAndUserId(1L, OTHER)).thenReturn(Optional.empty());
 
-        // Act
-        List<Task> tasks = taskService.getTasksByCompletionStatus(true);
+        assertThrows(ResourceNotFoundException.class, () -> taskService.toggleTaskCompletion(1L, OTHER));
+    }
 
-        // Assert
-        assertFalse(tasks.isEmpty());
-        assertEquals(1, tasks.size());
-        assertTrue(tasks.get(0).isCompleted());
-        verify(taskRepository, times(1)).findByCompleted(true);
+    @Test
+    void getTasksByCompletionStatus_ShouldScopeToTheGivenUser() {
+        when(taskRepository.findByUserIdAndCompleted(OWNER, false)).thenReturn(List.of(sampleTask));
+
+        List<Task> result = taskService.getTasksByCompletionStatus(OWNER, false);
+
+        assertEquals(1, result.size());
+        verify(taskRepository).findByUserIdAndCompleted(OWNER, false);
     }
 }
