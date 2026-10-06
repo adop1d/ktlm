@@ -9,6 +9,7 @@ import com.example.taskmanager.model.Task;
 import com.example.taskmanager.model.TaskFilter;
 import com.example.taskmanager.model.TaskSort;
 import com.example.taskmanager.repository.TaskRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import com.example.taskmanager.repository.TaskSpecifications;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.PageRequest;
@@ -26,9 +27,19 @@ public class TaskService {
     static final int MAX_PAGE_SIZE = 200;
 
     private final TaskRepository taskRepository;
+    private final ApplicationEventPublisher events;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, ApplicationEventPublisher events) {
         this.taskRepository = taskRepository;
+        this.events = events;
+    }
+
+    /**
+     * Avisa a las sesiones abiertas de este usuario. Se emite dentro de la transacción,
+     * pero el oyente de TaskEventStream espera al commit antes de empujar el evento.
+     */
+    private void notifyChanged(Long userId) {
+        events.publishEvent(new TaskEventStream.TasksChanged(userId));
     }
 
     /**
@@ -77,7 +88,9 @@ public class TaskService {
         }
         Task task = request.toEntity();
         task.setUserId(userId);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+        notifyChanged(userId);
+        return saved;
     }
 
     /**
@@ -88,12 +101,15 @@ public class TaskService {
     public Task updateTask(Long id, Long userId, TaskRequest request) {
         Task task = requireOwned(id, userId);
         request.applyTo(task);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+        notifyChanged(userId);
+        return saved;
     }
 
     @Transactional
     public void deleteTask(Long id, Long userId) {
         taskRepository.delete(requireOwned(id, userId));
+        notifyChanged(userId);
     }
 
     @Transactional
@@ -101,7 +117,9 @@ public class TaskService {
         Task task = requireOwned(id, userId);
         task.setCompleted(!task.isCompleted());
         task.updateTimestamp();
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+        notifyChanged(userId);
+        return saved;
     }
 
     private Task requireOwned(Long id, Long userId) {

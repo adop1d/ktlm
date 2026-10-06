@@ -7,10 +7,13 @@ import com.example.taskmanager.dto.TaskResponse;
 import com.example.taskmanager.model.TaskFilter;
 import com.example.taskmanager.model.TaskSort;
 import com.example.taskmanager.security.CurrentUser;
+import com.example.taskmanager.service.TaskEventStream;
 import com.example.taskmanager.service.TaskService;
 import com.example.taskmanager.service.TodoTxtService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,12 +26,29 @@ public class TaskController {
 
     private final TaskService taskService;
     private final CurrentUser currentUser;
+    private final TaskEventStream events;
     private final TodoTxtService todoTxtService;
 
-    public TaskController(TaskService taskService, CurrentUser currentUser, TodoTxtService todoTxtService) {
+    public TaskController(
+            TaskService taskService,
+            CurrentUser currentUser,
+            TodoTxtService todoTxtService,
+            TaskEventStream events) {
         this.taskService = taskService;
         this.currentUser = currentUser;
         this.todoTxtService = todoTxtService;
+        this.events = events;
+    }
+
+    /**
+     * Cambios de esta cuenta, empujados por el servidor. Es lo que sustituye a preguntar
+     * cada cierto tiempo: en cuanto alguien completa una tarea desde el móvil, la otra
+     * pantalla se entera.
+     */
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public SseEmitter stream() {
+        return events.subscribe(currentUser.id());
     }
 
     @GetMapping

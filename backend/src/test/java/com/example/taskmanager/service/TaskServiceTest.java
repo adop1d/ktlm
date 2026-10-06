@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -37,6 +38,10 @@ class TaskServiceTest {
 
     @Mock
     private TaskRepository taskRepository;
+
+    /** Los eventos son un efecto secundario: se comprueban aparte, no ensucian estas pruebas. */
+    @Mock
+    private ApplicationEventPublisher events;
 
     @InjectMocks
     private TaskService taskService;

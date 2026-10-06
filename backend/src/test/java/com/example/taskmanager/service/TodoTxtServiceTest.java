@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.springframework.context.ApplicationEventPublisher;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
@@ -30,13 +31,16 @@ class TodoTxtServiceTest {
     @Mock
     private TaskRepository taskRepository;
 
+    @Mock
+    private ApplicationEventPublisher events;
+
     private TodoTxtService service;
     private final List<Task> rows = new ArrayList<>();
     private long nextId = 100;
 
     @BeforeEach
     void setUp() {
-        service = new TodoTxtService(taskRepository, new TodoTxtCodec());
+        service = new TodoTxtService(taskRepository, new TodoTxtCodec(), events);
         rows.clear();
         nextId = 100;
     }
