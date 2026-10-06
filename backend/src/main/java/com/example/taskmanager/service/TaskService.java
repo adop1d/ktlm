@@ -14,6 +14,9 @@ import java.util.Optional;
 @Service
 public class TaskService {
 
+    /** Tope duro del tamaño de página, para que un size=100000 no arrastre la tabla. */
+    static final int MAX_PAGE_SIZE = 200;
+
     private final TaskRepository taskRepository;
 
     public TaskService(TaskRepository taskRepository) {
@@ -24,13 +27,10 @@ public class TaskService {
         return taskRepository.findByUserId(userId);
     }
 
-    public List<Task> getTasksByCompletionStatus(Long userId, boolean completed) {
-        return taskRepository.findByUserIdAndCompleted(userId, completed);
-    }
-
     public Optional<Task> getTaskById(Long id, Long userId) {
         return taskRepository.findByIdAndUserId(id, userId);
     }
+
 
     @Transactional
     public Task createTask(TaskRequest request, Long userId) {

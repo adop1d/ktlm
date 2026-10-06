@@ -4,6 +4,7 @@ import com.example.taskmanager.dto.TaskRequest;
 import com.example.taskmanager.dto.TaskResponse;
 import com.example.taskmanager.security.CurrentUser;
 import com.example.taskmanager.service.TaskService;
+import com.example.taskmanager.service.TodoTxtService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,12 @@ public class TaskController {
 
     private final TaskService taskService;
     private final CurrentUser currentUser;
+    private final TodoTxtService todoTxtService;
 
-    public TaskController(TaskService taskService, CurrentUser currentUser) {
+    public TaskController(TaskService taskService, CurrentUser currentUser, TodoTxtService todoTxtService) {
         this.taskService = taskService;
         this.currentUser = currentUser;
+        this.todoTxtService = todoTxtService;
     }
 
     @GetMapping
@@ -67,11 +70,22 @@ public class TaskController {
         return TaskResponse.from(taskService.toggleTaskCompletion(id, currentUser.id()));
     }
 
-    @GetMapping("/completed/{completed}")
+    @GetMapping(value = "/export", produces = "text/plain; charset=UTF-8")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
-    public List<TaskResponse> getTasksByCompletionStatus(@PathVariable boolean completed) {
-        return taskService.getTasksByCompletionStatus(currentUser.id(), completed).stream()
-                .map(TaskResponse::from)
-                .toList();
+    public ResponseEntity<String> export() {
+        return ResponseEntity.ok(todoTxtService.export(currentUser.id()));
     }
+
+    @PostMapping(value = "/import", consumes = "text/plain", produces = "application/json")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public TodoTxtService.ImportResult importFile(@RequestBody String todoTxt) {
+        return todoTxtService.importFile(currentUser.id(), todoTxt);
+    }
+
+    @PostMapping("/archive")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    public TodoTxtService.ArchiveResult archive() {
+        return todoTxtService.archive(currentUser.id());
+    }
+
 }

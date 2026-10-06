@@ -1,0 +1,6 @@
+(A) 2026-04-28 Call dentist @phone +health due:2026-05-08
+2026-05-09 Pay rent due:2026-05-15 rec:+1m
+x 2026-05-05 2026-05-01 Submit expense report +work
+Pay rent +home @bank due:2026-06-01 rec:+1m t:-3d uid:42
+# this is a comment
+Buy milk
