@@ -376,8 +376,9 @@ export const TaskListPage: FC = () => {
       <section className="max-w-2xl mx-auto py-8 px-4">
         <TodoFileBar
           onOpen={() => void todoFile.openAndLink()}
-          onSaveAs={() => void todoFile.saveAs()}
+          onImport={() => void todoFile.importFromDisk()}
           onDetach={todoFile.detach}
+          canImport={todoFile.isPersistent}
         />
         {/* Cabecera: una linea, como el titulo de una ventana de terminal */}
         <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[var(--border-default)]">

@@ -1,4 +1,10 @@
 import { API_BASE, fetchJSON } from './http';
+import { useAuthStore } from '../stores/authStore';
+
+const authHeader = (): Record<string, string> => {
+  const token = useAuthStore.getState().token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 import { Task, TaskCounts, TaskPage, TaskQueryParams } from '../types/task';
 
 const BASE = `${API_BASE}/api/tasks`;
@@ -53,6 +59,30 @@ export const exportTodoFile = (token: string | null) =>
     if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.text();
   });
+
+/**
+ * El archivo del servidor, como texto. Lo crea si no existía. No se parsea como JSON
+ * porque es un archivo, no una respuesta de API.
+ */
+export const readTodoFile = (): Promise<string> =>
+  fetch(`${API_BASE}/api/tasks/file`, { headers: authHeader() }).then(async (res) => {
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.text();
+  });
+
+/** Reemplaza el archivo entero y devuelve la versión reconciliada, con los uid ya puestos. */
+export const replaceTodoFile = (content: string) =>
+  fetch(`${API_BASE}/api/tasks/file`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'text/plain', ...authHeader() },
+    body: content,
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.text();
+  });
+
+/** Lo que hay en done.txt, ahora servido por el servidor. */
+export const readArchived = () => fetchJSON<string[]>(`${BASE}/archived`);
 
 export const archiveCompleted = () =>
   fetchJSON<{ archived: number; doneFile: string }>(`${BASE}/archive`, { method: 'POST' });
