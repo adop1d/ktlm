@@ -47,6 +47,28 @@ class TodoTxtServiceTest {
 
     private TodoTxtService service;
     private TodoStore store;
+
+    /**
+     * Doble del vigilante: no mira el disco, pero registra que el cambio es nuestro. El
+     * vigilante de verdad se prueba aparte, contra un directorio temporal.
+     */
+    private final class RecordingWatcher extends TodoFileWatcher {
+        RecordingWatcher(TodoStore store) {
+            super(store, events);
+        }
+
+        @Override
+        public void recordWritten(Long userId, String content) {
+            written.add(TodoStore.hashOf(content));
+        }
+
+        @Override
+        public void watch(Long userId) {
+            // no hace falta vigilar nada en un test del servicio
+        }
+    }
+
+    private final List<String> written = new ArrayList<>();
     /** Por id y no en una lista: el importador guarda dos veces y el doble tiene que
      *  reproducirlo, no contar dos veces la misma fila. */
     private final Map<Long, Task> rows = new LinkedHashMap<>();
@@ -58,7 +80,8 @@ class TodoTxtServiceTest {
     @BeforeEach
     void setUp() {
         store = new TodoStore(tempDir.toString());
-        service = new TodoTxtService(taskRepository, new TodoTxtCodec(), events, store);
+        TodoFileWatcher watcher = new RecordingWatcher(store);
+        service = new TodoTxtService(taskRepository, new TodoTxtCodec(), events, store, watcher);
         rows.clear();
         nextId = 100;
         behaveLikeADatabase();
