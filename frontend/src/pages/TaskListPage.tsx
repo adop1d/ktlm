@@ -1,6 +1,9 @@
 import { FC, useState, useEffect, useRef } from 'react';
 import { useTasks } from '../hooks/useTasks';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { DEFAULT_NORMAL_KEYMAP } from '../keymap/defaults';
+import { useKeymap } from '../keymap/useKeymap';
+import { HelpOverlay } from '../keymap/HelpOverlay';
+import type { ActionName } from '../keymap/actions';
 import { TaskCard } from '../components/task/TaskCard';
 import { TaskForm } from '../components/task/TaskForm';
 import { Header } from '../components/common/Header';
@@ -49,6 +52,11 @@ export const TaskListPage: FC = () => {
   const addToast = useToastStore(state => state.addToast);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const todoFile = useTodoFile();
+  const [showHelp, setShowHelp] = useState(false);
+  const [cursor, setCursor] = useState(0);
+  const [visual, setVisual] = useState<number[]>([]);
+
+  const rows = data?.content ?? [];
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
@@ -61,23 +69,93 @@ export const TaskListPage: FC = () => {
     setPage(0);
   }, [filter, debouncedSearch, sort]);
 
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    onNewTask: () => {
-      setEditing(null);
-      setShowForm(true);
-    },
-    onFocusSearch: () => {
-      searchInputRef.current?.focus();
-    },
-    onEscape: () => {
-      if (showForm) {
-        setShowForm(false);
+  useEffect(() => {
+    setCursor((current) => Math.min(current, Math.max(0, rows.length - 1)));
+  }, [rows.length]);
+
+  const moveCursor = (delta: number) => {
+    setCursor((current) => Math.max(0, Math.min(current + delta, rows.length - 1)));
+  };
+
+  const halfPage = (delta: number) => {
+    if (delta > 0 && data?.hasNext) {
+      setPage((p) => p + 1);
+      setCursor(0);
+      return;
+    }
+    if (delta < 0 && data?.hasPrevious) {
+      setPage((p) => p - 1);
+      setCursor(Math.max(0, PAGE_SIZE - 1));
+      return;
+    }
+    moveCursor(delta * Math.floor(PAGE_SIZE / 2));
+  };
+
+  const onKeyAction = (action: ActionName) => {
+    const task = rows[cursor];
+    switch (action) {
+      case 'cursor_down':
+        return moveCursor(1);
+      case 'cursor_up':
+        return moveCursor(-1);
+      case 'cursor_top':
+        return setCursor(0);
+      case 'cursor_bottom':
+        return setCursor(Math.max(0, rows.length - 1));
+      case 'half_page_down':
+        return halfPage(1);
+      case 'half_page_up':
+        return halfPage(-1);
+      case 'begin_add':
+      case 'begin_edit':
+      case 'begin_edit_insert':
         setEditing(null);
-      } else if (search) {
-        setSearch('');
-      }
-    },
+        setShowForm(true);
+        return;
+      case 'toggle_complete':
+        return task ? void todoFile.toggleComplete(task.sortOrder) : undefined;
+      case 'delete':
+        if (!task) return;
+        if (visual.length > 0) {
+          visual.forEach((index) => void todoFile.remove(rows[index].sortOrder));
+          setVisual([]);
+          return;
+        }
+        return void todoFile.remove(task.sortOrder);
+      case 'cycle_priority':
+        return task ? void todoFile.cyclePriority(task.sortOrder) : undefined;
+      case 'move_task_down':
+        return task ? void todoFile.move(task.sortOrder, 1) : undefined;
+      case 'move_task_up':
+        return task ? void todoFile.move(task.sortOrder, -1) : undefined;
+      case 'undo':
+        return void todoFile.undo();
+      case 'archive_completed':
+        return void todoFile.archive();
+      case 'toggle_visual':
+        setVisual((current) => (current.length > 0 ? [] : [cursor]));
+        return;
+      case 'toggle_selected':
+        setVisual((current) =>
+          current.includes(cursor)
+            ? current.filter((i) => i !== cursor)
+            : [...current, cursor].sort((a, b) => a - b)
+        );
+        return;
+      case 'begin_search':
+        searchInputRef.current?.focus();
+        return;
+      case 'open_help':
+        setShowHelp(true);
+        return;
+      default:
+        return;
+    }
+  };
+
+  const { mode, pendingChord } = useKeymap({
+    keymap: DEFAULT_NORMAL_KEYMAP,
+    onAction: onKeyAction,
     enabled: !isLoading,
   });
 
@@ -163,14 +241,31 @@ export const TaskListPage: FC = () => {
             </h1>
             {/* Shortcuts - compact under title */}
             <div className="flex items-center gap-2 mt-2 text-xs text-[var(--text-muted)] dark:text-[var(--dark-text-muted)]">
-              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">N</kbd>
+              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">n</kbd>
               <span>nueva</span>
               <span className="opacity-50">|</span>
-              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">/</kbd>
-              <span>buscar</span>
+              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">j k</kbd>
+              <span>mover</span>
               <span className="opacity-50">|</span>
-              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">Esc</kbd>
-              <span>cerrar</span>
+              <kbd className="px-1.5 py-0.5 bg-[var(--color-accent)] text-white rounded font-mono font-bold text-[10px]">x</kbd>
+              <span>completar</span>
+              <span className="opacity-50">|</span>
+              <button
+                onClick={() => setShowHelp(true)}
+                className="underline underline-offset-2 hover:text-[var(--color-accent)]"
+              >
+                ? ayuda
+              </button>
+              {pendingChord && (
+                <span className="ml-2 px-1.5 py-0.5 rounded font-mono bg-[var(--color-accent)] text-white text-[10px]">
+                  {pendingChord}…
+                </span>
+              )}
+              {mode !== 'normal' && (
+                <span className="ml-2 px-1.5 py-0.5 rounded font-mono bg-[var(--color-primary)] text-white text-[10px]">
+                  {mode}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -282,7 +377,7 @@ export const TaskListPage: FC = () => {
           </div>
         ) : (
           <div className={`grid gap-3 stagger-children transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
-            {data?.content.map((t) => (
+            {data?.content.map((t, index) => (
               <TaskCard
                 key={t.id}
                 task={t}
@@ -290,8 +385,11 @@ export const TaskListPage: FC = () => {
                 onEdit={(task) => {
                   setEditing(task);
                   setShowForm(true);
+                  setCursor(index);
                 }}
                 onDelete={handleDelete}
+                isCursor={index === cursor}
+                isSelected={visual.includes(index)}
               />
             ))}
           </div>
@@ -327,6 +425,8 @@ export const TaskListPage: FC = () => {
           </nav>
         )}
       </section>
+
+      {showHelp && <HelpOverlay keymap={DEFAULT_NORMAL_KEYMAP} onClose={() => setShowHelp(false)} />}
     </>
   );
 };
