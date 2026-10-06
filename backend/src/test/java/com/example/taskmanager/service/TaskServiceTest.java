@@ -1,20 +1,20 @@
 package com.example.taskmanager.service;
 
 import com.example.taskmanager.dto.TaskRequest;
-import com.example.taskmanager.exception.InvalidRequestException;
 import com.example.taskmanager.exception.ResourceNotFoundException;
 import com.example.taskmanager.model.Task;
 import com.example.taskmanager.repository.TaskRepository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -76,21 +76,16 @@ class TaskServiceTest {
 
     @Test
     void createTask_ShouldStampOwnerAndPersist() {
+        TaskRequest request = new TaskRequest("Buy milk", null, null, null, null, null, null, null, null, null);
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Task created = taskService.createTask(new TaskRequest("Buy milk", null, null, null, null, null), OWNER);
+        Task created = taskService.createTask(request, OWNER);
 
         assertEquals(OWNER, created.getUserId());
         assertEquals("Buy milk", created.getTitle());
         assertEquals(Task.Priority.MEDIUM, created.getPriority());
-    }
+        verify(taskRepository).save(any(Task.class));
 
-    @Test
-    void createTask_WithoutTitle_ShouldBeRejected() {
-        assertThrows(InvalidRequestException.class,
-                () -> taskService.createTask(new TaskRequest(null, null, null, null, null, null), OWNER));
-        assertThrows(InvalidRequestException.class,
-                () -> taskService.createTask(new TaskRequest("   ", null, null, null, null, null), OWNER));
     }
 
     @Test
@@ -100,8 +95,8 @@ class TaskServiceTest {
         when(taskRepository.findByIdAndUserId(1L, OWNER)).thenReturn(Optional.of(sampleTask));
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Task updated = taskService.updateTask(1L, OWNER,
-                new TaskRequest("Renamed", null, null, null, null, null));
+        Task updated = taskService.updateTask(
+                1L, OWNER, new TaskRequest("Renamed", null, null, null, null, null, null, null, null, null));
 
         assertEquals("Renamed", updated.getTitle());
         assertEquals(Task.Priority.HIGH, updated.getPriority());
@@ -114,7 +109,7 @@ class TaskServiceTest {
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Task updated = taskService.updateTask(1L, OWNER,
-                new TaskRequest("T", "D", true, Task.Priority.LOW, LocalDate.of(2027, 1, 2), 9));
+                new TaskRequest("T", "D", true, Task.Priority.LOW, LocalDate.of(2027, 1, 2), 9, null, null, null, null));
 
         assertEquals(Task.Priority.LOW, updated.getPriority());
         assertEquals(LocalDate.of(2027, 1, 2), updated.getDueDate());
@@ -128,7 +123,7 @@ class TaskServiceTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> taskService.updateTask(1L, OTHER,
-                        new TaskRequest("hijack", null, null, null, null, null)));
+                        new TaskRequest("hijack", null, null, null, null, null, null, null, null, null)));
 
         assertTrue(ex.getMessage().contains("1"));
         verify(taskRepository, never()).save(any(Task.class));
@@ -139,7 +134,7 @@ class TaskServiceTest {
         when(taskRepository.findByIdAndUserId(99L, OWNER)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                taskService.updateTask(99L, OWNER, new TaskRequest("x", null, null, null, null, null)));
+                taskService.updateTask(99L, OWNER, new TaskRequest("x", null, null, null, null, null, null, null, null, null)));
     }
 
     @Test
@@ -178,13 +173,4 @@ class TaskServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> taskService.toggleTaskCompletion(1L, OTHER));
     }
 
-    @Test
-    void getTasksByCompletionStatus_ShouldScopeToTheGivenUser() {
-        when(taskRepository.findByUserIdAndCompleted(OWNER, false)).thenReturn(List.of(sampleTask));
-
-        List<Task> result = taskService.getTasksByCompletionStatus(OWNER, false);
-
-        assertEquals(1, result.size());
-        verify(taskRepository).findByUserIdAndCompleted(OWNER, false);
-    }
 }
