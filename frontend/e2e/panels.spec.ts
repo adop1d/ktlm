@@ -3,7 +3,7 @@ import { expect, seedTasks, test, waitForList } from './fixtures';
 /** `[` y `]` abren los paneles laterales, igual que en tuxedo. */
 test.describe('paneles laterales', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await waitForList(page);
   });
 
@@ -82,7 +82,7 @@ test.describe('paneles laterales', () => {
 test.describe('la lista se lee como una rejilla de terminal', () => {
   test('cada fila tiene columnas alineadas y la fuente es monoespaciada', async ({ page, api }) => {
     api.tasks = seedTasks(3, 'Informe');
-    await page.goto('/');
+    await page.goto('/app');
     await waitForList(page);
 
     const fila = page.locator('.tui-row').first();
@@ -100,7 +100,7 @@ test.describe('la lista se lee como una rejilla de terminal', () => {
   });
 
   test('la fila con el cursor queda marcada', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/app');
     await waitForList(page);
 
     await expect(page.locator('.tui-row--cursor')).toHaveCount(1);
