@@ -55,6 +55,9 @@ class TodoTxtServiceTest {
                     return task;
                 });
         lenient()
+                .when(taskRepository.findByUserId(anyLong()))
+                .thenAnswer(invocation -> new ArrayList<>(rows));
+        lenient()
                 .when(taskRepository.findByUserIdAndTodoUid(anyLong(), any()))
                 .thenAnswer(invocation -> {
                     String uid = invocation.getArgument(1);
@@ -138,6 +141,28 @@ class TodoTxtServiceTest {
         assertEquals(2, rows.stream().map(Task::getTodoUid).distinct().count());
         assertEquals(1, rows.stream().filter(Task::isCompleted).count());
         assertEquals(1, rows.stream().filter(t -> !t.isCompleted()).count());
+    }
+
+    @Test
+    void importFile_LineaSinUid_ReconoceLaTareaPorContenido() {
+        behaveLikeADatabase();
+        seed("7", "Tarea externa");
+
+        // Tuxedo escribe sin uid si el archivo aún no lo lleva. Antes esto duplicaba la tarea.
+        TodoTxtService.ImportResult result = service.importFile(USER, "Tarea externa\n");
+
+        assertEquals(0, result.imported());
+        assertEquals(1, result.updated());
+        assertEquals(1, rows.size());
+    }
+
+    @Test
+    void importFile_DosLineasIgualesSinUid_NoAdivinaYConservaAmbas() {
+        behaveLikeADatabase();
+        service.importFile(USER, "Repetida\nRepetida\n");
+
+        // Dos tareas idénticas son indistinguibles: el emparejamiento debe abstain.
+        assertEquals(2, rows.size());
     }
 
     @Test

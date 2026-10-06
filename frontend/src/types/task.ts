@@ -10,6 +10,17 @@ export interface Task {
   sortOrder: number;
   createdAt: string; // ISO string from backend
   updatedAt: string;
+  // --- Interoperabilidad con todo.txt ---
+  /** Fecha de completado, presente solo en tareas cerradas. */
+  completedAt?: string;
+  /** Literal del token `rec:` sin el prefijo, p. ej. "+1m". */
+  recurrence?: string | null;
+  /** Literal del token `t:` sin el prefijo, p. ej. "-3d". */
+  threshold?: string | null;
+  /** Identidad estable en el archivo, la que hace de clave del round-trip. */
+  todoUid?: string | null;
+  projects: string[];
+  contexts: string[];
 }
 
 export type TaskSort = 'file' | 'priority' | 'due' | 'newest' | 'oldest' | 'alphabetical';

@@ -101,6 +101,11 @@ export interface UseKeymapOptions {
   onAction: (action: ActionName) => void;
   enabled?: boolean;
   onModeChange?: (mode: KeymapMode) => void;
+  /**
+   * Acciones que ahora mismo no pueden ejecutarse, con el motivo. Se ignoran en vez de
+   * hacer un no-op silencioso: es mejor un atajo apagado que uno que finge funcionar.
+   */
+  unavailable?: { actions: readonly ActionName[]; reason: string };
 }
 
 export interface UseKeymapResult {
@@ -122,7 +127,7 @@ const isTextEntryTarget = (target: EventTarget | null): boolean => {
 };
 
 export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
-  const { keymap, onAction, enabled = true, onModeChange } = options;
+  const { keymap, onAction, enabled = true, onModeChange, unavailable } = options;
   // `normal` es el fondo de la pila; insert → search → palette se apilan encima, como en tuxedo.
   const [stack, setStack] = useState<readonly KeymapMode[]>(['normal']);
   const [pendingChord, setPendingChord] = useState<string | null>(null);
@@ -131,8 +136,8 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
   const mode = stack[stack.length - 1] ?? 'normal';
   // El listener se registra una sola vez y lee el estado por ref: así no se resuscribe en cada
   // render ni captura closures rancias cuando el consumidor pasa callbacks inline.
-  const latest = useRef({ keymap, onAction, enabled, mode, pendingChord });
-  latest.current = { keymap, onAction, enabled, mode, pendingChord };
+  const latest = useRef({ keymap, onAction, enabled, mode, pendingChord, unavailable });
+  latest.current = { keymap, onAction, enabled, mode, pendingChord, unavailable };
 
   const clearChord = useCallback(() => {
     window.clearTimeout(chordTimer.current);
@@ -170,8 +175,14 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
     if (!enabled) return;
 
     const onKeyDown = (event: KeyboardEvent): void => {
-      const { keymap: map, onAction: emit, enabled: on, mode: currentMode, pendingChord: pending } =
-        latest.current;
+      const {
+        keymap: map,
+        onAction: emit,
+        enabled: on,
+        mode: currentMode,
+        pendingChord: pending,
+        unavailable: blocked,
+      } = latest.current;
       if (!on) return;
       // Meta se ignora siempre: secuestrar Cmd+Q o Cmd+W sería peor que no tener atajo.
       if (event.metaKey) return;
@@ -194,6 +205,8 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
         if (resolved.nextChord !== null) armChord(resolved.nextChord);
         return;
       }
+      // Una acción apagada no dispara nada ni deja rastro: la UI ya dice por qué.
+      if (blocked?.actions.includes(resolved.action)) return;
       emit(resolved.action);
     };
 

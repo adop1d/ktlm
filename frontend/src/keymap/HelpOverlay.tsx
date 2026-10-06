@@ -110,7 +110,9 @@ const LABELS: Partial<Record<ActionName, string>> = {
 export const HelpOverlay: FC<{
   keymap: Record<string, readonly string[]>;
   onClose: () => void;
-}> = ({ keymap, onClose }) => {
+  /** Acciones apagadas ahora mismo, con el motivo. Se listan, pero tachadas. */
+  unavailable?: { actions: readonly ActionName[]; reason: string };
+}> = ({ keymap, onClose, unavailable }) => {
   // En modo normal el keymap trata Esc como no-op, así que el overlay cierra por su cuenta.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -143,6 +145,7 @@ export const HelpOverlay: FC<{
         {GROUPS.map((group) => {
           const bound = group.actions.filter((action) => (keymap[action] ?? []).length > 0);
           if (bound.length === 0) return null;
+          const isOff = (action: ActionName) => unavailable?.actions.includes(action) === true;
           return (
             <section key={group.title} className="mb-4">
               <h3 className="text-xs uppercase tracking-wide text-[var(--text-muted)] dark:text-[var(--dark-text-muted)] mb-2">
@@ -150,7 +153,10 @@ export const HelpOverlay: FC<{
               </h3>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
                 {bound.map((action) => (
-                  <li key={action} className="flex items-baseline gap-2 text-sm">
+                  <li
+                    key={action}
+                    className={`flex items-baseline gap-2 text-sm ${isOff(action) ? 'opacity-40' : ''}`}
+                  >
                     <span className="flex gap-1 shrink-0">
                       {keymap[action].map((key) => (
                         <kbd
@@ -171,6 +177,11 @@ export const HelpOverlay: FC<{
           );
         })}
 
+        {unavailable && (
+          <p className="text-xs text-[var(--color-warning)] mb-3">
+            Apagados: {unavailable.reason}.
+          </p>
+        )}
         <p className="text-xs text-[var(--text-muted)] dark:text-[var(--dark-text-muted)] mt-4">
           Atajos copiados de tuxedo. Pulsa <kbd>Esc</kbd> para cerrar.
         </p>

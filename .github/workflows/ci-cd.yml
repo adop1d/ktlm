@@ -37,6 +37,8 @@ jobs:
         run: cd frontend && npm run test
       - name: Build frontend
         run: cd frontend && npm run build
+      - name: Run end-to-end tests
+        run: cd frontend && npx playwright install --with-deps chromium && npm run test:e2e
 
   docker-build:
     runs-on: ubuntu-latest

@@ -65,11 +65,28 @@ public class TodoTxtService {
         // segunda aparición del mismo crea una tarea nueva en vez de machacar la primera.
         Set<String> seenUids = new HashSet<>();
 
+        // Una línea sin uid no tiene identidad con la que reconocerse, y crearla siempre
+        // duplicaba todo cuando tuxedo escribía dos veces antes de que la app devolviera los
+        // uid. La salida es buscar por contenido, que solo es seguro si no hay ambigüedad.
+        List<Task> candidates = taskRepository.findByUserId(userId);
+
         for (int i = 0; i < parsed.size(); i++) {
             ParsedTask line = parsed.get(i);
             String uid = line.todoUid();
             boolean knownUid = uid != null && !uid.isBlank() && seenUids.add(uid);
-            Task task = knownUid ? taskRepository.findByUserIdAndTodoUid(userId, uid).orElse(null) : null;
+
+            Task task = null;
+            if (knownUid) {
+                task = taskRepository.findByUserIdAndTodoUid(userId, uid).orElse(null);
+            }
+            if (task == null) {
+                Task byContent = findUnambiguousMatch(candidates, line);
+                // Sin uid pero con coincidencia única, es la misma tarea: se actualiza y se
+                // le queda su uid puesto. Si hay varias iguales, no se adivina.
+                if (byContent != null && (uid == null || uid.isBlank())) {
+                    task = byContent;
+                }
+            }
 
             boolean isNew = task == null;
             if (isNew) {
@@ -103,6 +120,40 @@ public class TodoTxtService {
         }
 
         return new ImportResult(imported, updated, parsed.size(), export(userId));
+    }
+
+    /** La única coincidencia por contenido, o null si no hay o si hay varias. */
+    private Task findUnambiguousMatch(List<Task> candidates, ParsedTask line) {
+        String wanted = contentKey(line);
+        Task found = null;
+        for (Task candidate : candidates) {
+            if (!contentKey(toParsed(candidate)).equals(wanted)) {
+                continue;
+            }
+            if (found != null) {
+                // Ambigüedad: no se sabe cuál de las dos es, así que no se toca ninguna.
+                return null;
+            }
+            found = candidate;
+        }
+        return found;
+    }
+
+    /**
+     * Identidad de contenido: todo menos el uid —que es lo que a una línea nueva le falta— y
+     * menos las fechas. La de creación la sella el servidor y una línea de tuxedo puede no
+     * traerla; la de completado se deriva de `done`, que sí está aquí.
+     */
+    private String contentKey(ParsedTask line) {
+        return String.join("|",
+                String.valueOf(line.priority()),
+                line.body(),
+                String.valueOf(line.due()),
+                String.valueOf(line.recurrence()),
+                String.valueOf(line.threshold()),
+                String.valueOf(line.done()),
+                String.valueOf(line.projects()),
+                String.valueOf(line.contexts()));
     }
 
     /**

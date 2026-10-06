@@ -10,6 +10,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    // La app es un PWA: sin esto el service worker sirve el index cacheado y los tests
+    // assertan contra un build viejo que no es el que está en disco.
+    serviceWorkers: 'block',
   },
   projects: [
     {

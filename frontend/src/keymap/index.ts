@@ -10,4 +10,5 @@ export {
   mergeKeymaps,
   lookupAction,
   resolveAction,
-} from './useKeymap';
+} from './useKeymap';export { CommandPalette, rankCommands } from './CommandPalette';
+export { PromptOverlay } from './PromptOverlay';
