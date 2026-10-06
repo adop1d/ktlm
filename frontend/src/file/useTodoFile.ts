@@ -1,38 +1,22 @@
 /**
- * Une la app con el todo.txt del disco: lo abre, lo reconcilia con el servidor y vigila que
- * nada lo cambie por fuera sin avisar.
+ * Une la app con el todo.txt.
  *
- * El ciclo sigue el de tuxedo: comparar el contenido contra lo último visto, y cuando no
- * coincide, gana el archivo y se recarga.
+ * El archivo lo lleva el servidor, así que aquí no hay polling: el servidor avisa por SSE
+ * cuando cambia y las escrituras van por HTTP. La File System Access API sobrevive solo
+ * como forma de importar un archivo que ya tengas en el disco.
  */
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import * as api from '../api/tasks';
 import { useToastStore } from '../stores/toastStore';
 import type { TaskPriority } from '../types/task';
-import type { TodoFileHandle } from './FileHandlePort';
+import { isFileSystemAccessSupported, pickTodoFile } from './FileHandlePort';
 import {
-  isFileSystemAccessSupported,
-  pickTodoFile,
-  saveTodoFileAs,
-} from './FileHandlePort';
-import {
-  POLL_INTERVAL_MS,
-  flushNow,
-  hashText,
-  isWritePending,
-  scheduleFlush,
-  splitPreamble,
+  clearPendingWrite,
+  markPendingWrite,
   todoDocMutations,
   useTodoDoc,
 } from './todoDoc';
-
-/** El nombre del hermano donde cualquier cosa puede dejar una línea para que la recojamos. */
-const INBOX_NAME = 'inbox.txt';
-const DONE_NAME = 'done.txt';
-
-/** Vacía un archivo hermano: el drenaje no reintenta, igual que el rename de tuxedo. */
-const EMPTY = '';
 
 const todayIso = () => {
   const now = new Date();
@@ -44,109 +28,43 @@ const todayIso = () => {
 export const useTodoFile = () => {
   const qc = useQueryClient();
   const addToast = useToastStore((state) => state.addToast);
-  const pollRef = useRef(0);
 
   const refresh = useCallback(() => {
     void qc.invalidateQueries({ queryKey: ['tasks'] });
     void qc.invalidateQueries({ queryKey: ['task-counts'] });
   }, [qc]);
 
-  /** Relee el disco. Si cambió por fuera, el archivo gana y se recarga todo. */
-  const reconcile = useCallback(async () => {
-    const { handle, lastDiskHash, setStatus } = useTodoDoc.getState();
-    if (!handle) return;
-
-    // Con una escritura en curso el disco va por detrás: leerlo ahora y reimportar
-    // desharía el parche que todavía no ha llegado al archivo.
-    if (isWritePending()) return;
-
-    let content: string;
-    try {
-      content = await handle.read();
-    } catch {
-      // Nunca se escribe a ciegas sobre un archivo que no se ha podido leer.
-      setStatus('error', 'No se pudo leer el archivo: escrituras congeladas');
-      return;
-    }
-
-    // El inbox se drena siempre, incluso si el todo.txt no ha cambiado: su único proposito
-    // es que alguien escriba ahi sin abrir la app.
-    await drainInbox(handle);
-
-    if (hashText(content) === lastDiskHash) return;
-
-    const result = await api.importTodoFile(content);
-    // El hash a recordar es el del texto leído, no el del reconciliado: si no, el poll vería
-    // una diferencia en cada vuelta y volvería a importar sin parar. Y el preámbulo se toma
-    // del disco, no del reconciliado: el backend no conoce los comentarios y se los tragaría.
-    useTodoDoc
-      .getState()
-      .applyExternalFile(result.file, hashText(content), splitPreamble(content).preamble);
-    addToast('info', 'El todo.txt cambió fuera y se recargó');
+  /**
+   * El archivo ya no vive en este navegador: lo lleva el servidor. Vincular es pedirlo y ya
+   * está; el servidor lo crea si no existía.
+   */
+  const openAndLink = useCallback(async () => {
+    const file: string = await api.readTodoFile();
+    useTodoDoc.getState().link(file, 'servidor');
+    addToast('success', `Vinculado: ${file.split('\n').filter(Boolean).length} tareas`);
     refresh();
   }, [addToast, refresh]);
 
   /**
-   * Recoge lo que haya en inbox.txt y lovacía. Cualquier cosa que sepa escribir una línea
-   * ahí sirve de productor: un `echo`, un atajo de iOS, un cron.
+   * Importar desde el disco. Es la única vía que queda de la File System Access API: ya no
+   * es de dónde viene el archivo, sino una forma de traértelo una vez.
    */
-  const drainInbox = useCallback(
-    async (handle: TodoFileHandle) => {
-      const inbox = await handle.sibling(INBOX_NAME);
-      if (!inbox) return;
-
-      let body: string;
-      try {
-        body = await inbox.read();
-      } catch {
-        return;
-      }
-      // Vaciarlo ANTES de importar es lo que evita el bucle: si fallara la importación,
-      // las líneas ya no están en el inbox y se pierden, pero no se reprocesan para siempre.
-      if (!body.trim()) return;
-      await inbox.write(EMPTY);
-
-      await api.importTodoFile(body);
-      addToast('success', 'Tareas recibidas por inbox.txt');
-      refresh();
-    },
-    [addToast, refresh]
-  );
-
-  const openAndLink = useCallback(async () => {
+  const importFromDisk = useCallback(async () => {
     const opened = await pickTodoFile();
     if (!opened) return;
+    if (!isFileSystemAccessSupported()) {
+      addToast('error', 'Importar desde el disco necesita un navegador Chromium');
+      return;
+    }
     const result = await api.importTodoFile(opened.content);
-    useTodoDoc.getState().link(opened.handle, result.file, opened.content);
-    addToast('success', `Vinculado ${opened.handle.name}: ${result.parsed} tareas`);
-    // Hay que volcar el archivo reconciliado: es lo que lleva los uid al disco, y sin ellos
-    // la próxima importación no reconocería las tareas y las duplicaría.
-    scheduleFlush();
+    useTodoDoc.getState().link(result.file, 'servidor');
+    addToast('success', `Importadas ${result.parsed} tareas desde tu disco`);
     refresh();
   }, [addToast, refresh]);
 
-  /** Guarda el estado actual en un todo.txt nuevo. */
-  const saveAs = useCallback(async () => {
-    const content = useTodoDoc.getState().serialize();
-    const handle = await saveTodoFileAs(content);
-    if (!handle) return;
-    useTodoDoc.getState().link(handle, content, content);
-    addToast('success', `Guardado como ${handle.name}`);
-  }, [addToast]);
-
   const detach = useCallback(() => {
-    flushNow().finally(() => useTodoDoc.getState().unlink());
+    useTodoDoc.getState().unlink();
   }, []);
-
-  useEffect(() => {
-    pollRef.current = window.setInterval(() => {
-      void reconcile();
-    }, POLL_INTERVAL_MS);
-    return () => {
-      window.clearInterval(pollRef.current);
-      pollRef.current = 0;
-    };
-  }, [reconcile]);
 
   /** El orden de la tabla lo sigue el archivo, así que se propaga tras cada parche. */
   const pushLineOrder = async (): Promise<void> => {
@@ -164,7 +82,17 @@ export const useTodoFile = () => {
     } catch {
       // El orden es cosmético; el contenido del archivo sigue siendo lo importante.
     }
-    scheduleFlush();
+    // El servidor reconcilia y devuelve el archivo ya con los uid puestos: eso es lo que hay
+    // que mostrar. Devolver lo que envió el cliente sin más volvería a meter los uid viejos.
+    const { serialize } = useTodoDoc.getState();
+    markPendingWrite();
+    try {
+      await api.replaceTodoFile(serialize());
+    } catch (error) {
+      addToast('error', `No se pudo guardar: ${(error as Error).message}`);
+    } finally {
+      clearPendingWrite();
+    }
     refresh();
   }, [refresh]);
 
@@ -242,12 +170,6 @@ export const useTodoFile = () => {
   const archive = useCallback(async () => {
     const result = await api.archiveCompleted();
     if (result.archived > 0) {
-      const { handle } = useTodoDoc.getState();
-      const done = handle ? await handle.sibling(DONE_NAME) : null;
-      if (done) {
-        const previous = await done.read().catch(() => '');
-        await done.write(`${previous}${result.doneFile}`);
-      }
       addToast('success', `${result.archived} tareas a done.txt`);
       await commit();
     } else {
@@ -261,19 +183,11 @@ export const useTodoFile = () => {
    * salen de la lista. Por eso la vista de archivo se arma leyendo el hermano.
    */
   const readArchive = useCallback(async (): Promise<string[]> => {
-    const { handle } = useTodoDoc.getState();
-    const done = handle ? await handle.sibling(DONE_NAME) : null;
-    if (!done) return [];
-    const body = await done.read().catch(() => '');
-    return body
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line !== '' && !line.startsWith('#'));
+    return api.readArchived().catch(() => []);
   }, []);
 
   return {
     openAndLink,
-    saveAs,
     detach,
     toggleComplete,
     remove,
@@ -283,7 +197,7 @@ export const useTodoFile = () => {
     undo,
     archive,
     readArchive,
-    reconcile,
+    importFromDisk,
     isPersistent: isFileSystemAccessSupported(),
   };
 };

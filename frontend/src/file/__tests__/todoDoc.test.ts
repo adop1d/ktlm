@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { MemoryTodoFileHandle } from '../FileHandlePort';
 import { hashText, todoDocMutations, useTodoDoc } from '../todoDoc';
 import { advanceIsoDate, parseTodoLine } from '../todoLine';
 
@@ -11,7 +10,7 @@ const SAMPLE = [
 
 const reset = () => {
   useTodoDoc.setState({
-    handle: null,
+    source: null,
     lines: [],
     preamble: [],
     uidByLine: [],
@@ -67,13 +66,13 @@ describe('todoLine', () => {
 describe('todoDoc', () => {
   beforeEach(() => {
     reset();
-    useTodoDoc.getState().link(new MemoryTodoFileHandle('todo.txt', SAMPLE), SAMPLE, SAMPLE);
+    useTodoDoc.getState().link(SAMPLE, 'servidor');
   });
 
   it('conserva el encabezado de comentarios al vincular', () => {
     reset();
     const file = '# Mis tareas\n\n(A) 2026-04-28 Call dentist uid:1\n';
-    useTodoDoc.getState().link(new MemoryTodoFileHandle('todo.txt', file), file, file);
+    useTodoDoc.getState().link(file, 'disco');
     expect(useTodoDoc.getState().serialize()).toContain('# Mis tareas');
   });
 
@@ -141,7 +140,7 @@ describe('todoDoc', () => {
   });
 
   it('marca la vista previa como inválida tras un parche', () => {
-    useTodoDoc.getState().link(new MemoryTodoFileHandle('t', SAMPLE), SAMPLE, SAMPLE);
+    useTodoDoc.getState().link(SAMPLE, 'servidor');
     expect(useTodoDoc.getState().lastDiskHash).not.toBe(-1);
     todoDocMutations.removeLine(0);
     expect(useTodoDoc.getState().lastDiskHash).toBe(-1);

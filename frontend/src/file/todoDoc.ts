@@ -7,17 +7,14 @@
  * recarga y el historial se descarta: igual que hace tuxedo al detectar un cambio externo.
  */
 import { create } from 'zustand';
-import { TodoFileHandle } from './FileHandlePort';
 import { advanceIsoDate, formatTodoLine, parseTodoLine } from './todoLine';
 
 const UNDO_DEPTH = 50;
 export const POLL_INTERVAL_MS = 400;
-const FLUSH_DEBOUNCE_MS = 400;
 
 /**
- * Cierre de escritura pendiente. El sondeo debe respetarlo: un parche local marca el hash
- * como inválido, y sin este cerrojo el siguiente tick leería el archivo viejo, lo tomaría
- * por un cambio externo y desharía lo que el usuario acababa de escribir.
+ * Cierre de escritura pendiente. Mientras dure, el espejo no se recarga: recargarse antes de
+ * que la escritura llegue al servidor es deshacer lo recién escrito.
  */
 let writePending = false;
 
@@ -64,7 +61,8 @@ interface Snapshot {
 }
 
 interface TodoDocState {
-  handle: TodoFileHandle | null;
+  /** Solo informational: quién es el dueño del archivo ahora mismo. */
+  source: 'servidor' | 'disco' | null;
   lines: string[];
   preamble: string[];
   uidByLine: (string | null)[];
@@ -75,7 +73,7 @@ interface TodoDocState {
   selected: number[];
   history: Snapshot[];
 
-  link: (handle: TodoFileHandle, reconciledFile: string, originalFile: string) => void;
+  link: (reconciledFile: string, source: 'servidor' | 'disco') => void;
   unlink: () => void;
   /** Aplica un parche de línea. `next` recibe el estado actual y devuelve las líneas. */
   patch: (next: (state: TodoDocState) => Pick<Snapshot, 'lines' | 'preamble' | 'uidByLine'>) => void;
@@ -84,6 +82,8 @@ interface TodoDocState {
   clearSelection: () => void;
   undo: () => void;
   applyExternalFile: (content: string, diskHash: number, diskPreamble?: string[]) => void;
+  /** Reemplaza el documento por la versión reconciliada que devuelve el servidor. */
+  applyReconciled: (content: string) => void;
   serialize: () => string;
   setStatus: (status: DocStatus, message?: string | null) => void;
 }
@@ -100,7 +100,7 @@ const toLines = (file: string): { lines: string[]; uidByLine: (string | null)[] 
 };
 
 export const useTodoDoc = create<TodoDocState>((set, get) => ({
-  handle: null,
+  source: null,
   lines: [],
   preamble: [],
   uidByLine: [],
@@ -111,21 +111,19 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
   selected: [],
   history: [],
 
-  link: (handle, reconciledFile, originalFile) => {
+  link: (reconciledFile, source) => {
     const { lines, uidByLine } = toLines(reconciledFile);
-    const { preamble } = splitPreamble(originalFile);
+    const { preamble } = splitPreamble(reconciledFile);
     set({
-      handle,
+      source,
       lines,
       uidByLine,
       preamble,
       // El hash es del contenido REAL del disco, no del reconciliado: comparado con el
       // segundo, el poll vería siempre una diferencia y reimportaría en bucle.
-      lastDiskHash: hashText(originalFile),
-      status: handle.persistent ? 'linked' : 'in-memory',
-      message: handle.persistent
-        ? `Sincronizando con ${handle.name}`
-        : 'Sin File System Access API: los cambios no llegan al disco',
+      lastDiskHash: hashText(reconciledFile),
+      status: 'linked',
+      message: 'Sincronizado con el archivo del servidor',
       history: [],
       cursor: 0,
       selected: [],
@@ -133,7 +131,7 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
   },
 
   unlink: () =>
-    set({ handle: null, status: 'idle', message: null, history: [], selected: [], cursor: 0 }),
+    set({ source: null, status: 'idle', message: null, history: [], selected: [], cursor: 0 }),
 
   patch: (next) => {
     // El cerrojo se arma aquí y no en el commit: entre el parche y el commit hay un await
@@ -187,9 +185,14 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
       history: [],
       cursor: 0,
       selected: [],
-      status: get().handle?.persistent ? 'linked' : 'in-memory',
+      status: 'linked',
       message: 'El archivo cambió fuera: recargado',
     });
+  },
+
+  applyReconciled: (content) => {
+    const { lines, uidByLine } = toLines(content);
+    set({ lines, uidByLine, lastDiskHash: hashText(content) });
   },
 
   serialize: () => {
@@ -304,34 +307,11 @@ export const todoDocMutations = {
   },
 };
 
-// --- Escritura al archivo -----------------------------------------------------------------
-
-/** 0 como "sin temporizador": clearTimeout(0) no hace nada y evita arrastrar un null. */
-let flushTimer = 0;
-
-export const scheduleFlush = (): void => {
+/** Libera el cerrojo cuando la escritura ya llegó al servidor. */
+export const markPendingWrite = (): void => {
   writePending = true;
-  window.clearTimeout(flushTimer);
-  flushTimer = window.setTimeout(() => {
-    flushTimer = 0;
-    void flushNow();
-  }, FLUSH_DEBOUNCE_MS);
 };
 
-export const flushNow = async (): Promise<void> => {
-  const { handle, serialize } = useTodoDoc.getState();
-  if (!handle) {
-    writePending = false;
-    return;
-  }
-  const content = serialize();
-  useTodoDoc.getState().setStatus('syncing');
-  try {
-    await handle.write(content);
-    useTodoDoc.setState({ lastDiskHash: hashText(content), message: null });
-  } catch (error) {
-    useTodoDoc.getState().setStatus('error', `No se pudo guardar: ${(error as Error).message}`);
-  } finally {
-    writePending = false;
-  }
+export const clearPendingWrite = (): void => {
+  writePending = false;
 };
