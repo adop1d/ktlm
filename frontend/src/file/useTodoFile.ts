@@ -29,6 +29,7 @@ import {
 
 /** El nombre del hermano donde cualquier cosa puede dejar una línea para que la recojamos. */
 const INBOX_NAME = 'inbox.txt';
+const DONE_NAME = 'done.txt';
 
 /** Vacía un archivo hermano: el drenaje no reintenta, igual que el rename de tuxedo. */
 const EMPTY = '';
@@ -233,14 +234,42 @@ export const useTodoFile = () => {
     await commit();
   }, [commit]);
 
+  /**
+   * Las completadas se van a `done.txt`, el archivo hermano donde las deja tuxedo también.
+   * El servidor devuelve el contenido; aquí se escribe en el archivo de verdad, que es lo
+   * que hace que `tuxedo lsa` las vea en el mismo sitio.
+   */
   const archive = useCallback(async () => {
     const result = await api.archiveCompleted();
     if (result.archived > 0) {
-      addToast('success', `${result.archived} tareas al archivo de hechas`);
+      const { handle } = useTodoDoc.getState();
+      const done = handle ? await handle.sibling(DONE_NAME) : null;
+      if (done) {
+        const previous = await done.read().catch(() => '');
+        await done.write(`${previous}${result.doneFile}`);
+      }
+      addToast('success', `${result.archived} tareas a done.txt`);
       await commit();
+    } else {
+      addToast('info', 'No hay completadas que archivar');
     }
     return result;
   }, [addToast, commit]);
+
+  /**
+   * El archivo de hechas vive en el disco, no en la base: las completadas se archivan y
+   * salen de la lista. Por eso la vista de archivo se arma leyendo el hermano.
+   */
+  const readArchive = useCallback(async (): Promise<string[]> => {
+    const { handle } = useTodoDoc.getState();
+    const done = handle ? await handle.sibling(DONE_NAME) : null;
+    if (!done) return [];
+    const body = await done.read().catch(() => '');
+    return body
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#'));
+  }, []);
 
   return {
     openAndLink,
@@ -253,6 +282,7 @@ export const useTodoFile = () => {
     move,
     undo,
     archive,
+    readArchive,
     reconcile,
     isPersistent: isFileSystemAccessSupported(),
   };

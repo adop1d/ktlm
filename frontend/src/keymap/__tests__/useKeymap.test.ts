@@ -75,11 +75,21 @@ describe('resolveAction', () => {
     });
   });
 
-  it('una tecla que también es prefijo dispara su propia acción sin armar nada', () => {
-    // `p` es cycle_priority y prefijo de pick_project. Tuxedo da prioridad a la acción propia.
-    const resolved = resolveAction(DEFAULT_NORMAL_KEYMAP, 'p', null);
+  it('el prefijo de un chord manda sobre la acción enlazada a esa tecla', () => {
+    // `f` está enlazada a arm_f, que no es una acción sino el líder. Si la acción propia
+    // ganara, `fs` y `ff` nunca se dispararían.
+    expect(resolveAction(DEFAULT_NORMAL_KEYMAP, 'f', null)).toEqual({
+      action: null,
+      nextChord: 'f',
+    });
+  });
 
-    expect(resolved).toEqual({ action: 'cycle_priority', nextChord: null });
+  it('una tecla que es su propia acción y no prefijo de nada, dispara', () => {
+    // `p` es cycle_priority y no abre ningún chord por sí misma.
+    expect(resolveAction(DEFAULT_NORMAL_KEYMAP, 'p', null)).toEqual({
+      action: 'cycle_priority',
+      nextChord: null,
+    });
   });
 
   it('el líder consume la tecla aunque no complete el chord', () => {
