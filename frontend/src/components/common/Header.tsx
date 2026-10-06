@@ -1,6 +1,6 @@
 import { FC } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckBadgeIcon, ArrowRightOnRectangleIcon, MoonIcon, SunIcon } from '@heroicons/react/24/outline';
+import { CheckBadgeIcon, MoonIcon, SunIcon } from '@heroicons/react/24/outline';
 import { useUIStore } from '../../stores/uiStore';
 
 export const Header: FC = () => {

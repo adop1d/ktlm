@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+// defineConfig de vitest, no de vite: es el que conoce la clave `test` de abajo.
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -66,10 +67,10 @@ export default defineConfig({
     environment: 'jsdom',
     // loads this file before each test suite
     setupFiles: ['./vitest.setup.ts'],
-    // optional coverage thresholds
+    // En vitest 3 los límites viven bajo `thresholds`; `statements` ya no es una clave de primer nivel.
     coverage: {
       reporter: ['text', 'json'],
-      statements: 80,
+      thresholds: { statements: 80 },
     },
   },
 });

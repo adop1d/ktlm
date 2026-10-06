@@ -11,7 +11,6 @@ import { TaskListSkeleton, TaskFormSkeleton, PageHeaderSkeleton } from '../compo
 import { Task, TaskFilter, TaskSort } from '../types/task';
 import { TodoFileBar } from '../file/TodoFileBar';
 import { useTodoFile } from '../file/useTodoFile';
-import { useUIStore } from '../stores/uiStore';
 import { useToastStore } from '../stores/toastStore';
 import { PlusIcon, ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
@@ -47,8 +46,6 @@ export const TaskListPage: FC = () => {
   });
   const [editing, setEditing] = useState<Task | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const darkMode = useUIStore(state => state.darkMode);
-  const toggleDark = useUIStore(state => state.toggleDarkMode);
   const addToast = useToastStore(state => state.addToast);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const todoFile = useTodoFile();
