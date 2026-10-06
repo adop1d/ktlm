@@ -3,8 +3,8 @@ import { Portal } from '../components/common/Portal';
 
 /**
  * Prompt modal para escribir un valor. Es lo que tuxedo llama overlay: una sola línea, se
- * escribe, Enter acepta y Esc cancela. Sin esto, `rec:` solo se puede editar a mano en el
- * archivo.
+ * escribe y Enter acepta. Esc lo cancela el motor de teclado, igual que en el resto de
+ * overlays, así que aquí no hay ningún listener propio.
  */
 export const PromptOverlay: FC<{
   title: string;
@@ -29,12 +29,6 @@ export const PromptOverlay: FC<{
       className="tui-overlay"
       role="dialog"
       aria-label={title}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.stopPropagation();
-          onCancel();
-        }
-      }}
     >
       <div className="tui-modal w-full" style={{ maxWidth: '28rem' }}>
         <div className="tui-modal-header">

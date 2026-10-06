@@ -105,6 +105,12 @@ export interface UseKeymapOptions {
   enabled?: boolean;
   onModeChange?: (mode: KeymapMode) => void;
   /**
+   * Se llama cuando se pulsa Esc. El motor se queda con la tecla —es lo que hace
+   * `escape_stack` en tuxedo— así que los overlays se cierran desde aquí en vez de montar su
+   * propio listener global: dos dueños de la misma tecla es una fuente de bugs.
+   */
+  onEscape?: () => void;
+  /**
    * Acciones que ahora mismo no pueden ejecutarse, con el motivo. Se ignoran en vez de
    * hacer un no-op silencioso: es mejor un atajo apagado que uno que finge funcionar.
    */
@@ -130,7 +136,7 @@ const isTextEntryTarget = (target: EventTarget | null): boolean => {
 };
 
 export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
-  const { keymap, onAction, enabled = true, onModeChange, unavailable } = options;
+  const { keymap, onAction, enabled = true, onModeChange, onEscape, unavailable } = options;
   // `normal` es el fondo de la pila; insert → search → palette se apilan encima, como en tuxedo.
   const [stack, setStack] = useState<readonly KeymapMode[]>(['normal']);
   const [pendingChord, setPendingChord] = useState<string | null>(null);
@@ -196,9 +202,10 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
         return;
       }
       if (key === 'Esc') {
-        // Esc nunca sale como acción: lo gasta el hook contra la pila de modos.
+        // Esc nunca sale como acción: la gasta el motor contra la pila de modos y avisa.
         clearChord();
         popMode();
+        onEscape?.();
         return;
       }
       const resolved = resolveAction(map, key, pending);
@@ -234,7 +241,7 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
       window.removeEventListener('blur', onBlur);
       window.clearTimeout(chordTimer.current);
     };
-  }, [enabled, clearChord, popMode, armChord]);
+  }, [enabled, clearChord, popMode, armChord, onEscape]);
 
   return { mode, pendingChord, pushMode, popMode, setMode };
 };

@@ -169,7 +169,13 @@ export { expect, seedSession };
  * puede cambiar sin que la app esté rota, y el fallo que importa es "no llegó la lista".
  */
 export const waitForList = async (page: Page) => {
-  // La barra de título está siempre; la rejilla solo cuando hay tareas, así que no sirve
-  // como ancla única: con la lista vacía no existe.
   await expect(page.locator('.tui-titlebar')).toBeVisible();
+  // La barra aparece incluso con la lista vacía, así que no basta: hay que esperar a que
+  // la lista se asiente, ya sea con filas o con el estado vacío. Sin esto, una tecla de
+  // navegación puede llegar antes de que haya filas que mover.
+  await page.waitForFunction(
+    () => document.querySelectorAll('.tui-row').length > 0 ||
+      (document.body.innerText.includes('No hay tareas') ||
+        document.body.innerText.includes('No hay resultados'))
+  );
 };
