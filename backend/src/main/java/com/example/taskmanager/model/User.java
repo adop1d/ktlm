@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,6 +24,7 @@ public class User {
 
     @NotBlank(message = "Password is required")
     @Size(min = 6)
+    @JsonIgnore
     private String password;
 
     @NotBlank(message = "Email is required")
