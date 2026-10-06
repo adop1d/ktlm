@@ -22,8 +22,10 @@ export const StatusBar: FC<{
   position: string;
   counts: { all: number; active: number; completed: number } | undefined;
   linked: boolean;
+  /** Nombre del archivo en vista cuando no es la lista activa. */
+  view?: string | null;
   hints: StatusHint[];
-}> = ({ mode, pendingChord, position, counts, linked, hints }) => (
+}> = ({ mode, pendingChord, position, counts, linked, view, hints }) => (
   <Portal>
     <div className="tui-status" role="status" aria-label="Barra de estado">
       <span className="tui-status-segment tui-status-segment--mode">{mode}</span>
@@ -32,7 +34,11 @@ export const StatusBar: FC<{
         <span className="tui-status-segment tui-status-segment--chord">{pendingChord}…</span>
       ) : null}
 
-      <span className="tui-status-segment">{position}</span>
+      {view ? (
+        <span className="tui-status-segment tui-status-segment--chord">{view}</span>
+      ) : (
+        <span className="tui-status-segment">{position}</span>
+      )}
 
       {counts ? (
         <span className="tui-status-segment">

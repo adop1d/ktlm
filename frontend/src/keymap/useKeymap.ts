@@ -82,10 +82,13 @@ export const resolveAction = (
     return action ? { action, nextChord: null } : null;
   }
 
-  const direct = lookupAction(keymap, key);
-  if (direct) return { action: direct, nextChord: null };
+  // El prefijo manda sobre la acción propia. El caso que lo decide es `f`: está enlazado a
+  // `arm_f`, que no es una acción sino el líder de fp/fc/ff/fs. Con el orden inverso, pulsar
+  // `f` ejecutaba el líder en vez de armar el chord, y `fs` nunca llegaba.
+  if (isChordPrefix(keymap, key)) return { action: null, nextChord: key };
 
-  return isChordPrefix(keymap, key) ? { action: null, nextChord: key } : null;
+  const direct = lookupAction(keymap, key);
+  return direct ? { action: direct, nextChord: null } : null;
 };
 
 export type KeymapMode = 'normal' | 'insert' | 'visual' | 'search' | 'palette';

@@ -798,3 +798,34 @@ kbd {
 .lp-window {
   min-width: 0;
 }
+
+.lp-pane-item-row,
+.tui-pane-item-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+.tui-pane-item-row > .tui-pane-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.tui-pane-item-row[aria-current='true'] .tui-pane-item {
+  background: var(--color-primary-muted);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.tui-pane-item-delete {
+  padding: 0 0.4rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tui-pane-item-delete:hover {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}

@@ -8,6 +8,12 @@ import { PromptOverlay } from '../keymap/PromptOverlay';
 import { StatusBar } from '../keymap/StatusBar';
 import { FilterPane } from '../file/FilterPane';
 import { DetailPane } from '../file/DetailPane';
+import { SavedFilterPicker } from '../keymap/SavedFilterPicker';
+import {
+  SavedFilter,
+  isEmptyFilter,
+  useSavedFilters,
+} from '../stores/savedSearchesStore';
 import type { ActionName } from '../keymap/actions';
 import { TaskRow } from '../components/task/TaskRow';
 import { TaskForm } from '../components/task/TaskForm';
@@ -18,6 +24,7 @@ import { TodoFileBar } from '../file/TodoFileBar';
 import { useTodoFile } from '../file/useTodoFile';
 import { useTodoDoc } from '../file/todoDoc';
 import { useToastStore } from '../stores/toastStore';
+import { useAuthStore } from '../stores/authStore';
 import { ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, ArrowsUpDownIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const PAGE_SIZE = 20;
@@ -66,6 +73,23 @@ export const TaskListPage: FC = () => {
   const [showRight, setShowRight] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [visual, setVisual] = useState<number[]>([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [namingFilter, setNamingFilter] = useState(false);
+  const [archive, setArchive] = useState<string[] | null>(null);
+
+  const username = useAuthStore((state) => state.username) ?? 'anon';
+  const savedFilters = useSavedFilters((state) => state.byUser[username] ?? []);
+  const saveFilter = useSavedFilters((state) => state.save);
+  const removeFilter = useSavedFilters((state) => state.remove);
+
+  /** Lo que hay abierto ahora mismo, que es lo que se guarda con fs. */
+  const currentFilter = {
+    q: debouncedSearch,
+    filter,
+    project,
+    context,
+    sort,
+  };
 
   const rows = data?.content ?? [];
 
@@ -102,7 +126,7 @@ export const TaskListPage: FC = () => {
     moveCursor(delta * Math.floor(PAGE_SIZE / 2));
   };
 
-  const onKeyAction = (action: ActionName) => {
+  const onKeyAction = async (action: ActionName) => {
     const task = rows[cursor];
     switch (action) {
       case 'cursor_down':
@@ -174,6 +198,23 @@ export const TaskListPage: FC = () => {
         return;
       case 'pick_context':
         setShowLeft((current) => !current);
+        return;
+      case 'save_current_filter':
+        if (isEmptyFilter(currentFilter)) {
+          addToast('info', 'No hay nada que guardar: la búsqueda está vacía');
+          return;
+        }
+        setNamingFilter(true);
+        return;
+      case 'pick_saved_filter':
+        setShowPicker(true);
+        return;
+      case 'toggle_archive_view':
+        if (archive === null) {
+          setArchive(await todoFile.readArchive());
+        } else {
+          setArchive(null);
+        }
         return;
       case 'open_command_palette':
         setShowPalette(true);
@@ -414,7 +455,27 @@ export const TaskListPage: FC = () => {
 
           <div>
         {/* Content */}
-        {(data?.content.length ?? 0) === 0 ? (
+        {archive !== null ? (
+          <section className="tui-panel p-3" aria-label="Archivo de hechas">
+            <span className="tui-panel-title">done.txt</span>
+            {archive.length === 0 ? (
+              <p className="tui-empty">
+                Nada archivado todavía. Con <kbd>A</kbd> mandas las completadas a done.txt.
+              </p>
+            ) : (
+              <div className="tui-list">
+                {archive.map((line, index) => (
+                  <div key={`${index}-${line}`} className="tui-row tui-row--done">
+                    <span className="tui-row-index">{String(index + 1).padStart(3, ' ')}</span>
+                    <span className="tui-row-prio">·</span>
+                    <span className="tui-row-title">{line}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="tui-empty mt-2">Vista de solo lectura: sale del archivo, no de la base.</p>
+          </section>
+        ) : (data?.content.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center animate-bounce-in">
             <div className="w-16 h-16 mb-4 rounded-full bg-[var(--surface-elevated)] dark:bg-[var(--dark-surface-elevated)] flex items-center justify-center animate-float" style={{ animationDelay: '0.2s' }}>
               <ClipboardDocumentListIcon className="h-8 w-8 text-[var(--text-muted)]" />
@@ -460,7 +521,8 @@ export const TaskListPage: FC = () => {
               />
             ))}
           </div>
-        )}
+        )
+        }
 
           </div>
 
@@ -508,6 +570,7 @@ export const TaskListPage: FC = () => {
         }
         counts={counts}
         linked={isLinked}
+        view={archive !== null ? 'done.txt' : null}
         hints={[
           { keys: 'j k', label: 'mover' },
           { keys: 'n', label: 'nueva' },
@@ -527,9 +590,43 @@ export const TaskListPage: FC = () => {
           }
           onRun={(action) => {
             setShowPalette(false);
-            onKeyAction(action);
+            void onKeyAction(action);
           }}
           onClose={() => setShowPalette(false)}
+        />
+      )}
+
+      {showPicker && (
+        <SavedFilterPicker
+          filters={savedFilters}
+          onApply={(filter: SavedFilter) => {
+            setShowPicker(false);
+            setSearch(filter.q);
+            setFilter(filter.filter);
+            setProject(filter.project);
+            setContext(filter.context);
+            setSort(filter.sort);
+            setPage(0);
+          }}
+          onRemove={(name) => removeFilter(username, name)}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
+      {namingFilter && (
+        <PromptOverlay
+          title="Guardar esta búsqueda"
+          hint="El nombre con el que aparecerá en ff. Guardarla dos veces con el mismo nombre la sobrescribe."
+          initial={savedFilters[0]?.name ?? ''}
+          submitLabel="Guardar"
+          onSubmit={(name) => {
+            if (name) {
+              saveFilter(username, { name, ...currentFilter });
+              addToast('success', `Búsqueda «${name}» guardada`);
+            }
+            setNamingFilter(false);
+          }}
+          onCancel={() => setNamingFilter(false)}
         />
       )}
 
