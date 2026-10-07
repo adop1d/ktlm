@@ -1,0 +1,27 @@
+# El contexto de este build es ./frontend. El Dockerfile hace `COPY . .`, así que sin este
+# fichero un .env con VITE_* viaja a la capa del builder.
+
+# Secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencias y compilados: los rehace el build
+node_modules/
+dist/
+coverage/
+
+# Resultados de pruebas
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.bak

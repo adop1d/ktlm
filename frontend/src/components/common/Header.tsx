@@ -20,7 +20,7 @@ export const Header: FC = () => {
     <header className="tui-titlebar">
       <Link to="/" className="tui-titlebar-brand">
         <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={18} height={18} />
-        <span>ktm</span>
+        <span>ktlm</span>
       </Link>
 
       <nav className="tui-titlebar-actions">

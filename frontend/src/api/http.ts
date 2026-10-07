@@ -4,9 +4,16 @@ import { useAuthStore } from '../stores/authStore';
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const parseError = async (res: Response): Promise<Error> => {
-  if (res.status === 401) {
+  // 401 y 403 significan lo mismo para el cliente: el token que lleva ya no vale. Pasa
+  // con un JWT caducado, y también cuando la clave de firma cambia —una variable de
+  // entorno— y todos los tokens emitidos antes dejan de servir de golpe.
+  //
+  // Antes solo se cerraba sesión con 401, así que ese segundo caso dejaba la app en un
+  // «Error al cargar: 403» permanente: la sesión parecía viva, con el nombre del usuario
+  // arriba, y ninguna petición pasaba.
+  if (res.status === 401 || res.status === 403) {
     useAuthStore.getState().logout();
-    return new Error('Unauthorized');
+    return new Error(res.status === 401 ? 'Unauthorized' : 'Forbidden');
   }
   const body = await res.text();
   return new Error(`API error ${res.status}: ${body}`);

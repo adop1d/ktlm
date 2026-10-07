@@ -181,7 +181,7 @@ cd frontend && npm test            # 55 tests
 cd frontend && npm run test:e2e    # Playwright, 44
 
 # El servidor MCP, de punta a punta contra el backend levantado:
-cd mcp && KTM_SERVICE_TOKEN=ktm_... .venv/bin/python smoke.py
+cd mcp && KTLM_SERVICE_TOKEN=ktlm_... .venv/bin/python smoke.py
 ```
 
 Los e2e interceptan la API, así que no necesitan el backend levantado. En el CI corren los
@@ -242,8 +242,8 @@ servidor, así que no puede desincronizarse de la web.
 ```bash
 cd mcp
 python3 -m venv .venv && .venv/bin/pip install -e .
-export KTM_SERVICE_TOKEN=ktm_...      # se crea en la app, en la barra: «tokens»
-.venv/bin/python -m ktm_mcp.server    # stdio, por defecto
+export KTLM_SERVICE_TOKEN=ktlm_...      # se crea en la app, en la barra: «tokens»
+.venv/bin/python -m ktlm_mcp.server    # stdio, por defecto
 ```
 
 ### Credenciales
@@ -267,9 +267,35 @@ operación: el navegador lleva su propio espejo del archivo, este cliente no, y 
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
-| `KTM_API_URL` | `http://localhost:8080` | Dónde está la API |
-| `KTM_SERVICE_TOKEN` | — | Obligatoria. El token de servicio |
-| `KTM_MCP_TRANSPORT` | `stdio` | `http` para streamable-http en el puerto `KTM_MCP_PORT` |
+| `KTLM_API_URL` | `http://localhost:8080` | Dónde está la API |
+| `KTLM_SERVICE_TOKEN` | — | Obligatoria. El token de servicio |
+| `KTLM_MCP_TRANSPORT` | `stdio` | `http` para streamable-http en el puerto `KTLM_MCP_PORT` |
+
+---
+
+## Seguridad
+
+- **Sin secretos en el repositorio.** `.env` está ignorado y `.env.example` es la
+  plantilla, sin nada dentro. `JWT_SECRET` y `DB_PASSWORD` no tienen valor por defecto:
+  `docker compose up` se niega a arrancar si faltan, diciendo cuál.
+- **`.dockerignore` en cada contexto.** El de la raíz no sirve: el contexto del build es
+  `./backend` y `./frontend`, así que hay uno en cada uno. Sin eso, un `.env` se iba a la
+  capa del builder con `COPY . .`.
+- **Postgres no se publica.** El backend llega a la base por la red de compose. Antes
+  estaba en `0.0.0.0:5432` con la contraseña `PLACEHOLDER_LEE_EL_ENV` escrita en el fichero.
+- **Login y registro limitados**: diez intentos por cuenta cada quince minutos. El login
+  se cuenta por nombre de usuario —una IP se rota en un segundo, un nombre no— y el
+  registro por IP, porque al revés sería un arma para bloquear la cuenta de otro.
+- **Registro validado de verdad.** Las restricciones estaban en la entidad `User`, que es
+  lo que se guarda, así que `@Valid` no miraba nada: una contraseña de un carácter se
+  guardaba hasheada.
+- **El rol es una lista cerrada**, no texto libre: `POST /api/admin/users/roles` escribía
+  en `user_roles` lo que le mandaran.
+- **Los errores 500 no devuelven el mensaje.** Varios incluyen rutas absolutas del
+  servidor.
+- **Cabeceras**: CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`.
+- **`/api/auth/**` ya no es `permitAll`**, solo `login` y `register`. Con el comodín, un
+  endpoint nuevo en ese controlador sin `@PreAuthorize` quedaba público.
 
 ---
 

@@ -1,45 +1,98 @@
-# Environment variables
+# ---------------------------------------------------------------------------
+# Secretos
+# ---------------------------------------------------------------------------
+# .env lleva lo que no debe subirse nunca. .env.example sí: es la plantilla, y una
+# plantilla sin secretos es justamente lo que debe estar a la vista.
 .env
-*.local
-.env.example
+.env.*
+!.env.example
 
-# Dependencies
+# Archivos de entorno por servicio, que es donde se cuelan por costumbre.
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# Secretos con nombre propio, por si alguien los guardó aparte.
+*.pem
+*.key
+*.p12
+*.jks
+keystore.*
+id_rsa*
+
+# ---------------------------------------------------------------------------
+# Dependencias
+# ---------------------------------------------------------------------------
 node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mvn/wrapper/maven-wrapper.jar
 
-# Build output
+# ---------------------------------------------------------------------------
+# Compilados
+# ---------------------------------------------------------------------------
 dist/
 frontend/dist/
 backend/target/
+target/
 build/
-
-# Java
 *.class
 *.jar
 *.war
 
-# IDE
+# ---------------------------------------------------------------------------
+# Datos de ejecución: son de cada máquina y contienen las tareas de alguien
+# ---------------------------------------------------------------------------
+data/
+backend/data/
+*.log
+logs/
+
+# ---------------------------------------------------------------------------
+# Pruebas
+# ---------------------------------------------------------------------------
+coverage/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/.playwright/
+.playwright/
+
+# ---------------------------------------------------------------------------
+# Editores
+# ---------------------------------------------------------------------------
+# .factorypath lleva rutas absolutas de jars de esta máquina: no dice nada útil y sí
+# dice dónde vive cadadeveloper.
+.factorypath
+.classpath
+.project
+.settings/
 .idea/
 .vscode/
 *.swp
 *.swo
-.project
-.classpath
-.settings/
+*~
 
-# OS
+# ---------------------------------------------------------------------------
+# Sistema
+# ---------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+desktop.ini
 
-# Logs
-*.log
-npm-debug.log*
-
-# Test
-coverage/
-
-# Misc
+# ---------------------------------------------------------------------------
+# Mogollón
+# ---------------------------------------------------------------------------
 *.bak
 *.tmp
-
-# Zips
+*.orig
+*.rej
 *.zip

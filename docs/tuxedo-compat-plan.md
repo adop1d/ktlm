@@ -1,11 +1,11 @@
-# Plan: compatibilidad KTM ↔ [tuxedo](https://github.com/webstonehq/tuxedo)
+# Plan: compatibilidad KTLM ↔ [tuxedo](https://github.com/webstonehq/tuxedo)
 
 
 > **Estado: Fase 0 COMPLETA (verificada en ejecución).** La tabla 0.1–0.7 se aplicó y se
 > comprobó contra la app corriendo. Un hallazgo del smoke test se añadió sobre la marcha:
 > un cuerpo con fecha malformada devolvía **500** y `GlobalExceptionHandler` no logueaba
 > nada; ahora devuelve 400 y registra los no manejados. Ver "Registro de ejecución" al final.
-Objetivo: que la app KTM (Spring Boot + React) pueda **abrir un `todo.txt` real desde el disco**,
+Objetivo: que la app KTLM (Spring Boot + React) pueda **abrir un `todo.txt` real desde el disco**,
 mantenerlo sincronizado en ambos sentidos con tuxedo, **paginar en servidor**, y exponer los
 **mismos keybindings vim/chord** que tuxedo.
 
@@ -41,7 +41,7 @@ Decisiones ya tomadas por el usuario:
   `{"n":1,"raw":"...","done":false,"priority":"A","created":"2026-04-28","completed":null,
     "projects":["health"],"contexts":["phone"],"due":"2026-05-08","rec":null,"t":null}`
 
-**KTM (estado actual, con rutas exactas)**
+\*\*KTLM (estado actual, con rutas exactas)**
 
 | Área | Estado actual | Fichero |
 | --- | --- | --- |
@@ -293,7 +293,7 @@ Requisitos del motor:
 
 ### Mapa de paridad (núcleo + chords)
 
-| Acción | Tecla | Estado en KTM hoy | Trabajo |
+| Acción | Tecla | Estado en KTLM hoy | Trabajo |
 | --- | --- | --- | --- |
 | `cursor_down` / `cursor_up` | `j` `k` / `↓` `↑` | — | cursor de fila + `Ctrl-d`/`Ctrl-u` por página |
 | `cursor_top` / `cursor_bottom` | `gg` `G` | — | chord |
