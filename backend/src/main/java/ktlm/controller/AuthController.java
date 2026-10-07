@@ -40,12 +40,12 @@ public class AuthController {
     }
 
     /**
-     * Las restricciones van en el record, no en la entidad.
+     * The constraints go on the record, not on the entity.
      *
-     * <p>Estaban en {@code User}, que es lo que se guarda: ahí no las mira nadie. El
-     * {@code @Valid} del controlador solo mira el record, así que sin esto no validaba
-     * nada y una contraseña de un carácter se guardaba hasheada. Peor: un null llegaba a
-     * {@code encode()} y reventaba con un 500 en vez de un 400.
+     * <p>They were on {@code User}, which is what gets saved: nobody looks at them there.
+     * The controller's {@code @Valid} only looks at the record, so without this it
+     * validated nothing and a one-character password got saved hashed. Worse: a null
+     * reached {@code encode()} and blew up with a 500 instead of a 400.
      */
     public record LoginRequest(
             @NotBlank @Size(max = 50) String username,
@@ -54,8 +54,8 @@ public class AuthController {
     public record RegisterRequest(
             @NotBlank @Size(min = 3, max = 50) String username,
             @NotBlank @Email @Size(max = 254) String email,
-            // Ocho es el mínimo de siempre; por debajo, adivinar una contraseña de tres
-            // letras no cuesta nada.
+            // Eight has always been the minimum; below that, guessing a three-letter
+            // password costs nothing.
             @NotBlank @Size(min = 8, max = 200) String password) {}
     public record AuthResponse(String token, String type, String username, String email, List<String> roles) {}
 

@@ -4,12 +4,12 @@ import * as api from '../../api/tasks';
 import { useToastStore } from '../../stores/toastStore';
 
 /**
- * El editor de la nota de una tarea.
+ * The note editor for a task.
  *
- * <p>En el archivo `note:` no guarda el texto sino una ruta, igual que en tuxedo. El motivo
- * es el formato: el token se separa por espacios, así que un texto con varias palabras se
- * truncaría en la primera. Guardarlo en un archivo del directorio del usuario además deja
- * caber un texto de varias líneas, que es de lo que se trata cuando se abre un editor.
+ * <p>The `note:` token in the file does not store the text but a path, same as in tuxedo. The
+ * reason is the format: the token is split on spaces, so a multi-word text would get
+ * truncated at the first one. Storing it in a file inside the user directory also leaves room
+ * for a multi-line text, which is the whole point of opening an editor.
  */
 export const NoteEditor: FC<{
   uid: number;
@@ -44,7 +44,7 @@ export const NoteEditor: FC<{
     try {
       await api.writeNote(uid, contenido);
       addToast('success', contenido.trim() ? 'Nota guardada' : 'Nota borrada');
-      // No hace falta refrescar: el servidor reescribe el archivo y el SSE lo trae.
+      // No need to refetch: the server rewrites the file and the SSE brings it over.
       onClose();
     } catch (e) {
       addToast('error', `No se pudo guardar: ${(e as Error).message}`);

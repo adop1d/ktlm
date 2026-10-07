@@ -1,6 +1,6 @@
 package ktlm.model;
 
-/** Filtro de estado para la lista paginada. */
+/** State filter for the paginated list. */
 public enum TaskFilter {
     ALL(null),
     ACTIVE(false),
@@ -16,7 +16,7 @@ public enum TaskFilter {
         return completed;
     }
 
-    /** Valor tolerante: cualquier entrada desconocida cae en ALL en vez de fallar la petición. */
+    /** Tolerant value: any unknown input falls back to ALL instead of failing the request. */
     public static TaskFilter from(String raw) {
         if (raw == null) {
             return ALL;

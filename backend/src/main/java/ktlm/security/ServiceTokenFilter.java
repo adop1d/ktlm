@@ -16,15 +16,15 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Autentica las peticiones con token de servicio, en la cabecera
- * {@code Authorization: Service <token>}.
+ * Authenticates requests with a service token, in the
+ * {@code Authorization: Service <token>} header.
  *
- * <p>Va antes que el filtro del JWT y, si no hay token de servicio, lo deja pasar para que
- * el de JWT haga su trabajo: son dos formas de entrar en la misma puerta, no dos puertas.
+ * <p>It runs before the JWT filter and, if there is no service token, lets it through so
+ * the JWT one can do its job: two ways into the same door, not two doors.
  *
- * <p>La autoridad es ROLE_MCP. Los endpoints que hacen falta a mano —archivar— no la
- * aceptan, así que una automatización no puede hacer lo que se decidió que no puede
- * hacer aunque lleve un token válido.
+ * <p>The authority is ROLE_MCP. The endpoints that are done by hand —archiving— do not
+ * accept it, so an automation cannot do what was decided it must not do even if it
+ * carries a valid token.
  */
 @Component
 public class ServiceTokenFilter extends OncePerRequestFilter {
@@ -58,7 +58,7 @@ public class ServiceTokenFilter extends OncePerRequestFilter {
         request.setAttribute(ServiceTokenPrincipal.ATTRIBUTE, principal);
     }
 
-    /** Identidad del token de servicio en la petición, para poder auditar quién hizo qué. */
+    /** Service token identity on the request, so we can audit who did what. */
     public record ServiceTokenPrincipal(Long userId, String label) {
         public static final String ATTRIBUTE = "serviceToken";
     }

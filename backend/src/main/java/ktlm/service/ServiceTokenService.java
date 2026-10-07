@@ -18,11 +18,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Emisión y comprobación de tokens de servicio.
+ * Issuing and validating service tokens.
  *
- * <p>El token es aleatorio y se entrega una sola vez; en la base solo queda su SHA-256. La
- * comparación es en tiempo constante: comparar hashes con {@code equals} filtra por el tiempo
- * que tardan, y un atacante puede medir eso.
+ * <p>The token is random and handed out once; only its SHA-256 stays in the database. The
+ * comparison is constant-time: comparing hashes with {@code equals} leaks through the time
+ * they take, and an attacker can measure that.
  */
 @Service
 public class ServiceTokenService {
@@ -34,7 +34,7 @@ public class ServiceTokenService {
         this.repository = repository;
     }
 
-    /** El token en claro. Es la única vez que se ve. */
+    /** The token in the clear. The only time it is seen. */
     public record IssuedToken(ServiceToken token, String plainToken) {}
 
     @Transactional
@@ -50,7 +50,7 @@ public class ServiceTokenService {
         return new IssuedToken(repository.save(token), plain);
     }
 
-    /** El usuario al que pertenece un token, si sigue vivo. */
+    /** The user a token belongs to, if it is still alive. */
     @Transactional
     public Optional<ServiceToken> resolve(String plainToken) {
         if (plainToken == null || plainToken.isBlank()) {

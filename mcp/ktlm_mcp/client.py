@@ -1,15 +1,15 @@
-"""Cliente de la API de KTLM para el servidor MCP.
+"""API client for KTLM, used by the MCP server.
 
-Habla por HTTP contra el mismo servicio que usa el navegador. Autentica con token de
-servicio, no con JWT: es una credencial pensada para esto y revocable sin invalidar la
-sesión de quien la creó.
+Speaks HTTP against the same service the browser uses. Authenticates with a service
+token, not JWT: it is a credential meant for this and revocable without invalidating the
+session of whoever created it.
 
-**Toda escritura pasa por `/api/tasks/batch`, incluidas las de una sola operación.** No
-es azúcar: el navegador lleva su propio espejo del archivo y lo manda entero en cada
-cambio, pero este cliente no lo lleva. Si una escritura no pasa por el lote, el cambio
-llega a la base de datos y no se refleja nunca en el todo.txt —que es justo la fuente de
-verdad. El lote es el único camino que escribe el archivo, así que hay un solo camino y
-es el correcto.
+**Every write goes through `/api/tasks/batch`, including single-operation ones.** It is
+not sugar: the browser carries its own mirror of the file and sends it whole on every
+change, but this client does not. If a write doesn't go through the batch, the change
+reaches the database and is never reflected in the todo.txt — which is exactly the source
+of truth. The batch is the only path that writes the file, so there is one path and it is
+the right one.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ PAGE_SIZE = int(os.environ.get("KTLM_PAGE_SIZE", "50"))
 
 
 class KtmError(RuntimeError):
-    """Lo que devolvió la API y no se pudo usar."""
+    """What the API returned and could not be used."""
 
 
 @dataclass
@@ -49,8 +49,8 @@ class Task:
 def _headers() -> dict[str, str]:
     if not SERVICE_TOKEN:
         raise KtmError(
-            "Falta KTLM_SERVICE_TOKEN. Créalo en la app, en Tokens de servicio, y pásalo "
-            "por el entorno."
+            "KTLM_SERVICE_TOKEN is missing. Create it in the app, under service tokens, "
+            "and pass it in the environment."
         )
     return {"Authorization": f"Service {SERVICE_TOKEN}"}
 
@@ -59,16 +59,16 @@ def _check(res: httpx.Response) -> httpx.Response:
     if res.status_code >= 400:
         detail = res.text.strip()[:300]
         if res.status_code == 401:
-            detail = "el token de servicio no es válido o está revocado"
+            detail = "the service token is not valid, or it has been revoked"
         raise KtmError(f"HTTP {res.status_code}: {detail}")
     return res
 
 
 def _to_task(raw: dict[str, Any]) -> Task:
     return Task(
-        # uid es el id de la API, que es lo que llevan las URLs. El número que aparece
-        # en el archivo es otra cosa, todo_uid: son dos identidades y no conviene
-        # confundirlas, porque con la segunda las URLs no funcionan.
+        # uid is the API id, the one the URLs take. The number that appears in the file
+        # is something else, todo_uid: they are two identities and shouldn't be confused,
+        # because with the second one the URLs don't work.
         uid=int(raw["id"]),
         todo_uid=raw.get("todoUid"),
         title=raw.get("title", ""),
@@ -85,7 +85,7 @@ def _to_task(raw: dict[str, Any]) -> Task:
 
 
 def batch(operations: list[dict[str, Any]]) -> dict[str, Any]:
-    """Aplica operaciones de una en una o de veinte en una: el mismo camino."""
+    """Applies operations one at a time or twenty at a time: the same path."""
     with httpx.Client(timeout=30.0) as client:
         res = _check(client.post(
             f"{BASE_URL}/api/tasks/batch",
@@ -102,7 +102,7 @@ def list_tasks(
     search: str | None = None,
     projects: list[str] | None = None,
 ) -> tuple[list[Task], int, int]:
-    """Una página de tareas y los totales, para poder decir si hay más detrás."""
+    """A page of tasks plus the totals, so you can tell whether there is more behind."""
     params: dict[str, Any] = {"page": page, "size": size, "filter": filter, "sort": "file"}
     if search:
         params["search"] = search
@@ -129,7 +129,7 @@ def create_task(
     priority: str = "MEDIUM",
     due_date: str | None = None,
 ) -> Task:
-    """Crea y devuelve la tarea ya creada, con su uid."""
+    """Creates and returns the task already created, with its uid."""
     result = batch([{"op": "create", "title": title, "projects": projects,
                      "contexts": contexts, "priority": priority, "dueDate": due_date}])
     uid = int(result["results"][0].get("uid") or 0)
@@ -145,7 +145,7 @@ def update_task(
     due_date: str | None = None,
     recurrence: str | None = None,
 ) -> Task:
-    """Cambia solo lo que se informa; lo demás se queda. Va por el lote y por tanto escribe el archivo."""
+    """Changes only what is reported; the rest stays. It goes through the batch, so it writes the file."""
     operation: dict[str, Any] = {"op": "update", "uid": uid}
     if title is not None:
         operation["title"] = title
@@ -173,21 +173,22 @@ def delete_task(uid: int) -> None:
 
 
 def read_file() -> str:
-    """El todo.txt tal cual, con comentarios y formato. Para leer, no para editar."""
+    """The todo.txt as-is, with comments and formatting. For reading, not editing."""
     with httpx.Client(timeout=20.0) as client:
         return _check(client.get(f"{BASE_URL}/api/tasks/file", headers=_headers())).text
 
 def read_note(uid: int) -> str:
-    """El texto de la nota. Vacío si la tarea no tiene."""
+    """The text of the note. Empty if the task has none."""
     with httpx.Client(timeout=20.0) as client:
         return _check(client.get(f"{BASE_URL}/api/tasks/{uid}/note", headers=_headers())).text
 
 
 def write_note(uid: int, text: str) -> dict[str, Any]:
-    """Guarda la nota. Vaciar borra el archivo y quita el token `note:` de la línea.
+    """Saves the note. Emptying deletes the file and drops the `note:` token from the line.
 
-    Va por su endpoint y no por el lote a propósito: la nota es una ruta dentro del
-    directorio del usuario, y el endpoint es donde se valida que no se salga.
+    It deliberately goes through its own endpoint rather than the batch: the note is a
+    path inside the user's directory, and the endpoint is where it gets validated against
+    escaping it.
     """
     with httpx.Client(timeout=20.0) as client:
         res = _check(client.put(

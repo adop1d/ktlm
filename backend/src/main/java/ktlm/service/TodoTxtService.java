@@ -21,21 +21,21 @@ import java.util.Set;
 import java.util.Map;
 
 /**
- * Interoperabilidad con archivos todo.txt (tuxedo).
+ * Interoperability with todo.txt files (tuxedo).
  *
- * <p>El archivo se trata como el espejo del usuario: la base de datos es la fuente de
- * verdad y {@code uid:} es la identidad estable que permite reconciliar ambos sentidos
- * sin duplicar.
+ * <p>The file is treated as the user's mirror: the database is the source of truth and
+ * {@code uid:} is the stable identity that lets both directions be reconciled without
+ * duplicating anything.
  */
 @Service
 public class TodoTxtService {
 
-    // MEDIUM no emite prioridad: es el estado por defecto y el archivo es del usuario.
-    // Escribir "(B)" en cada línea contaminaría el todo.txt entero.
-    /** Tope del archivo. Con 10 000 tareas de 500 caracteres se queda corto de sobra. */
+    // MEDIUM emits no priority: it is the default state and the file belongs to the user.
+    // Writing "(B)" on every line would contaminate the whole todo.txt.
+    /** File size cap. 10 000 tasks of 500 characters fall well short of it. */
     private static final int MAX_FILE = 8_000_000;
 
-    /** Token de la nota en el archivo. Vive en extras, pero con columna propia. */
+    /** The note token in the file. It lives in extras, but has its own column. */
     private static final String KEY_NOTE = "note";
 
     private static final Map<Task.Priority, Character> PRIORITY_TO_TODO = Map.of(
@@ -61,12 +61,12 @@ public class TodoTxtService {
         this.watcher = watcher;
     }
 
-    /** El archivo tal cual está en disco, sin reconciliar. */
+    /** The file exactly as it is on disk, without reconciling. */
     public String currentFile(Long userId) {
         return store.read(userId);
     }
 
-    /** Escribe el archivo y avisa al vigilante de que el cambio es nuestro. */
+    /** Writes the file and tells the watcher the change came from us. */
     private void writeFile(Long userId, String content) {
         store.write(userId, content);
         watcher.recordWritten(userId, content);
@@ -74,19 +74,20 @@ public class TodoTxtService {
     }
 
     /**
-     * El todo.txt completo del usuario.
+     * The user's complete todo.txt.
      *
-     * <p>Sale del archivo, no de la base: el archivo es la fuente y la tabla es el índice
-     * para poder filtrar y paginar. reconstruirlo desde la base perdería los comentarios y
-     * el formato exacto, que es justo lo que hay que conservar.
+     * <p>It comes from the file, not the database: the file is the source and the table is
+     * the index, so that filtering and pagination are possible. Rebuilding it from the
+     * database would lose the comments and the exact formatting, which is precisely what
+     * has to be preserved.
      */
     public String export(Long userId) {
         return store.read(userId);
     }
 
     /**
-     * Crea el archivo si no existe. Lo llama el navegador al vincularse, y con esto el
-     * usuario no tiene que crear nada a mano para empezar.
+     * Creates the file if it does not exist. The browser calls it on linking, so the user
+     * does not have to create anything by hand to get started.
      */
     public void ensureFile(Long userId) {
         if (store.read(userId).isEmpty()) {
@@ -96,11 +97,11 @@ public class TodoTxtService {
     }
 
     /**
-     * Vuelca a disco el estado actual y avisa a las sesiones abiertas.
+     * Dumps the current state to disk and notifies the open sessions.
      *
-     * <p>El navegador no lo necesita: lleva su propio espejo y manda el archivo entero con
-     * cada cambio. Un cliente sin espejo —el servidor MCP, un script— sí: si no, el cambio
-     * llegaba a la base y no se notaba nunca en el todo.txt.
+     * <p>The browser does not need it: it keeps its own mirror and sends the whole file
+     * with every change. A client without a mirror —the MCP server, a script— does: without
+     * this, the change would reach the database and never show up in the todo.txt.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String persistToFile(Long userId) {
@@ -113,21 +114,22 @@ public class TodoTxtService {
     }
 
     /**
-     * Le da a cada tarea el uid y el orden que el archivo necesita y la base aún no tiene.
+     * Gives every task the uid and the ordering the file needs and the database does not
+     * have yet.
      *
-     * <p>El importador asigna esas cosas al leer, pero hay cambios que no pasan por ahí:
-     * un lote del servidor MCP, una nota. Si el archivo se escribiera tal cual, la línea
-     * saldría sin {@code uid:} y con el orden a cero —y el cliente, que llama a la API con
-     * el uid, apuntaría a la tarea 0. El cambio se perdería sin error, que es lo peor que
-     * puede pasar.
+     * <p>The importer assigns those on read, but some changes do not go through it: a batch
+     * from the MCP server, a note. If the file were written as-is, the line would come out
+     * without {@code uid:} and with the ordering at zero —and the client, which calls the
+     * API with the uid, would point at task 0. The change would be lost without an error,
+     * which is the worst thing that can happen.
      *
-     * <p>El uid es el id de la fila: un número que el servidor ya tiene, no uno que hay que
-     * inventar y mantener en su sitio.
+     * <p>The uid is the row id: a number the server already has, not one that has to be
+     * invented and kept in place.
      *
-     * <p>Y aquí no se llama al importador, aunque podría: serializaría líneas sin uid y él
-     * no podría emparejarlas con las tareas que son suyas. Con cinco tareas de igual
-     * título no hay coincidencia única, así que crearía cinco tareas nuevas y dejaría las
-     * viejas huérfanas. Es un bucle, no una ayuda.
+     * <p>And the importer is not called here, even though it could be: it would serialize
+     * lines without a uid and could not match them against the tasks that are actually
+     * theirs. With five tasks of the same title there is no unique match, so it would
+     * create five new tasks and leave the old ones orphaned. That is a loop, not a help.
      */
     private void prepararParaEscribir(List<Task> tasks) {
         List<Task> sucias = new ArrayList<>();
@@ -154,12 +156,12 @@ public class TodoTxtService {
     }
 
     /**
-     * Reconstruye el archivo desde la base. Para cuando alguien edita el archivo a mano y
-     * se rompe.
+     * Rebuilds the file from the database. For when someone edits the file by hand and it
+     * breaks.
      *
-     * <p>Es {@link #persistToFile}: reconstruir y volcar son la misma operación, y tener las
-     * dos por separado invitaba a que una se quedara sin preparar el uid y el orden —que es
-     * justo lo que la dejaba escribiendo un archivo inservible.
+     * <p>It is {@link #persistToFile}: rebuilding and dumping are the same operation, and
+     * having them separate invited one of them to skip preparing the uid and the ordering
+     * —which is exactly what left it writing an unusable file.
      */
     public String rebuildFile(Long userId) {
         return persistToFile(userId);
@@ -172,17 +174,17 @@ public class TodoTxtService {
     private static final String EMPTY_FILE = "";
 
     /**
-     * Añade una línea al inbox.txt. El servidor no la procesa todavía: es una captura, no
-     * una importación, y hacerlo sin que el cliente lo pida haría que una escritura fuera
-     * de la app apareciera de golpe.
+     * Appends a line to inbox.txt. The server does not process it yet: it is a capture, not
+     * an import, and doing it without the client asking would make a write from outside the
+     * app appear all at once.
      */
     public void appendInbox(Long userId, String line) {
         store.appendInbox(userId, line);
     }
 
     /**
-     * Vacía el inbox y lo pasa por el importador. Devuelve el archivo reconciliado.
-     * Es idempotente: si el inbox ya estaba vacío, no toca nada.
+     * Empties the inbox and runs it through the importer. Returns the reconciled file.
+     * It is idempotent: if the inbox was already empty, it touches nothing.
      */
     public String drainInbox(Long userId) {
         String pending = store.consumeInbox(userId);
@@ -193,9 +195,9 @@ public class TodoTxtService {
     }
 
     /**
-     * Importa un archivo. Cada línea se hace coincidir por su token {@code uid:}: si no lo
-     * tiene, se crea nueva y se le asigna uno. Nunca borra; las tareas ausentes del archivo
-     * se quedan porque la semántica de borrado la decide el cliente al reconciliar.
+     * Imports a file. Each line is matched by its {@code uid:} token: without one it is
+     * created anew and given one. It never deletes; tasks absent from the file stay
+     * because the delete semantics are decided by the client when reconciling.
      */
     @Transactional
     public ImportResult importFile(Long userId, String text) {
@@ -206,14 +208,15 @@ public class TodoTxtService {
         int imported = 0;
         int updated = 0;
 
-        // Al completar una tarea recurrente, tuxedo inserta la instancia siguiente
-        // conservando el mismo uid. Un uid identifica como mucho una fila, así que la
-        // segunda aparición del mismo crea una tarea nueva en vez de machacar la primera.
+        // When completing a recurring task, tuxedo inserts the next instance keeping the
+        // same uid. A uid identifies at most one row, so the second occurrence of the same
+        // one creates a new task instead of overwriting the first.
         Set<String> seenUids = new HashSet<>();
 
-        // Una línea sin uid no tiene identidad con la que reconocerse, y crearla siempre
-        // duplicaba todo cuando tuxedo escribía dos veces antes de que la app devolviera los
-        // uid. La salida es buscar por contenido, que solo es seguro si no hay ambigüedad.
+        // A line without a uid has no identity to recognize it by, and creating it always
+        // duplicated everything when tuxedo wrote twice before the app returned the uids.
+        // The way out is to search by content, which is only safe when there is no
+        // ambiguity.
         List<Task> candidates = taskRepository.findByUserId(userId);
 
         for (int i = 0; i < parsed.size(); i++) {
@@ -227,8 +230,8 @@ public class TodoTxtService {
             }
             if (task == null) {
                 Task byContent = findUnambiguousMatch(candidates, line);
-                // Sin uid pero con coincidencia única, es la misma tarea: se actualiza y se
-                // le queda su uid puesto. Si hay varias iguales, no se adivina.
+                // Without a uid but with a unique match, it is the same task: it gets
+                // updated and keeps its uid. If several are identical, we do not guess.
                 if (byContent != null && (uid == null || uid.isBlank())) {
                     task = byContent;
                 }
@@ -241,9 +244,9 @@ public class TodoTxtService {
             }
 
             apply(task, line);
-            // El uid solo se copia si corresponde a una fila ya existente. Si ya se había
-            // visto, la tarea es nueva y necesita el suyo: dos filas no pueden compartir
-            // identidad.
+            // The uid is only copied when it belongs to an existing row. If it had already
+            // been seen, the task is new and needs its own: two rows cannot share an
+            // identity.
             if (knownUid) {
                 task.setTodoUid(uid);
             }
@@ -252,7 +255,8 @@ public class TodoTxtService {
             taskRepository.save(task);
 
             if (task.getTodoUid() == null || task.getTodoUid().isBlank()) {
-                // El id solo existe tras el primer insert: se usa como uid y se persiste.
+                // The id only exists after the first insert: it is used as the uid and
+                // persisted.
                 task.setTodoUid(String.valueOf(task.getId()));
                 task.updateTimestamp();
                 taskRepository.save(task);
@@ -274,7 +278,7 @@ public class TodoTxtService {
         return new ImportResult(imported, updated, parsed.size(), reconciled);
     }
 
-    /** La única coincidencia por contenido, o null si no hay o si hay varias. */
+    /** The only content match, or null when there is none or there are several. */
     private Task findUnambiguousMatch(List<Task> candidates, ParsedTask line) {
         String wanted = contentKey(line);
         Task found = null;
@@ -283,7 +287,7 @@ public class TodoTxtService {
                 continue;
             }
             if (found != null) {
-                // Ambigüedad: no se sabe cuál de las dos es, así que no se toca ninguna.
+                // Ambiguity: we do not know which of the two it is, so neither is touched.
                 return null;
             }
             found = candidate;
@@ -292,9 +296,9 @@ public class TodoTxtService {
     }
 
     /**
-     * Identidad de contenido: todo menos el uid —que es lo que a una línea nueva le falta— y
-     * menos las fechas. La de creación la sella el servidor y una línea de tuxedo puede no
-     * traerla; la de completado se deriva de `done`, que sí está aquí.
+     * Content identity: everything but the uid —which is exactly what a new line lacks—
+     * and the dates. The creation date is stamped by the server and a tuxedo line may not
+     * carry it; the completed one is derived from `done`, which is present here.
      */
     private String contentKey(ParsedTask line) {
         return String.join("|",
@@ -309,8 +313,8 @@ public class TodoTxtService {
     }
 
     /**
-     * Devuelve las completadas para que el cliente las escriba en done.txt y las quita de
-     * la lista activa. Equivale a la tecla {@code A} de tuxedo.
+     * Returns the completed ones so the client can write them to done.txt and take them off
+     * the active list. Equivalent to tuxedo's {@code A} key.
      */
     @Transactional
     public ArchiveResult archive(Long userId) {
@@ -326,7 +330,7 @@ public class TodoTxtService {
         return new ArchiveResult(done.size(), doneFile);
     }
 
-    // --- Mapeo Task <-> línea todo.txt ----------------------------------------------------
+    // --- Task <-> todo.txt line mapping ------------------------------------------------
 
     private ParsedTask toParsed(Task task) {
         return new ParsedTask(
@@ -347,8 +351,8 @@ public class TodoTxtService {
 
     private void apply(Task task, ParsedTask line) {
         Map<String, String> extras = new LinkedHashMap<>(line.extras() == null ? Map.of() : line.extras());
-        // `note` tiene columna propia. Si además se queda en extras, al reescribir el
-        // archivo saldría dos veces en la misma línea.
+        // `note` has its own column. If it also stayed in extras, rewriting the file would
+        // emit it twice on the same line.
         String note = extras.remove(KEY_NOTE);
         task.setNote(note == null || note.isBlank() ? null : note);
         task.setTitle(line.body());
@@ -379,11 +383,11 @@ public class TodoTxtService {
         if (c == 'C') {
             return Task.Priority.LOW;
         }
-        // B y cualquier letra restante colapsan a la única prioridad intermedia del dominio.
+        // B and any remaining letter collapse to the domain's single intermediate priority.
         return Task.Priority.MEDIUM;
     }
 
-    /** La nota vuelve a los extras, que es donde el codec la escribe como `note:`. */
+    /** The note goes back into extras, which is where the codec writes it as `note:`. */
     private static Map<String, String> conNota(Map<String, String> extras, String note) {
         if (note == null || note.isBlank()) {
             return extras;
@@ -393,7 +397,7 @@ public class TodoTxtService {
         return conNota;
     }
 
-    /** Los extras se guardan como tokens "clave:valor" separados por espacios. */
+    /** Extras are stored as space-separated "key:value" tokens. */
     private String formatExtras(Map<String, String> extras) {
         if (extras == null || extras.isEmpty()) {
             return null;
@@ -421,9 +425,9 @@ public class TodoTxtService {
         return extras;
     }
 
-    /** @param parsed total de tareas leídas del archivo */
+    /** @param parsed total number of tasks read from the file */
     public record ImportResult(int imported, int updated, int parsed, String file) {}
 
-    /** @param doneFile contenido para(done.txt) */
+    /** @param doneFile content for done.txt */
     public record ArchiveResult(int archived, String doneFile) {}
 }

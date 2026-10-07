@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ActionName, Keymap } from './actions';
 import { CHORD_WINDOW_MS } from './defaults';
 
-/** Tecla modificadora suelta: nunca es un atajo por sí misma. */
+/** A bare modifier key: never a shortcut on its own. */
 const MODIFIER_KEY: Readonly<Record<string, true>> = {
   Shift: true,
   Control: true,
@@ -11,7 +11,7 @@ const MODIFIER_KEY: Readonly<Record<string, true>> = {
   CapsLock: true,
 };
 
-/** `KeyboardEvent.key` habla DOM; tuxedo habla nombres de terminal. */
+/** `KeyboardEvent.key` speaks DOM; tuxedo speaks terminal key names. */
 const NAMED_KEYS: Readonly<Record<string, string>> = {
   ArrowDown: 'Down',
   ArrowUp: 'Up',
@@ -21,14 +21,14 @@ const NAMED_KEYS: Readonly<Record<string, string>> = {
   ' ': 'space',
 };
 
-/** "j" | "Down" | "Ctrl-d" | "Shift-Tab" | "F1" | "Esc" | "space"; null si no debe contar. */
+/** "j" | "Down" | "Ctrl-d" | "Shift-Tab" | "F1" | "Esc" | "space"; null if it should not count. */
 export const normalizeKey = (event: KeyboardEvent): string | null => {
   if (MODIFIER_KEY[event.key]) return null;
 
   let key = NAMED_KEYS[event.key] ?? event.key;
   const isSingleChar = key.length === 1;
-  // Con Shift el DOM ya entrega la letra en mayúscula, así que no hay que marcarla dos
-  // veces: `Shift-a` es `A` en tuxedo. En las teclas con nombre sí hace falta el prefijo.
+  // With Shift the DOM already delivers the letter uppercase, so there is no need to mark it
+  // twice: `Shift-a` is `A` in tuxedo. Named keys do need the prefix.
   if (isSingleChar && event.shiftKey) key = key.toUpperCase();
 
   if (event.ctrlKey) key = `Ctrl-${key}`;
@@ -38,7 +38,7 @@ export const normalizeKey = (event: KeyboardEvent): string | null => {
   return key;
 };
 
-/** Une atajos del usuario sobre los de tuxedo; una entrada vacía no pisa el default. */
+/** Merges the user's shortcuts over tuxedo's; an empty entry does not override the default. */
 export const mergeKeymaps = (defaults: Keymap, custom: Keymap): Keymap => {
   const merged: Record<string, readonly string[]> = { ...defaults };
   for (const [action, keys] of Object.entries(custom)) {
@@ -49,7 +49,7 @@ export const mergeKeymaps = (defaults: Keymap, custom: Keymap): Keymap => {
   return merged;
 };
 
-/** Busca la acción; null si la tecla no está mapeada o está mapeada a lista vacía. */
+/** Finds the action; null if the key is unmapped or mapped to an empty list. */
 export const lookupAction = (keymap: Keymap, key: string): ActionName | null => {
   for (const [action, keys] of Object.entries(keymap)) {
     if (keys.includes(key)) return action as ActionName;
@@ -65,11 +65,12 @@ const isChordPrefix = (keymap: Keymap, key: string): boolean => {
 };
 
 /**
- * Convierte una tecla en la acción que dispararía, resolviendo chords.
+ * Turns a key into the action it would fire, resolving chords.
  *
- * Con un líder pendiente solo se mira la clave de dos teclas: si no completa, la tecla se
- * consume. Sin líder, una tecla que además de prefijo tiene acción propia dispara su acción y
- * no arma nada — que es lo que evita que `d` (acción y prefijo de `dd`) quede ambigua.
+ * With a pending leader only the two-key binding is looked at: if it does not complete, the
+ * key is consumed. Without a leader, a key that is both a prefix and its own action fires its
+ * action and arms nothing — which is what keeps `d` (an action and the prefix of `dd`)
+ * unambiguous.
  */
 export const resolveAction = (
   keymap: Keymap,
@@ -78,13 +79,14 @@ export const resolveAction = (
 ): { action: ActionName | null; nextChord: string | null } | null => {
   if (pendingChord !== null) {
     const action = lookupAction(keymap, pendingChord + key);
-    // El líder se consume aunque no complete: en tuxedo la tecla incorrecta no hace nada.
+    // The leader is consumed even when it does not complete: in tuxedo the wrong key does
+    // nothing.
     return action ? { action, nextChord: null } : null;
   }
 
-  // El prefijo manda sobre la acción propia. El caso que lo decide es `f`: está enlazado a
-  // `arm_f`, que no es una acción sino el líder de fp/fc/ff/fs. Con el orden inverso, pulsar
-  // `f` ejecutaba el líder en vez de armar el chord, y `fs` nunca llegaba.
+  // The prefix wins over the action of its own. The case that settles it is `f`: it is bound
+  // to `arm_f`, which is not an action but the leader of fp/fc/ff/fs. With the opposite
+  // order, pressing `f` ran the leader instead of arming the chord, and `fs` never landed.
   if (isChordPrefix(keymap, key)) return { action: null, nextChord: key };
 
   const direct = lookupAction(keymap, key);
@@ -95,7 +97,7 @@ export type KeymapMode = 'normal' | 'insert' | 'visual' | 'search' | 'palette';
 
 export interface KeymapState {
   mode: KeymapMode;
-  /** 'g' | 'd' | 'y' | 'f' mientras la ventana del chord está abierta; si no, null. */
+  /** 'g' | 'd' | 'y' | 'f' while the chord window is open; otherwise null. */
   pendingChord: string | null;
 }
 
@@ -105,14 +107,14 @@ export interface UseKeymapOptions {
   enabled?: boolean;
   onModeChange?: (mode: KeymapMode) => void;
   /**
-   * Se llama cuando se pulsa Esc. El motor se queda con la tecla —es lo que hace
-   * `escape_stack` en tuxedo— así que los overlays se cierran desde aquí en vez de montar su
-   * propio listener global: dos dueños de la misma tecla es una fuente de bugs.
+   * Called when Esc is pressed. The engine keeps the key —that is what `escape_stack` does
+   * in tuxedo— so the overlays close from here instead of mounting their own global listener:
+   * two owners of the same key is a source of bugs.
    */
   onEscape?: () => void;
   /**
-   * Acciones que ahora mismo no pueden ejecutarse, con el motivo. Se ignoran en vez de
-   * hacer un no-op silencioso: es mejor un atajo apagado que uno que finge funcionar.
+   * Actions that cannot run right now, with the reason. They are ignored instead of doing a
+   * silent no-op: a shortcut that is off is better than one that pretends to work.
    */
   unavailable?: { actions: readonly ActionName[]; reason: string };
 }
@@ -137,14 +139,15 @@ const isTextEntryTarget = (target: EventTarget | null): boolean => {
 
 export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
   const { keymap, onAction, enabled = true, onModeChange, onEscape, unavailable } = options;
-  // `normal` es el fondo de la pila; insert → search → palette se apilan encima, como en tuxedo.
+  // `normal` is the bottom of the stack; insert → search → palette stack on top, as in tuxedo.
   const [stack, setStack] = useState<readonly KeymapMode[]>(['normal']);
   const [pendingChord, setPendingChord] = useState<string | null>(null);
-  // 0 como "sin temporizador": clearTimeout(0) no hace nada y evita arrastrar un null por el tipo.
+  // 0 as "no timer": clearTimeout(0) does nothing and avoids carrying a null through the type.
   const chordTimer = useRef(0);
   const mode = stack[stack.length - 1] ?? 'normal';
-  // El listener se registra una sola vez y lee el estado por ref: así no se resuscribe en cada
-  // render ni captura closures rancias cuando el consumidor pasa callbacks inline.
+  // The listener is registered once and reads state through a ref: that way it is not
+  // resubscribed on every render nor does it capture stale closures when the consumer passes
+  // inline callbacks.
   const latest = useRef({ keymap, onAction, enabled, mode, pendingChord, unavailable });
   latest.current = { keymap, onAction, enabled, mode, pendingChord, unavailable };
 
@@ -157,7 +160,7 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
   const armChord = useCallback((leader: string) => {
     window.clearTimeout(chordTimer.current);
     setPendingChord(leader);
-    // Un timeout por chord, no un interval: la ventana solo puede expirar una vez.
+    // One timeout per chord, not an interval: the window can only expire once.
     chordTimer.current = window.setTimeout(() => {
       chordTimer.current = 0;
       setPendingChord(null);
@@ -193,16 +196,17 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
         unavailable: blocked,
       } = latest.current;
       if (!on) return;
-      // Meta se ignora siempre: secuestrar Cmd+Q o Cmd+W sería peor que no tener atajo.
+      // Meta is always ignored: hijacking Cmd+Q or Cmd+W would be worse than having no shortcut.
       if (event.metaKey) return;
       const key = normalizeKey(event);
       if (key === null) return;
-      // En normal/visual el foco suele estar en un input de la propia app: `j`/`k` son del input.
+      // In normal/visual the focus is usually in an input of the app itself: `j`/`k` belong
+      // to the input.
       if (isTextEntryTarget(event.target) && (currentMode === 'normal' || currentMode === 'visual')) {
         return;
       }
       if (key === 'Esc') {
-        // Esc nunca sale como acción: la gasta el motor contra la pila de modos y avisa.
+        // Esc never comes out as an action: the engine spends it on the mode stack and warns.
         clearChord();
         popMode();
         onEscape?.();
@@ -215,18 +219,18 @@ export const useKeymap = (options: UseKeymapOptions): UseKeymapResult => {
         if (resolved.nextChord !== null) armChord(resolved.nextChord);
         return;
       }
-      // La tecla ya la consumió el motor: si además llegara al campo que la acción acaba de
-      // abrir, se escribiría en él. Con `n` pasaba —abría el formulario con una "n" en el
-      // título— y con `e` igual.
+      // The engine already consumed the key: if it also reached the field the action just
+      // opened, it would be typed into it. That used to happen with `n` —it opened the form
+      // with an "n" in the title— and with `e` too.
       event.preventDefault();
-      // Una acción apagada no dispara nada ni deja rastro: la UI ya dice por qué.
+      // An action that is off fires nothing and leaves no trace: the UI already says why.
       if (blocked?.actions.includes(resolved.action)) return;
       emit(resolved.action);
     };
 
     const onKeyUp = (event: KeyboardEvent): void => {
       const pending = latest.current.pendingChord;
-      // Soltar el líder no cierra la ventana; si no, `gg` nunca llegaría a completarse.
+      // Releasing the leader does not close the window; otherwise `gg` would never complete.
       if (pending === null || normalizeKey(event) === pending) return;
       clearChord();
     };

@@ -13,12 +13,12 @@ public class RoleAssignmentRequest {
     private String username;
 
     /**
-     * Lista cerrada, no texto libre.
+     * Closed list, not free text.
      *
-     * <p>Con un String cualquiera, este endpoint escribía en user_roles exactamente lo que
-     * le mandaran. Un rol que el código no conoce no hace nada hoy, pero es un dato
-     * escribible por el cliente donde debería haber un enum: el día que algo lo lea por
-     * comparación de cadenas, ese día hay una escalada.
+     * <p>With an arbitrary String, this endpoint wrote into user_roles exactly what
+     * it was handed. A role the code doesn't know does nothing today, but it is a
+     * client-writable field where there should be an enum: the day something reads it
+     * by string comparison, that day there is an escalation.
      */
     @NotNull(message = "Role is required")
     @Pattern(regexp = "ROLE_(USER|ADMIN|MCP)", message = "Role must be ROLE_USER, ROLE_ADMIN or ROLE_MCP")

@@ -14,18 +14,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * El lote: qué devuelve, qué rechaza y dónde para.
+ * The batch: what it returns, what it rejects and where it stops.
  *
- * <p>Sin Mockito, que aquí no instrumenta las clases, y sin base de datos, que en esta
- * máquina no es la del compose. Ninguna de las dos cosas hace falta para lo que se
- * comprueba: la forma de las llamadas y el punto de parada de un lote fallido.
+ * <p>No Mockito, which here does not instrument the classes, and no database, which on
+ * this machine is not the compose one. Neither is needed for what is checked: the shape
+ * of the calls and the stopping point of a failed batch.
  *
- * <p>Lo que sí necesita una base de datos es que la transacción revierta de verdad, y eso
- * se verifica en vivo contra el servidor, que es donde además importa.
+ * <p>What a database is needed for is that the transaction really rolls back, and that
+ * is checked live against the server, which is also where it matters.
  */
 class TaskBatchServiceTest {
 
-    /** Doble a mano: anota lo que le llega y devuelve una tarea con uid fijo. */
+    /** Hand-rolled double: records what it gets and returns a task with a fixed uid. */
     static class FakeTasks extends TaskService {
         final List<TaskRequest> received = new ArrayList<>();
         final List<String> calls = new ArrayList<>();
@@ -36,7 +36,7 @@ class TaskBatchServiceTest {
             super(null, null);
         }
 
-        /** Falla solo en la llamada indicada: así se ve dónde para el lote. */
+        /** Fails only on the indicated call: so you can see where the batch stops. */
         private void maybeFail() {
             if (failOn != null && calls.size() == failAtCall) {
                 throw failOn;
@@ -80,7 +80,7 @@ class TaskBatchServiceTest {
         }
     }
 
-    /** Doble de todo.txt: solo cuenta cuántas veces se le pide escribir. */
+    /** todo.txt double: only counts how many times it is asked to write. */
     static class FakeTodoTxt extends TodoTxtService {
         int escrituras;
 
@@ -130,7 +130,7 @@ class TaskBatchServiceTest {
 
         TaskRequest enviado = tasks.received.get(0);
         assertThat(enviado.title()).isEqualTo("nuevo");
-        // Si estos fueran null-insertados, un update parcial borraría los proyectos de la tarea.
+        // If these were null-inserted, a partial update would wipe the task's projects.
         assertThat(enviado.projects()).isNull();
         assertThat(enviado.contexts()).isNull();
         assertThat(enviado.priority()).isNull();
@@ -153,7 +153,7 @@ class TaskBatchServiceTest {
     @DisplayName("un lote que falla dice en qué operación paró")
     void diceDondeParo() {
         tasks.failOn = new IllegalArgumentException("no existe");
-        tasks.failAtCall = 2; // la segunda: la primera tiene que llegar a aplicarse
+        tasks.failAtCall = 2; // the second one: the first has to make it to being applied
 
         assertThatThrownBy(() -> batch.apply(userId, List.of(
                 op("create", "title", "esta sí"),

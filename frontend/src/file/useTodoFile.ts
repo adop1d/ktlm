@@ -1,9 +1,9 @@
 /**
- * Une la app con el todo.txt.
+ * Connects the app to the todo.txt.
  *
- * El archivo lo lleva el servidor, así que aquí no hay polling: el servidor avisa por SSE
- * cuando cambia y las escrituras van por HTTP. La File System Access API sobrevive solo
- * como forma de importar un archivo que ya tengas en el disco.
+ * The server owns the file, so there is no polling here: the server signals changes over SSE
+ * and writes go over HTTP. The File System Access API survives only as a way to import a
+ * file you already have on disk.
  */
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,8 +35,8 @@ export const useTodoFile = () => {
   }, [qc]);
 
   /**
-   * El archivo ya no vive en este navegador: lo lleva el servidor. Vincular es pedirlo y ya
-   * está; el servidor lo crea si no existía.
+   * The file no longer lives in this browser: the server holds it. Linking is just asking for
+   * it; the server creates it if it did not exist.
    */
   const openAndLink = useCallback(async () => {
     const file: string = await api.readTodoFile();
@@ -46,8 +46,8 @@ export const useTodoFile = () => {
   }, [addToast, refresh]);
 
   /**
-   * Importar desde el disco. Es la única vía que queda de la File System Access API: ya no
-   * es de dónde viene el archivo, sino una forma de traértelo una vez.
+   * Import from disk. This is the only remaining use of the File System Access API: it is no
+   * longer where the file comes from, just a way to bring it in once.
    */
   const importFromDisk = useCallback(async () => {
     const opened = await pickTodoFile();
@@ -66,7 +66,7 @@ export const useTodoFile = () => {
     useTodoDoc.getState().unlink();
   }, []);
 
-  /** El orden de la tabla lo sigue el archivo, así que se propaga tras cada parche. */
+  /** The table order follows the file, so it is pushed after every patch. */
   const pushLineOrder = async (): Promise<void> => {
     const { uidByLine } = useTodoDoc.getState();
     await Promise.all(
@@ -80,10 +80,10 @@ export const useTodoFile = () => {
     try {
       await pushLineOrder();
     } catch {
-      // El orden es cosmético; el contenido del archivo sigue siendo lo importante.
+      // The order is cosmetic; the file content is still what matters.
     }
-    // El servidor reconcilia y devuelve el archivo ya con los uid puestos: eso es lo que hay
-    // que mostrar. Devolver lo que envió el cliente sin más volvería a meter los uid viejos.
+    // The server reconciles and returns the file with the uid values already in place: that is
+    // what should be shown. Echoing back what the client sent would put the old uid back in.
     const { serialize } = useTodoDoc.getState();
     markPendingWrite();
     try {
@@ -116,7 +116,7 @@ export const useTodoFile = () => {
     [commit]
   );
 
-  /** Las letras de tuxedo no son los valores del enum del backend. */
+  /** The tuxedo letters are not the values of the backend enum. */
   const PRIORITY_BY_LETTER: Record<string, TaskPriority> = { A: 'HIGH', B: 'MEDIUM', C: 'LOW' };
 
   const cyclePriority = useCallback(
@@ -153,8 +153,8 @@ export const useTodoFile = () => {
   );
 
   /**
-   * Deshacer devuelve líneas al archivo, pero las filas que se borraron de la base no
-   * vuelven solas: hay que reimportar el documento para reconciliar.
+   * Undo puts lines back in the file, but the rows deleted from the database do not come back
+   * on their own: the document has to be reimported to reconcile.
    */
   const undo = useCallback(async () => {
     useTodoDoc.getState().undo();
@@ -163,9 +163,9 @@ export const useTodoFile = () => {
   }, [commit]);
 
   /**
-   * Las completadas se van a `done.txt`, el archivo hermano donde las deja tuxedo también.
-   * El servidor devuelve el contenido; aquí se escribe en el archivo de verdad, que es lo
-   * que hace que `tuxedo lsa` las vea en el mismo sitio.
+   * Completed tasks go to `done.txt`, the sibling file where tuxedo puts them too. The server
+   * returns the content; here it is written to the real file, which is what makes `tuxedo lsa`
+   * see them in the same place.
    */
   const archive = useCallback(async () => {
     const result = await api.archiveCompleted();
@@ -179,8 +179,8 @@ export const useTodoFile = () => {
   }, [addToast, commit]);
 
   /**
-   * El archivo de hechas vive en el disco, no en la base: las completadas se archivan y
-   * salen de la lista. Por eso la vista de archivo se arma leyendo el hermano.
+   * The done file lives on disk, not in the database: completed tasks are archived and leave
+   * the list. That is why the file view is built by reading the sibling.
    */
   const readArchive = useCallback(async (): Promise<string[]> => {
     return api.readArchived().catch(() => []);

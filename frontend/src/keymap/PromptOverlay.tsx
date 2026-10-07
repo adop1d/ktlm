@@ -2,16 +2,16 @@ import { FC, useEffect, useRef, useState } from 'react';
 import { Portal } from '../components/common/Portal';
 
 /**
- * Prompt modal para escribir un valor. Es lo que tuxedo llama overlay: una sola línea, se
- * escribe y Enter acepta. Esc lo cancela el motor de teclado, igual que en el resto de
- * overlays, así que aquí no hay ningún listener propio.
+ * Modal prompt for typing a value. This is what tuxedo calls an overlay: a single line, you
+ * type and Enter accepts. Esc cancels it via the keymap engine, as in the rest of the
+ * overlays, so there is no listener of its own here.
  */
 export const PromptOverlay: FC<{
   title: string;
   hint?: string;
   initial?: string;
   submitLabel?: string;
-  /** Devuelve el texto, o null para cancelar. */
+  /** Returns the text, or null to cancel. */
   onSubmit: (value: string) => void;
   onCancel: () => void;
 }> = ({ title, hint, initial = '', submitLabel = 'Guardar', onSubmit, onCancel }) => {

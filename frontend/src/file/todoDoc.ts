@@ -1,10 +1,10 @@
 /**
- * Espejo en memoria del todo.txt del usuario.
+ * In-memory mirror of the user's todo.txt.
  *
- * Invariante: `lines` ⇔ contenido del archivo ⇔ proyección en la base de datos.
- * Las mutaciones parchean líneas, no reserializan el archivo entero, y se agrupan en un
- * historial de undo como el de tuxedo. Cuando el archivo cambia por fuera, el espejo se
- * recarga y el historial se descarta: igual que hace tuxedo al detectar un cambio externo.
+ * Invariant: `lines` ⇔ file content ⇔ projection in the database. Mutations patch individual
+ * lines rather than reserializing the whole file, and they are grouped into an undo history
+ * like tuxedo's. When the file changes from outside, the mirror reloads and the history is
+ * dropped, the same way tuxedo does on detecting an external change.
  */
 import { create } from 'zustand';
 import { advanceIsoDate, formatTodoLine, parseTodoLine } from './todoLine';
@@ -13,15 +13,15 @@ const UNDO_DEPTH = 50;
 export const POLL_INTERVAL_MS = 400;
 
 /**
- * Cierre de escritura pendiente. Mientras dure, el espejo no se recarga: recargarse antes de
- * que la escritura llegue al servidor es deshacer lo recién escrito.
+ * Closure for the pending write. While it holds, the mirror does not reload: reloading before
+ * the write reaches the server would undo what was just written.
  */
 let writePending = false;
 
 export const isWritePending = (): boolean => writePending;
 
 
-/** FNV-1a: rápido y suficiente para detectar si el texto cambió. */
+/** FNV-1a: fast and good enough to tell whether the text changed. */
 export const hashText = (text: string): number => {
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
@@ -32,9 +32,9 @@ export const hashText = (text: string): number => {
 };
 
 /**
- * Separa el encabezado del archivo (líneas en blanco y comentarios iniciales) del resto.
- * El backend no conoce los comentarios, así que sin esto un guardado perdería el bloque de
- * cabecera que muchos usuarios ponen en su todo.txt.
+ * Splits the file header (blank lines and leading comments) off from the rest. The backend
+ * knows nothing about comments, so without this a save would lose the header block that many
+ * users put at the top of their todo.txt.
  */
 export const splitPreamble = (text: string): { preamble: string[]; body: string } => {
   const allLines = text.split('\n');
@@ -61,7 +61,7 @@ interface Snapshot {
 }
 
 interface TodoDocState {
-  /** Solo informational: quién es el dueño del archivo ahora mismo. */
+  /** Informational only: who owns the file right now. */
   source: 'servidor' | 'disco' | null;
   lines: string[];
   preamble: string[];
@@ -75,14 +75,14 @@ interface TodoDocState {
 
   link: (reconciledFile: string, source: 'servidor' | 'disco') => void;
   unlink: () => void;
-  /** Aplica un parche de línea. `next` recibe el estado actual y devuelve las líneas. */
+  /** Applies a line patch. `next` receives the current state and returns the lines. */
   patch: (next: (state: TodoDocState) => Pick<Snapshot, 'lines' | 'preamble' | 'uidByLine'>) => void;
   setCursor: (index: number) => void;
   toggleSelected: (index: number) => void;
   clearSelection: () => void;
   undo: () => void;
   applyExternalFile: (content: string, diskHash: number, diskPreamble?: string[]) => void;
-  /** Reemplaza el documento por la versión reconciliada que devuelve el servidor. */
+  /** Replaces the document with the reconciled version the server returns. */
   applyReconciled: (content: string) => void;
   serialize: () => string;
   setStatus: (status: DocStatus, message?: string | null) => void;
@@ -119,8 +119,8 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
       lines,
       uidByLine,
       preamble,
-      // El hash es del contenido REAL del disco, no del reconciliado: comparado con el
-      // segundo, el poll vería siempre una diferencia y reimportaría en bucle.
+      // The hash is of the REAL on-disk content, not of the reconciled one: compared against
+      // the second, the poll would always see a difference and reimport in a loop.
       lastDiskHash: hashText(reconciledFile),
       status: 'linked',
       message: 'Sincronizado con el archivo del servidor',
@@ -134,8 +134,9 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
     set({ source: null, status: 'idle', message: null, history: [], selected: [], cursor: 0 }),
 
   patch: (next) => {
-    // El cerrojo se arma aquí y no en el commit: entre el parche y el commit hay un await
-    // de red, y el sondeo colándose ahí releía el archivo viejo y deshacía el parche.
+    // The latch is armed here, not at commit time: between the patch and the commit there is
+    // a network await, and the poll slipping in there would reread the old file and undo the
+    // patch.
     writePending = true;
     const state = get();
     const before = snapshot(state);
@@ -144,7 +145,7 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
     set({
       ...partial,
       history,
-      // Un parche invalida la vista previa de disco: la siguiente escritura cambia el hash.
+      // A patch invalidates the disk preview: the next write changes the hash.
       lastDiskHash: -1,
     });
   },
@@ -169,11 +170,11 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
     }),
 
   /**
-   * Recarga tras un cambio externo. El historial se descarta a propósito: si otro proceso
-   * reescribió el archivo, deshacer hasta "antes" ya no significaría nada.
+   * Reloads after an external change. The history is dropped on purpose: if another process
+   * rewrote the file, undoing back to "before" would no longer mean anything.
    *
-   * @param diskHash hash del texto leído del disco, que puede diferir del reconciliado.
-   * @param diskPreamble cabecera tal y como está en disco, que el backend no conserva.
+   * @param diskHash hash of the text read from disk, which may differ from the reconciled one.
+   * @param diskPreamble header as it is on disk, which the backend does not preserve.
    */
   applyExternalFile: (content, diskHash, diskPreamble = splitPreamble(content).preamble) => {
     const { lines, uidByLine } = toLines(content);
@@ -198,14 +199,14 @@ export const useTodoDoc = create<TodoDocState>((set, get) => ({
   serialize: () => {
     const { lines, preamble } = get();
     const body = [...preamble, ...lines].join('\n');
-    // Sin salto final, la siguiente línea se pegaría a la anterior.
+    // Without a trailing newline the next line would be glued to the previous one.
     return body === '' ? '' : `${body}\n`;
   },
 
   setStatus: (status, message = null) => set({ status, message }),
 }));
 
-// --- Mutaciones de línea ------------------------------------------------------------------
+// --- Line mutations ------------------------------------------------------------------------
 
 export const todoDocMutations = {
   toggleComplete(index: number, todayIso: string): string | null {
@@ -228,7 +229,7 @@ export const todoDocMutations = {
       if (nextDone && line.recurrence && line.due) {
         const advanced = advanceIsoDate(line.due, line.recurrence);
         if (advanced) {
-          // La instancia siguiente entra justo debajo, como hace tuxedo al completar.
+          // The next instance lands right below, the way tuxedo does on completion.
           const spawned = formatTodoLine({ ...line, done: false, created: todayIso, due: advanced });
           lines.splice(index, 1, updated, spawned);
           uids.splice(index, 1, uid, uid);
@@ -261,7 +262,7 @@ export const todoDocMutations = {
     const uid = state.uidByLine[index];
     if (raw === undefined) return { uid, priority: null };
     const line = parseTodoLine(raw);
-    // El ciclo de tuxedo es A -> B -> C -> ninguna.
+    // The tuxedo cycle is A -> B -> C -> none.
     const next =
       line.priority === 'A' ? 'B' : line.priority === 'B' ? 'C' : line.priority === 'C' ? null : 'A';
 
@@ -273,7 +274,7 @@ export const todoDocMutations = {
     return { uid, priority: next };
   },
 
-  /** Escribe o quita el token `rec:` de una línea. null la deja sin recurrencia. */
+  /** Writes or removes a line's `rec:` token. null leaves it without recurrence. */
   setRecurrence(index: number, recurrence: string | null): string | null {
     const state = useTodoDoc.getState();
     const raw = state.lines[index];
@@ -307,7 +308,7 @@ export const todoDocMutations = {
   },
 };
 
-/** Libera el cerrojo cuando la escritura ya llegó al servidor. */
+/** Releases the latch once the write has reached the server. */
 export const markPendingWrite = (): void => {
   writePending = true;
 };

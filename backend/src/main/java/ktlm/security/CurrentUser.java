@@ -7,13 +7,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Resuelve el userId del llamante desde los details de la autenticación.
- * Ya no reparsea el token: JwtAuthenticationFilter lo deja en AuthenticatedUser.
+ * Resolves the caller's userId from the authentication details.
+ * No reparsing of the token: JwtAuthenticationFilter leaves it in AuthenticatedUser.
  */
 @Component
 public class CurrentUser {
 
-    /** @throws ResponseStatusException 401 si no hay un userId resoluble */
+    /** @throws ResponseStatusException 401 when there is no resolvable userId */
     public Long id() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getDetails() instanceof AuthenticatedUser details && details.userId() != null) {

@@ -23,7 +23,7 @@ import java.util.Optional;
 @Service
 public class TaskService {
 
-    /** Tope duro del tamaño de página, para que un size=100000 no arrastre la tabla. */
+    /** Hard cap on the page size, so a size=100000 does not drag the whole table in. */
     static final int MAX_PAGE_SIZE = 200;
 
     private final TaskRepository taskRepository;
@@ -35,16 +35,16 @@ public class TaskService {
     }
 
     /**
-     * Avisa a las sesiones abiertas de este usuario. Se emite dentro de la transacción,
-     * pero el oyente de TaskEventStream espera al commit antes de empujar el evento.
+     * Notifies this user's open sessions. It is published inside the transaction,
+     * but the TaskEventStream listener waits for the commit before pushing the event.
      */
     private void notifyChanged(Long userId) {
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
     }
 
     /**
-     * Una página de las tareas del usuario. El scope por usuario va incluido en la
-     * specification: no hay forma de pedir la lista sin él.
+     * A page of the user's tasks. The per-user scope is built into the
+     * specification: there is no way to ask for the list without it.
      */
     public TaskPageResponse getTasks(Long userId, int page, int size, TaskFilter filter, String q,
                                      String project, String context, TaskSort sort) {
@@ -59,7 +59,7 @@ public class TaskService {
                 TaskSpecifications.inContext(context),
                 TaskSpecifications.sortedBy(sort));
 
-        // Pageable.unpaged: el orden lo pone la specification, no un Sort.
+        // Pageable.unpaged: the order comes from the specification, not from a Sort.
         var pageable = PageRequest.of(safePage, safeSize, Sort.unsorted());
         return TaskPageResponse.from(taskRepository.findAll(spec, pageable));
     }
@@ -81,8 +81,8 @@ public class TaskService {
 
     @Transactional
     public Task createTask(TaskRequest request, Long userId) {
-        // El payload admite títulos ausentes para los PUT parciales, pero una tarea sí
-        // nace con título.
+        // The payload allows missing titles for partial PUTs, but a task is
+        // born with a title.
         if (request.title() == null || request.title().isBlank()) {
             throw new InvalidRequestException("Title is required");
         }
@@ -94,8 +94,8 @@ public class TaskService {
     }
 
     /**
-     * Aplica un parche parcial. Los campos ausentes del payload se conservan, de modo que
-     * priority, dueDate y sortOrder sobreviven a un PUT que solo trae title/description.
+     * Applies a partial patch. Fields absent from the payload are kept, so
+     * priority, dueDate and sortOrder survive a PUT that only brings title/description.
      */
     @Transactional
     public Task updateTask(Long id, Long userId, TaskRequest request) {

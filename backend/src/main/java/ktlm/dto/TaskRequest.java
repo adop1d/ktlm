@@ -8,12 +8,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
- * Payload de escritura de una tarea. Deliberadamente NO expone id, userId, createdAt,
- * updatedAt ni todoUid: la identidad y las marcas de tiempo las fija el servidor.
+ * Write payload for a task. Deliberately does NOT expose id, userId, createdAt,
+ * updatedAt or todoUid: the server sets the identity and the timestamps.
  *
- * <p>El título es opcional porque el mismo payload sirve para un PUT parcial —reordenar el
- * archivo manda solo `sortOrder`— y para un POST. La obligatoriedad la impone el servicio al
- * crear, que es donde de verdad importa.
+ * <p>The title is optional because the same payload serves a partial PUT —reordering
+ * the file only sends `sortOrder`— and a POST. Required-ness is enforced by the
+ * service on create, which is where it actually matters.
  */
 public record TaskRequest(
         @Size(max = 500, message = "Title must not exceed 500 characters")
@@ -40,7 +40,7 @@ public record TaskRequest(
 
         List<String> contexts) {
 
-    /** Aplica este payload sobre una entidad existente. Los campos ausentes se conservan. */
+    /** Applies this payload onto an existing entity. Absent fields are kept. */
     public void applyTo(Task task) {
         if (title != null) {
             task.setTitle(title.trim());
@@ -50,7 +50,7 @@ public record TaskRequest(
         }
         if (completed != null) {
             task.setCompleted(completed);
-            // La fecha de completado es coherente con el estado, no la fija el cliente.
+            // The completion date follows the state, the client does not set it.
             task.setCompletedAt(completed ? LocalDateTime.now() : null);
         }
         if (priority != null) {
@@ -80,7 +80,7 @@ public record TaskRequest(
         task.updateTimestamp();
     }
 
-    /** Construye una entidad nueva a partir de este payload. */
+    /** Builds a new entity from this payload. */
     public Task toEntity() {
         Task task = new Task();
         applyTo(task);

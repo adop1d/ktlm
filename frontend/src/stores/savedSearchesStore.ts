@@ -3,11 +3,12 @@ import { persist } from 'zustand/middleware';
 import type { TaskFilter, TaskSort } from '../types/task';
 
 /**
- * Búsquedas guardadas — el equivalente a los `filter.<nombre>` del keybinds.toml de tuxedo.
+ * Saved searches — the equivalent of the `filter.<name>` entries in tuxedo's
+ * keybinds.toml.
  *
- * Allá son una línea de texto en un fichero que se edita a mano; aquí viven en localStorage
- * porque el archivo de configuración del navegador no es nuestro. Se guardan por usuario:
- * la misma app sirve a varias cuentas en el mismo navegador.
+ * There they are a line of text in a file you edit by hand; here they live in
+ * localStorage because the browser's config file is not ours. They are saved per user:
+ * the same app serves several accounts in the same browser.
  */
 
 export interface SavedFilter {
@@ -26,7 +27,7 @@ interface SavedFilterState {
   rename: (user: string, from: string, to: string) => void;
 }
 
-/** Un filtro vacío no es una búsqueda: guardarlo solo añade ruido a la lista. */
+/** An empty filter is not a search: saving it only adds noise to the list. */
 export const isEmptyFilter = (filter: Omit<SavedFilter, 'name'>): boolean =>
   filter.q.trim() === '' &&
   filter.filter === 'all' &&
@@ -45,8 +46,8 @@ export const useSavedFilters = create<SavedFilterState>()(
           return {
             byUser: {
               ...state.byUser,
-              // Guardar dos veces con el mismo nombre sobrescribe, como en el TOML: la clave
-              // repetida se queda con el último valor.
+              // Saving twice under the same name overwrites, as in the TOML: the repeated
+              // key keeps the last value.
               [user]: [...sameName, filter],
             },
           };

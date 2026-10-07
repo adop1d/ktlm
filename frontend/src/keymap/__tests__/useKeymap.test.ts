@@ -76,8 +76,8 @@ describe('resolveAction', () => {
   });
 
   it('el prefijo de un chord manda sobre la acción enlazada a esa tecla', () => {
-    // `f` está enlazada a arm_f, que no es una acción sino el líder. Si la acción propia
-    // ganara, `fs` y `ff` nunca se dispararían.
+    // `f` is bound to arm_f, which is not an action but the leader. If the action of its own
+    // won, `fs` and `ff` would never fire.
     expect(resolveAction(DEFAULT_NORMAL_KEYMAP, 'f', null)).toEqual({
       action: null,
       nextChord: 'f',
@@ -85,7 +85,7 @@ describe('resolveAction', () => {
   });
 
   it('una tecla que es su propia acción y no prefijo de nada, dispara', () => {
-    // `p` es cycle_priority y no abre ningún chord por sí misma.
+    // `p` is cycle_priority and does not open any chord by itself.
     expect(resolveAction(DEFAULT_NORMAL_KEYMAP, 'p', null)).toEqual({
       action: 'cycle_priority',
       nextChord: null,
@@ -134,7 +134,7 @@ describe('resolveAction con el keymap por defecto de tuxedo', () => {
 
 describe('resolveAction con teclas sin atajo', () => {
   it('devuelve null sin armar chord', () => {
-    // `q` sí está ligado a `quit` en tuxedo: no es una tecla libre.
+    // `q` is bound to `quit` in tuxedo: it is not a free key.
     for (const key of ['Z', 'F12', 'Shift-q', 'Ctrl-z', 'Alt-j']) {
       expect(resolveAction(DEFAULT_NORMAL_KEYMAP, key, null), key).toBeNull();
     }

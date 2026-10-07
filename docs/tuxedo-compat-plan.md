@@ -1,74 +1,74 @@
-# Plan: compatibilidad KTLM ↔ [tuxedo](https://github.com/webstonehq/tuxedo)
+# Plan: KTLM ↔ [tuxedo](https://github.com/webstonehq/tuxedo) compatibility
 
 
-> **Estado: Fase 0 COMPLETA (verificada en ejecución).** La tabla 0.1–0.7 se aplicó y se
-> comprobó contra la app corriendo. Un hallazgo del smoke test se añadió sobre la marcha:
-> un cuerpo con fecha malformada devolvía **500** y `GlobalExceptionHandler` no logueaba
-> nada; ahora devuelve 400 y registra los no manejados. Ver "Registro de ejecución" al final.
-Objetivo: que la app KTLM (Spring Boot + React) pueda **abrir un `todo.txt` real desde el disco**,
-mantenerlo sincronizado en ambos sentidos con tuxedo, **paginar en servidor**, y exponer los
-**mismos keybindings vim/chord** que tuxedo.
+> **Status: Phase 0 COMPLETE (verified by running it).** Table 0.1–0.7 was applied and
+> checked against the running app. A finding from the smoke test was added on the fly:
+> a body with a malformed date returned **500** and `GlobalExceptionHandler` logged
+> nothing; it now returns 400 and logs the unhandled ones. See "Execution log" at the end.
+Goal: to let the KTLM app (Spring Boot + React) **open a real `todo.txt` from disk**,
+keep it synced both ways with tuxedo, **paginate on the server**, and expose the
+**same vim/chord keybindings** as tuxedo.
 
-Decisiones ya tomadas por el usuario:
+Decisions already made by the user:
 
-| Decisión | Valor | Consecuencia principal |
+| Decision | Value | Main consequence |
 | --- | --- | --- |
-| Topología de sync | Archivo local vía **File System Access API** (solo Chromium) | El navegador no tiene servidor de archivos; el `todo.txt` vive en la máquina del usuario. Fuera de Chromium hace falta un modo fallback. |
-| Paridad de keybindings | **Núcleo + chords** | Se replica el motor modal/chord, no el TUI completo (temas, densidad, QR de captura y `rec:` builder quedan fuera). |
-| Paginación | **Servidor** (`Spring Pageable`) | Hay que tocar repositorio, servicio, controlador, DTO de respuesta y cache key del frontend. |
+| Sync topology | Local file via the **File System Access API** (Chromium only) | The browser has no file server; the `todo.txt` lives on the user's machine. Outside Chromium a fallback mode is needed. |
+| Keybinding parity | **Core + chords** | The modal/chord engine is replicated, not the whole TUI (themes, density, capture QR and the `rec:` builder stay out). |
+| Pagination | **Server-side** (`Spring Pageable`) | Repository, service, controller, response DTO and the frontend cache key all have to be touched. |
 
-> Nota de alcance: tuxedo instalado en esta máquina = `2026.8.1` (`/opt/homebrew/bin/tuxedo`).
-> Este plan se escribió contra ese binario y contra el README/fuentes de `main`.
+> Scope note: tuxedo installed on this machine = `2026.8.1` (`/opt/homebrew/bin/tuxedo`).
+> This plan was written against that binary and against the README/sources on `main`.
 
 ---
 
-## 0. Hechos verificados (base del plan)
+## 0. Verified facts (basis of the plan)
 
-**tuxedo (referencia de formato y comportamiento)**
+**tuxedo (format and behaviour reference)**
 
-- Formato: línea plana. `(A)` = prioridad A–Z, `YYYY-MM-DD` = creación, `+proyecto`, `@contexto`,
-  `key:value` (`due:`, `rec:`, `t:`, `note:`). Las tareas completas llevan `x ` + fecha de completado
-  al inicio.
-- Cualquier `key:value` desconocido **sobrevive al round-trip**; `hide_keys` solo lo oculta en pantalla.
-  → es la ranura oficial para colgar metadatos propios.
-- Numeración de tareas = **número de línea 1-based del archivo**, estable bajo filtro/orden.
-- Escritura atómica: escribe `.tmp` y hace `rename`. Ante `NotFound` en disco, recarga como vacío.
-- Detección de cambio externo: compara el **contenido completo** contra `last_disk` (no mtime).
-  Un reload externo **borra el historial de undo**.
-- Captura: `inbox.txt` hermano → `rename` a `.tuxedo-staging` → parseo → merge → escritura atómica →
-  borrado de staging, todo bajo un lock consultivo (`*.tuxedo-lock`).
-- Salida JSON del CLI (contrato útil para validar nuestro parser):
+- Format: a flat line. `(A)` = priority A–Z, `YYYY-MM-DD` = creation, `+project`, `@context`,
+  `key:value` (`due:`, `rec:`, `t:`, `note:`). Completed tasks carry `x ` + completion date
+  at the start.
+- Any unknown `key:value` **survives the round-trip**; `hide_keys` only hides it on screen.
+  → it is the official slot for hanging your own metadata.
+- Task numbering = **1-based line number in the file**, stable under filter/sort.
+- Atomic write: writes `.tmp` and does a `rename`. On `NotFound` on disk it reloads as empty.
+- External change detection: compares the **full content** against `last_disk` (not mtime).
+  An external reload **erases the undo history**.
+- Capture: sibling `inbox.txt` → `rename` to `.tuxedo-staging` → parse → merge → atomic write →
+  staging deleted, all under an advisory lock (`*.tuxedo-lock`).
+- CLI JSON output (a useful contract for validating our parser):
   `{"n":1,"raw":"...","done":false,"priority":"A","created":"2026-04-28","completed":null,
     "projects":["health"],"contexts":["phone"],"due":"2026-05-08","rec":null,"t":null}`
 
-\*\*KTLM (estado actual, con rutas exactas)**
+\*\*KTLM (current state, with exact paths)**
 
-| Área | Estado actual | Fichero |
+| Area | Current state | File |
 | --- | --- | --- |
-| Entidad `Task` | `title @Size(max=100)`, `description @Size(max=500)`, `completed`, `priority LOW/MEDIUM/HIGH`, `dueDate LocalDateTime`, `sortOrder Integer` (nunca leído/escrito), `createdAt`, `updatedAt`, `userId` (escalar suelto, sin FK) | `backend/src/main/java/com/example/taskmanager/model/Task.java` |
-| Sin DTO | Los controladores devuelven la entidad JPA cruda como request **y** response | `TaskController.java`, `AuthController.java` |
-| Ownership | `GET/PUT/DELETE/PATCH /api/tasks/{id}` **no chequean propietario**; `GET /api/tasks` cae a `userId=1` si no resuelve el JWT | `TaskController.java` |
-| Actualización parcial | `TaskService.updateTask` copia **solo** `title`, `description`, `completed` — descarta `priority`, `dueDate`, `sortOrder` | `TaskService.java` |
-| Paginación | **Inexistente**. `TaskRepository` solo tiene `findByCompleted` y `findByUserId` | `TaskRepository.java` |
-| Migraciones | Ninguna; `spring.jpa.hibernate.ddl-auto=update` | `application.properties` |
-| Cliente API | `API_BASE` **hardcodeado** a `http://localhost:8080/api/tasks`, ignora `VITE_API_URL`; `api/client.ts` es **código muerto** sin importadores | `frontend/src/api/tasks.ts:3`, `frontend/src/api/client.ts` |
-| Query | `queryKey: ['tasks']` plano, sin `staleTime`, sin `keepPreviousData`, mutaciones solo invalidan | `frontend/src/hooks/useTasks.ts` |
-| Keybindings | 4 listeners sueltos de una sola tecla (`n`, `/`, `Esc`, rama muerta `1/2/3`), sin modo, sin chords, sin cursor de fila | `frontend/src/hooks/useKeyboardShortcuts.ts` |
-| Filtro/búsqueda/orden | 100% cliente en un `useMemo` sobre el array completo | `frontend/src/pages/TaskListPage.tsx` |
-| Tests backend | 1 archivo, 9 tests Mockito. Cero tests de controlador, cero de seguridad, cero de integración | `backend/src/test/.../TaskServiceTest.java` |
-| Tests frontend | 2 archivos triviales (un smoke test, un render). E2E Playwright con `if (isVisible())` por todas partes | `frontend/src/**/__tests__`, `frontend/e2e/*.spec.ts` |
+| `Task` entity | `title @Size(max=100)`, `description @Size(max=500)`, `completed`, `priority LOW/MEDIUM/HIGH`, `dueDate LocalDateTime`, `sortOrder Integer` (never read/written), `createdAt`, `updatedAt`, `userId` (a loose scalar, no FK) | `backend/src/main/java/com/example/taskmanager/model/Task.java` |
+| No DTOs | The controllers return the raw JPA entity as request **and** response | `TaskController.java`, `AuthController.java` |
+| Ownership | `GET/PUT/DELETE/PATCH /api/tasks/{id}` **don't check the owner**; `GET /api/tasks` falls back to `userId=1` if the JWT doesn't resolve | `TaskController.java` |
+| Partial update | `TaskService.updateTask` copies **only** `title`, `description`, `completed` — it drops `priority`, `dueDate`, `sortOrder` | `TaskService.java` |
+| Pagination | **Nonexistent**. `TaskRepository` only has `findByCompleted` and `findByUserId` | `TaskRepository.java` |
+| Migrations | None; `spring.jpa.hibernate.ddl-auto=update` | `application.properties` |
+| API client | `API_BASE` **hardcoded** to `http://localhost:8080/api/tasks`, ignores `VITE_API_URL`; `api/client.ts` is **dead code** with no importers | `frontend/src/api/tasks.ts:3`, `frontend/src/api/client.ts` |
+| Query | `queryKey: ['tasks']` flat, no `staleTime`, no `keepPreviousData`, mutations only invalidate | `frontend/src/hooks/useTasks.ts` |
+| Keybindings | 4 loose single-key listeners (`n`, `/`, `Esc`, a dead `1/2/3` branch), no mode, no chords, no row cursor | `frontend/src/hooks/useKeyboardShortcuts.ts` |
+| Filter/search/sort | 100% client-side in a `useMemo` over the whole array | `frontend/src/pages/TaskListPage.tsx` |
+| Backend tests | 1 file, 9 Mockito tests. Zero controller tests, zero security tests, zero integration tests | `backend/src/test/.../TaskServiceTest.java` |
+| Frontend tests | 2 trivial files (a smoke test, a render). Playwright e2e with `if (isVisible())` everywhere | `frontend/src/**/__tests__`, `frontend/e2e/*.spec.ts` |
 
-**Conclusión clave:** el tamaño de `title` (100) y el hecho de que `updateTask` descarte `priority`
-y `dueDate` hacen que **importar un `todo.txt` real y usar `p` / `r` fallen hoy**. La Fase 0 no es
-opcional.
+**Key conclusion:** the size of `title` (100) and the fact that `updateTask` drops
+`priority` and `dueDate` mean that **importing a real `todo.txt` and using `p` / `r` fail
+today**. Phase 0 is not optional.
 
 ---
 
-## 1. Arquitectura objetivo
+## 1. Target architecture
 
 ```mermaid
 flowchart LR
-    subgraph disco["Disco del usuario (Chromium)"]
+    subgraph disco["User disk (Chromium)"]
         F["todo.txt"]
         D["done.txt"]
         I["inbox.txt"]
@@ -76,7 +76,7 @@ flowchart LR
 
     subgraph browser["Browser"]
         FH["FileHandlePort\n(showOpenFilePicker)"]
-        DOC["TodoDoc — espejo en memoria\n= líneas canónicas"]
+        DOC["TodoDoc — in-memory mirror\n= canonical lines"]
         KEYS["useKeymap — motor modal/chord"]
         PAGE["TaskListPage — render de UNA página"]
     end
@@ -91,7 +91,7 @@ flowchart LR
     TUX["tuxedo (TUI/CLI)"]
     SYNC1["Archivo → DB\nimport + UID"]
     SYNC2["DB → Archivo\nmutaciones → debounce 400 ms"]
-    SYNC3["Cambio externo\npoll + hash, aviso y reimport"]
+    SYNC3["External change\npoll + hash, notify and re-import"]
 
     F <--> FH
     FH --> DOC
@@ -111,88 +111,89 @@ flowchart LR
     SYNC2 --> FH
 ```
 
-**Invariante único:** `TodoDoc` (memoria del cliente) ≡ contenido de `todo.txt` ≡ proyección en
-`task`. Ninguna operación escribe en dos sitios sin pasar por `TodoDoc`.
+**Single invariant:** `TodoDoc` (client memory) ≡ `todo.txt` content ≡ the projection onto
+`task`. No operation writes in two places without going through `TodoDoc`.
 
-**Quién gana en cada evento** (mismo criterio que `apply_external_state` de tuxedo):
+**Who wins on each event** (same criterion as tuxedo's `apply_external_state`):
 
-| Evento | Ganador | Acción |
+| Event | Winner | Action |
 | --- | --- | --- |
-| Mutación desde la app | La app | Patch en `TodoDoc` → mutación REST → flush atómico al archivo. |
-| Edición externa (tuxedo, editor, sync) | El archivo | Se detecta por hash, se **revierte** la mutación en vuelo si no se aplicó, se reimporta y se avisa. |
-| Error de lectura del archivo | Nadie | Se aborta la escritura; el estado en memoria se preserva (nunca se sobrescribe un archivo ilegible). |
+| Mutation from the app | The app | Patch on `TodoDoc` → REST mutation → atomic flush to the file. |
+| External edit (tuxedo, editor, sync) | The file | Detected by hash, the in-flight mutation is **reverted** if it wasn't applied, it is reimported and you get a warning. |
+| File read error | Nobody | The write is aborted; in-memory state is preserved (an unreadable file is never overwritten). |
 
 ---
 
-## 2. Fase 0 — Saneo bloqueante
+## 2. Phase 0 — Blocking cleanup
 
-Sin esto, las fases siguientes producen datos corruptos o fugas.
+Without this, the later phases produce corrupt data or leaks.
 
-| # | Cambio | Fichero | Motivo |
+| # | Change | File | Reason |
 | --- | --- | --- | --- |
-| 0.1 | Introducir `TaskRequest`/`TaskResponse` DTOs; dejar de exponer la entidad JPA | nuevo `dto/` | Hoy el cliente puede escribir `userId`, `createdAt`, `id`. |
-| 0.2 | Subir `title` a `@Size(max=500)` y `description` a `@Size(max=4000)` | `Task.java:20-25` | Un cuerpo todo.txt real no cabe en 100 caracteres → el import devuelve 400. |
-| 0.3 | `TaskService.updateTask` debe copiar `priority`, `dueDate`, `sortOrder` | `TaskService.java` | Sin esto `p` (prioridad) y `r` (reschedule) son no-ops silenciosos. |
-| 0.4 | Chequeo de propietario en `GET/PUT/DELETE/PATCH /api/tasks/{id}`; borrar el fallback a `userId=1` | `TaskController.java` | IDOR: cualquier autenticado lee/edita tareas ajenas. |
-| 0.5 | `dueDate`: `LocalDateTime` → `LocalDate` | `Task.java:32`, `TaskForm.tsx`, `types/task.ts` | `due:` es fecha civil; el `new Date(d).toISOString()` actual introduce desplazamiento UTC. |
-| 0.6 | Unificar `API_BASE` en un solo módulo y **borrar** `api/client.ts` | `frontend/src/api/` | `client.ts` no tiene importadores; `tasks.ts` ignora `VITE_API_URL`. |
-| 0.7 | `@JsonIgnore` en `User.password` | `User.java` | `GET /api/admin/users` devuelve el hash BCrypt. |
+| 0.1 | Introduce `TaskRequest`/`TaskResponse` DTOs; stop exposing the JPA entity | new `dto/` | Today the client can write `userId`, `createdAt`, `id`. |
+| 0.2 | Raise `title` to `@Size(max=500)` and `description` to `@Size(max=4000)` | `Task.java:20-25` | A real todo.txt body doesn't fit in 100 characters → import returns 400. |
+| 0.3 | `TaskService.updateTask` must copy `priority`, `dueDate`, `sortOrder` | `TaskService.java` | Without this, `p` (priority) and `r` (reschedule) are silent no-ops. |
+| 0.4 | Owner check on `GET/PUT/DELETE/PATCH /api/tasks/{id}`; drop the `userId=1` fallback | `TaskController.java` | IDOR: any authenticated user reads/edits someone else's tasks. |
+| 0.5 | `dueDate`: `LocalDateTime` → `LocalDate` | `Task.java:32`, `TaskForm.tsx`, `types/task.ts` | `due:` is a civil date; the current `new Date(d).toISOString()` introduces a UTC shift. |
+| 0.6 | Unify `API_BASE` into a single module and **delete** `api/client.ts` | `frontend/src/api/` | `client.ts` has no importers; `tasks.ts` ignores `VITE_API_URL`. |
+| 0.7 | `@JsonIgnore` on `User.password` | `User.java` | `GET /api/admin/users` returns the BCrypt hash. |
 
 ---
 
-## 3. Fase 1 — Modelo de dominio todo.txt
+## 3. Phase 1 — todo.txt domain model
 
-### 3.1 Mapeo de campos
+### 3.1 Field mapping
 
-| todo.txt | `Task` (destino) | Nota |
+| todo.txt | `Task` (target) | Note |
 | --- | --- | --- |
-| `(A)` … `(Z)` | `priority` | `A→HIGH`, `B→MEDIUM`, `C→LOW`, resto `MEDIUM`. Sin `(x)` → `MEDIUM`. |
-| `YYYY-MM-DD` (2.ª posición) | `createdAt` | Se conserva la **fecha**; la hora es irrelevante para el archivo. |
-| cuerpo libre | `title` + `description` | El cuerpo no tiene límite real; por eso 0.2. |
-| `+proyecto` | `task_project(project)` | `@ElementCollection`, como `User.roles`. |
-| `@contexto` | `task_context(context)` | Igual. |
+| `(A)` … `(Z)` | `priority` | `A→HIGH`, `B→MEDIUM`, `C→LOW`, the rest `MEDIUM`. No `(x)` → `MEDIUM`. |
+| `YYYY-MM-DD` (2nd position) | `createdAt` | The **date** is kept; the time is irrelevant to the file. |
+| free body | `title` + `description` | The body has no real limit; hence 0.2. |
+| `+project` | `task_project(project)` | `@ElementCollection`, like `User.roles`. |
+| `@context` | `task_context(context)` | Same. |
 | `due:YYYY-MM-DD` | `dueDate` (`LocalDate`) | |
-| `rec:[+]N{d,b,w,m,y}` | `recurrence` (`String`, nullable) | Se guarda literal; el motor lo interpreta. |
-| `t:±N…` | `threshold` (`String`, nullable) | Umbral de aviso. |
-| `x ` + fecha | `completed` + `completedAt` | `completedAt` **nuevo**, hoy inexistente. |
-| `uid:<id>` | `uid` (`String`, nullable, indexado único) | **Clave del round-trip.** |
-| otros `key:value` | `extras` (texto) | Se preservan literales. |
+| `rec:[+]N{d,b,w,m,y}` | `recurrence` (`String`, nullable) | Stored literally; the engine interprets it. |
+| `t:±N…` | `threshold` (`String`, nullable) | Warning threshold. |
+| `x ` + date | `completed` + `completedAt` | `completedAt` is **new**, nonexistent today. |
+| `uid:<id>` | `uid` (`String`, nullable, uniquely indexed) | **The key of the round-trip.** |
+| other `key:value` | `extras` (text) | Kept literally. |
 
-`uid` es el punto crítico de la compatibilidad: tuxedo conserva cualquier token `key:value`, así que
-al escribir `uid:42` en cada línea el archivo sigue siendo un `todo.txt` válido para tuxedo, y el
-import de vuelta reconoce la tarea sin duplicar. Se oculta con `hide_keys = uid` en
-`~/.config/tuxedo/config.toml` (afecta solo al dibujo; el token sigue en disco).
+`uid` is the critical point of compatibility: tuxedo keeps any `key:value` token, so by
+writing `uid:42` on every line the file is still a valid `todo.txt` for tuxedo, and the
+import back recognizes the task without duplicating. It's hidden with `hide_keys = uid`
+in `~/.config/tuxedo/config.toml` (this only affects drawing; the token stays on disk).
 
-### 3.2 Sin número de línea en la base de datos
+### 3.2 No line number in the database
 
-El `n` de tuxedo es la posición en el archivo. No se persiste: se recalcula al serializar
-(`TodoDoc` mantiene el orden). `sortOrder` deja de ser campo muerto y pasa a ser el **orden de
-inserción dentro del archivo**, que es lo que `J`/`K` mueven y lo que `sort = file` respeta.
+tuxedo's `n` is the position in the file. It isn't persisted: it's recomputed on
+serialization (`TodoDoc` holds the order). `sortOrder` stops being a dead field and
+becomes the **insertion order inside the file**, which is what `J`/`K` move and what
+`sort = file` respects.
 
 ### 3.3 `TodoTxtCodec` (backend)
 
-Una clase, `com.example.taskmanager.todotxt.TodoTxtCodec`, sin dependencias:
+One class, `com.example.taskmanager.todotxt.TodoTxtCodec`, no dependencies:
 
-- `List<ParsedTask> parse(String body)` — una línea → `ParsedTask(priority, created, body, projects, contexts, due, rec, t, done, completed, uid, raw)`.
-  Descarta líneas vacías y `# comentario` (mismo criterio que `drain_inbox`).
-- `String serialize(List<ParsedTask>)` — orden de tokens fijo: `(P) created x completed  body  +proj  @ctx  due:  rec:  t:  uid:`.
-- **Contrato de paridad**: tests que comparan contra la salida real de
-  `tuxedo ls --json` y contra un `todo.txt` generado por `tuxedo add`, fijados como recursos de test.
+- `List<ParsedTask> parse(String body)` — one line → `ParsedTask(priority, created, body, projects, contexts, due, rec, t, done, completed, uid, raw)`.
+  Drops empty lines and `# comment` (same criterion as `drain_inbox`).
+- `String serialize(List<ParsedTask>)` — fixed token order: `(P) created x completed  body  +proj  @ctx  due:  rec:  t:  uid:`.
+- **Parity contract**: tests comparing against the real output of
+  `tuxedo ls --json` and against a `todo.txt` generated by `tuxedo add`, pinned as test resources.
 
 ### 3.4 Endpoints
 
-| Método | Ruta | Body / Query | Respuesta |
+| Method | Route | Body / Query | Response |
 | --- | --- | --- | --- |
-| `POST` | `/api/tasks/import` | texto plano `text/plain` | `{ imported, updated, skipped, tasks[] }` |
-| `GET` | `/api/tasks/export` | — | `text/plain`, el `todo.txt` completo del usuario |
-| `POST` | `/api/tasks/archive` | — | mueve completadas a `done.txt` (espejo del `A`) |
+| `POST` | `/api/tasks/import` | plain text `text/plain` | `{ imported, updated, skipped, tasks[] }` |
+| `GET` | `/api/tasks/export` | — | `text/plain`, the user's complete `todo.txt` |
+| `POST` | `/api/tasks/archive` | — | moves completed to `done.txt` (mirror of `A`) |
 
-`import` es **upsert por `uid`**, en una sola transacción, y devuelve el archivo reconciliado para
-que el cliente lo escriba.
+`import` is an **upsert by `uid`**, in a single transaction, and returns the reconciled
+file so the client can write it.
 
 ---
 
-## 4. Fase 2 — Paginación en servidor
+## 4. Phase 2 — Server-side pagination
 
 - `TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task>`.
 - `TaskSpecifications`: `userId`, `completed`, `q` (title OR description, case-insensitive),
@@ -202,25 +203,26 @@ que el cliente lo escriba.
   { "content": [TaskResponse], "page": 0, "size": 50,
     "totalElements": 0, "totalPages": 0, "hasNext": false }
   ```
-- Reemplaza `getTasksByCompletionStatus(boolean)` (global, sin scope de usuario) — se elimina, no se
-  reimplementa.
-- Frontend: `queryKey: ['tasks', params]` con `placeholderData: keepPreviousData` para que la página
-  no parpadee; `mutations` invalidan por prefijo (`['tasks']`).
-- `Ctrl-d` / `Ctrl-u` dejan de ser "media pantalla" de scroll y pasan a **media página**, que es lo
-  que hacen en tuxedo y lo que la paginación hace significativo.
+- Replaces `getTasksByCompletionStatus(boolean)` (global, with no user scope) — it is
+  deleted, not reimplemented.
+- Frontend: `queryKey: ['tasks', params]` with `placeholderData: keepPreviousData` so the
+  page doesn't flicker; `mutations` invalidate by prefix (`['tasks']`).
+- `Ctrl-d` / `Ctrl-u` stop being "half a screen" of scroll and become **half a page**,
+  which is what they do in tuxedo and what makes pagination meaningful.
 
 ---
 
-## 5. Fase 3 — Espejo de archivo (File System Access API)
+## 5. Phase 3 — File mirror (File System Access API)
 
-### 5.1 Puerto de archivo
+### 5.1 File port
 
-`frontend/src/file/FileHandlePort.ts` con dos implementaciones:
+`frontend/src/file/FileHandlePort.ts` with two implementations:
 
-- `FsaFileHandle` — `showOpenFilePicker` / `showSaveFilePicker`, con el permiso re-solicitado en cada
-  `queryPermission`.
-- `MemoryFileHandle` — fallback para Firefox/Safari y para Playwright (que no implementa la FSA API).
-  La UI muestra un aviso explícito cuando corre en modo fallback: **el archivo no se sincroniza**.
+- `FsaFileHandle` — `showOpenFilePicker` / `showSaveFilePicker`, with the permission
+  re-requested on every `queryPermission`.
+- `MemoryFileHandle` — fallback for Firefox/Safari and for Playwright (which doesn't
+  implement the FSA API). The UI shows an explicit warning when running in fallback
+  mode: **the file is not synced**.
 
 ```ts
 interface FileHandlePort {
@@ -229,503 +231,513 @@ interface FileHandlePort {
 }
 ```
 
-### 5.2 `TodoDoc`, el espejo
+### 5.2 `TodoDoc`, the mirror
 
-Store dedicado (`frontend/src/file/todoDoc.ts`), inicializado al abrir el archivo:
+A dedicated store (`frontend/src/file/todoDoc.ts`), initialized when the file is opened:
 
 1. `text = await handle.text()`
-2. `POST /api/tasks/import` → la DB queda alineada; se recibe el archivo reconciliado
-3. `doc = parse(textReconciled)` y se guarda `lastDisk = textoDeDisco`
+2. `POST /api/tasks/import` → the DB is aligned; you get the reconciled file back
+3. `doc = parse(textReconciled)` and `lastDisk = textFromDisk` is stored
 
-Mutación en la app = **patch de línea**, no reserialización completa:
+Mutation in the app = **line patch**, not a full reserialization:
 
-- `x` → parchear la línea, `POST /api/tasks/{uid}/toggle`; si la tarea trae `rec:`, insertar la
-  instancia siguiente con `due:` avanzado (mismo cálculo de tuxedo: con `+` anclado al `due` anterior,
-  sin `+` desde la fecha de completado).
-- `dd` → borrar la línea, `DELETE /api/tasks/{uid}`.
-- `J`/`K` → mover la línea, `PATCH /api/tasks/{uid}/move` con el índice destino.
-- Flush **debounced 400 ms** → `handle.write(serialize(doc))` con escritura atómica equivalente:
-  como FSA no expone `rename`, se usa `createWritable({ keepExistingData: false })` + `write` +
-  `close`, que es atómico a nivel de archivo en Chromium.
+- `x` → patch the line, `POST /api/tasks/{uid}/toggle`; if the task carries `rec:`, insert
+  the next instance with an advanced `due:` (same calculation as tuxedo's: with `+`
+  anchored to the previous `due`, without `+` from the completion date).
+- `dd` → delete the line, `DELETE /api/tasks/{uid}`.
+- `J`/`K` → move the line, `PATCH /api/tasks/{uid}/move` with the target index.
+- Flush **debounced 400 ms** → `handle.write(serialize(doc))` with an equivalent atomic
+  write: since FSA doesn't expose `rename`, we use `createWritable({ keepExistingData: false })`
+  + `write` + `close`, which is file-level atomic in Chromium.
 
-### 5.3 Detección de cambio externo
+### 5.3 External change detection
 
-Réplica exacta de `apply_external_state`:
+An exact replica of `apply_external_state`:
 
-- `setInterval(400 ms)` (tuxedo usa ~250 ms en reposo) → `handle.text()`.
-- Hash (FNV-1a sobre el string) distinto de `lastDisk` → **reload**: reimportar, refrescar la página
-  actual, `toast` de aviso, y **descartar el historial de undo** local.
-- Si el archivo ya no existe → estado vacío, sin crash.
-- Si el `getFile()` falla por permisos → congelar escrituras y avisar; nunca escribir a ciegas.
+- `setInterval(400 ms)` (tuxedo uses ~250 ms when idle) → `handle.text()`.
+- Hash (FNV-1a over the string) different from `lastDisk` → **reload**: reimport, refresh
+  the current page, a warning `toast`, and **discard** the local undo history.
+- If the file no longer exists → empty state, no crash.
+- If `getFile()` fails on permissions → freeze writes and warn; never write blind.
 
-### 5.4 Captura
+### 5.4 Capture
 
-`inbox.txt` hermano: la app lo lee en el mismo poll, aplica el mismo `TodoDoc` de merge y devuelve
-las líneas canónicas. Es exactamente el punto de extensión que tuxedo ya expone (`echo "…" >> inbox.txt`
-desde shell, Shortcuts de iOS, cron).
+Sibling `inbox.txt`: the app reads it in the same poll, applies the same `TodoDoc` merge
+and returns the canonical lines. It's exactly the extension point tuxedo already exposes
+(`echo "…" >> inbox.txt` from the shell, iOS Shortcuts, cron).
 
 ---
 
-## 6. Fase 4 — Motor de keybindings
+## 6. Phase 4 — Keybinding engine
 
-Sustituye `frontend/src/hooks/useKeyboardShortcuts.ts` (se borra, no se extiende).
+Replaces `frontend/src/hooks/useKeyboardShortcuts.ts` (it's deleted, not extended).
 
 ```
 frontend/src/keymap/
-  actions.ts     → nombres de acción en snake_case, idénticos a tuxedo
-  defaults.ts    → tabla por defecto, copia de la sección [normal] del keybinds.toml de tuxedo
-  parseToml.ts   → parser del subconjunto TOML ([normal], string o array de string)
-  useKeymap.ts   → máquina de estados: mode stack + leader armado + ventana de chord de 600 ms
+  actions.ts     → action names in snake_case, identical to tuxedo
+  defaults.ts    → default table, a copy of the [normal] section of tuxedo's keybinds.toml
+  parseToml.ts   → parser for the TOML subset ([normal], string or array of strings)
+  useKeymap.ts   → state machine: mode stack + armed leader + 600 ms chord window
   KeymapProvider.tsx
 ```
 
-Requisitos del motor:
+Engine requirements:
 
-- **Pila de modos**: `normal → insert | search | visual | palette | prompt`, con `Esc` haciendo pop
-  (equivalente a `escape_stack`).
-- **Chords** con ventana de 600 ms e indicador en la barra de estado (`g…`, `d…`, `y…`, `f…`).
-- **Normalización de teclas**: `event.key` → `Ctrl-n`, `Shift-Tab`, `Page-Up`, `F1`…`F24`.
-- **Guardas**: se ignoran teclas con `metaKey`; `n` no dispara en un input (el hook actual solo
-  protege `n`, y `/` y `Esc` secuestran teclas dentro de campos — bug a corregir).
-- **Import de configuración real**: botón "Importar keybinds" que abre
-  `~/.config/tuxedo/keybinds.toml` con la FSA. Si el usuario ya.customizó tuxedo, la web app usa
-  **sus mismos atajos** sin duplicar configuración.
+- **Mode stack**: `normal → insert | search | visual | palette | prompt`, with `Esc` popping
+  (equivalent to `escape_stack`).
+- **Chords** with a 600 ms window and an indicator in the status bar (`g…`, `d…`, `y…`, `f…`).
+- **Key normalization**: `event.key` → `Ctrl-n`, `Shift-Tab`, `Page-Up`, `F1`…`F24`.
+- **Guards**: keys with `metaKey` are ignored; `n` doesn't fire inside an input (the
+  current hook only guards `n`, and `/` and `Esc` hijack keys inside fields — a bug to fix).
+- **Real config import**: an "Import keybinds" button that opens
+  `~/.config/tuxedo/keybinds.toml` with the FSA. If the user already customized tuxedo,
+  the web app uses **their own shortcuts** without duplicating configuration.
 
-### Mapa de paridad (núcleo + chords)
+### Parity map (core + chords)
 
-| Acción | Tecla | Estado en KTLM hoy | Trabajo |
+| Action | Key | State in KTLM today | Work |
 | --- | --- | --- | --- |
-| `cursor_down` / `cursor_up` | `j` `k` / `↓` `↑` | — | cursor de fila + `Ctrl-d`/`Ctrl-u` por página |
+| `cursor_down` / `cursor_up` | `j` `k` / `↓` `↑` | — | row cursor + `Ctrl-d`/`Ctrl-u` per page |
 | `cursor_top` / `cursor_bottom` | `gg` `G` | — | chord |
-| `half_page_down/up` | `Ctrl-d` `Ctrl-u` | — | paginación |
-| `begin_add` | `n` | ✅ existe | reutilizar `TaskForm` como overlay |
-| `begin_edit_insert` / `_edit` | `i` / `e` | ❌ | `i` arranca en insert, `e` en normal |
-| `toggle_complete` | `x` | ⚠️ solo con hover | **hoy las acciones son `opacity-0 group-hover`** → hay que hacerlas visibles para teclado |
-| `delete` | `dd` | ❌ | chord + confirmación con `u` como salida |
-| `cycle_priority` | `p` | ❌ | depende de Fase 0.3 |
+| `half_page_down/up` | `Ctrl-d` `Ctrl-u` | — | pagination |
+| `begin_add` | `n` | ✅ exists | reuse `TaskForm` as an overlay |
+| `begin_edit_insert` / `_edit` | `i` / `e` | ❌ | `i` starts in insert, `e` in normal |
+| `toggle_complete` | `x` | ⚠️ only on hover | **today the actions are `opacity-0 group-hover`** → they have to become visible to the keyboard |
+| `delete` | `dd` | ❌ | chord + confirmation with `u` as the way out |
+| `cycle_priority` | `p` | ❌ | depends on Phase 0.3 |
 | `move_task_down/up` | `J` `K` | ❌ | `sortOrder` |
 | `reschedule` | `r` | ❌ | date picker |
-| `begin_prompt_context` / `_project` | `c` / `+` | ❌ | `+` no es escribible en el TOML de tuxedo → mismo treatment |
-| `copy_line` / `copy_body` | `yy` / `yb` | ❌ | `navigator.clipboard` + fallback `textarea.execCommand` |
-| `undo` | `u` | ❌ | pila de 50 niveles, cliente |
-| `begin_search` | `/` | ⚠️ roba `/` en inputs | grammar de `due:±Nw`, `rec:`, `t:` + texto libre |
-| `pick_project` / `_context` / `_saved_filter` / `save_current_filter` | `fp` `fc` `ff` `fs` | ❌ | chord `f` con 600 ms |
+| `begin_prompt_context` / `_project` | `c` / `+` | ❌ | `+` isn't writable in tuxedo's TOML → same treatment |
+| `copy_line` / `copy_body` | `yy` / `yb` | ❌ | `navigator.clipboard` + `textarea.execCommand` fallback |
+| `undo` | `u` | ❌ | 50-level stack, client-side |
+| `begin_search` | `/` | ⚠️ steals `/` in inputs | grammar for `due:±Nw`, `rec:`, `t:` + free text |
+| `pick_project` / `_context` / `_saved_filter` / `save_current_filter` | `fp` `fc` `ff` `fs` | ❌ | `f` chord with 600 ms |
 | `cycle_sort` | `S` | ❌ | priority → due → file |
 | `toggle_visual` / `toggle_selected` | `v` / `space` | ❌ | multi-select |
-| `go_list` / `toggle_archive_view` / `archive_completed` / `toggle_show_done` | `l` `a` `A` `H` | ❌ | `A` escribe `done.txt` |
-| `open_command_palette` | `:` `Ctrl-P` | ❌ | matcher fuzzy compartido con `/` |
-| `open_help` | `?` | ❌ | overlay generado desde `defaults.ts` (una sola fuente de verdad) |
-| `escape_stack` / `quit` | `Esc` / `q` | parcial ⚠️ | |
+| `go_list` / `toggle_archive_view` / `archive_completed` / `toggle_show_done` | `l` `a` `A` `H` | ❌ | `A` writes `done.txt` |
+| `open_command_palette` | `:` `Ctrl-P` | ❌ | fuzzy matcher shared with `/` |
+| `open_help` | `?` | ❌ | overlay generated from `defaults.ts` (a single source of truth) |
+| `escape_stack` / `quit` | `Esc` / `q` | partial ⚠️ | |
 
-**Fuera de alcance por decisión**: `T` (temas), `D` (densidad), `L` (números de línea), `s` (QR de
-captura), `[` `]` (sidebars), `o`/`O` (notas), constructor `rec:` modal. Se documentan como
-extensiones futuras.
+**Out of scope by decision**: `T` (themes), `D` (density), `L` (line numbers), `s`
+(capture QR), `[` `]` (sidebars), `o`/`O` (notes), the modal `rec:` builder. They're
+documented as future extensions.
 
 ---
 
-## 7. Fase 5 — Funcionalidades tuxedo adicionales
+## 7. Phase 5 — Additional tuxedo features
 
-| Funcionalidad | Dónde vive | Nota |
+| Feature | Where it lives | Note |
 | --- | --- | --- |
-| Recurrencia (`rec:`) | backend `RecurrenceCalculator` | Al completar, inserta la siguiente instancia en la misma transacción. `u` deshace ambas. |
-| Linguaje natural (`"Pay rent monthly on the first, show 3 days before due, project home"`) | `TodoTxtCodec` / `NaturalLanguageParser` | tuxedo lo llama desde `n` y desde el drain de `inbox.txt`; replicar la gramática completa es caro → **Fase 5.5, opcional**: empezar por fechas + `rec:` + `+proyecto`/`@contexto`. |
-| Archivo y guardados (`fs`/`ff`) | `config.toml` local + `localStorage` | Los saved searches son `filter.<name> = <query>`, texto plano. |
-| `done.txt` | Endpoint `archive` + FSA | Espejo del `A` de tuxedo. |
-| `hide_keys = uid` | Config local de tuxedo | Documentarlo en el README del proyecto. |
+| Recurrence (`rec:`) | backend `RecurrenceCalculator` | On completion, the next instance is inserted in the same transaction. `u` undoes both. |
+| Natural language (`"Pay rent monthly on the first, show 3 days before due, project home"`) | `TodoTxtCodec` / `NaturalLanguageParser` | tuxedo calls it from `n` and from the `inbox.txt` drain; replicating the full grammar is expensive → **Phase 5.5, optional**: start with dates + `rec:` + `+project`/`@context`. |
+| File and saved searches (`fs`/`ff`) | local `config.toml` + `localStorage` | Saved searches are `filter.<name> = <query>`, plain text. |
+| `done.txt` | `archive` endpoint + FSA | Mirror of tuxedo's `A`. |
+| `hide_keys = uid` | tuxedo local config | Document it in the project README. |
 
 ---
 
-## 8. Riesgos
+## 8. Risks
 
-| Riesgo | Impacto | Mitigación |
+| Risk | Impact | Mitigation |
 | --- | --- | --- |
-| FSA API solo en Chromium | Firefox/Safari no pueden editar el archivo | `MemoryFileHandle` + aviso visible; la app sigue funcionando contra la API |
-| La FSA no expone `rename` | No hay escritura atómica real | `createWritable()` es atómico en Chromium; documentar la diferencia |
-| Playwright no soporta FSA | Los e2e no pueden probar el archivo | Tests de `TodoDoc`/`parseKeymap` en vitest; e2e de la parte de archivo vía `MemoryFileHandle` |
-| Carrera entre tuxedo y la web | Pérdida de escrituras | Hash + reconciliación previa a cada mutación (igual que tuxedo) + aviso |
-| `ddl-auto=update` sin migraciones | Columnas nuevas implícitas, sin rollback | Adoptar Flyway antes de la Fase 1 |
-| Grow de `title` a 500 | Rompe `TaskCard` (trunca a 1 línea) | Ajustar render y el `line-clamp` |
-| E2e actuales con `if (isVisible())` | No fallan nunca → no protegen nada | Reescribir las aserciones cuando se toca la lista |
+| FSA API only in Chromium | Firefox/Safari can't edit the file | `MemoryFileHandle` + visible warning; the app keeps working against the API |
+| FSA doesn't expose `rename` | No real atomic write | `createWritable()` is atomic in Chromium; document the difference |
+| Playwright doesn't support FSA | The e2e can't test the file | `TodoDoc`/`parseKeymap` tests in vitest; e2e of the file part via `MemoryFileHandle` |
+| Race between tuxedo and the web | Lost writes | Hash + reconciliation before every mutation (same as tuxedo) + warning |
+| `ddl-auto=update` without migrations | Implicit new columns, no rollback | Adopt Flyway before Phase 1 |
+| Growing `title` to 500 | Breaks `TaskCard` (it truncates to 1 line) | Adjust the render and the `line-clamp` |
+| Current e2e with `if (isVisible())` | They never fail → they protect nothing | Rewrite the assertions when the list is touched |
 
 ---
 
-## 9. Verificación por fase
+## 9. Verification per phase
 
-Nunca cerrar una fase solo con tests unitarios: la prueba es el binario corriendo.
+Never close a phase on unit tests alone: the proof is the running binary.
 
-- **Fase 0**: levantar `docker compose up` + `npm run dev`; crear una tarea con prioridad `HIGH` y
-  `dueDate`, editarla y confirmar que persiste (hoy falla).
-- **Fase 1**: `tuxedo add "x +p @c due:2026-12-01"` → exportar desde `/api/tasks/export` →
-  `diff` contra el archivo original → debe dar **cero diferencias**.
-- **Fase 2**: 300 tareas, recorrer 6 páginas con `Ctrl-d`/`Ctrl-u`, medir que cada request devuelve
-  ≤ `size` elementos.
-- **Fase 3**: abrir un `todo.txt` real en Chromium, editar con `x`/`dd`/`p`, y en paralelo
-  `watch -n 0.5 cat todo.txt` para ver la escritura; después editar desde `tuxedo` y comprobar el
-  aviso de recarga.
-- **Fase 4**: recorrer la tabla de paridad tecla por tecla con el driver real.
-- **Fase 5**: `x` sobre una tarea con `rec:+1m` → comprobar la línea siguiente y que `u` deshace
-  ambas.
+- **Phase 0**: bring up `docker compose up` + `npm run dev`; create a task with `HIGH`
+  priority and a `dueDate`, edit it and confirm it persists (today it fails).
+- **Phase 1**: `tuxedo add "x +p @c due:2026-12-01"` → export from `/api/tasks/export` →
+  `diff` against the original file → must give **zero differences**.
+- **Phase 2**: 300 tasks, walk through 6 pages with `Ctrl-d`/`Ctrl-u`, check that every
+  request returns ≤ `size` items.
+- **Phase 3**: open a real `todo.txt` in Chromium, edit with `x`/`dd`/`p`, and in parallel
+  run `watch -n 0.5 cat todo.txt` to see the write; then edit from `tuxedo` and check the
+  reload warning.
+- **Phase 4**: walk through the parity table key by key with the real driver.
+- **Phase 5**: `x` on a task with `rec:+1m` → check the next line and that `u` undoes
+  both.
 
 ---
 
-## 10. Orden de ejecución
+## 10. Execution order
 
 ```
-Fase 0 (saneo)  ── bloquea todo
+Phase 0 (cleanup)  ── blocks everything
    │
-Fase 1 (modelo + codec + import/export)  ── bloquea la interoperabilidad real
+Phase 1 (model + codec + import/export)  ── blocks real interoperability
    │
-Fase 2 (paginación)  ── independiente de 1, puede solaparse
+Phase 2 (pagination)  ── independent of 1, can overlap
    │
-Fase 3 (espejo de archivo)  ── necesita 1
+Phase 3 (file mirror)  ── needs 1
    │
-Fase 4 (keymap)  ── necesita 3 (las chords dependen de la fila cursor) y 2 (Ctrl-d/u)
+Phase 4 (keymap)  ── needs 3 (chords depend on the cursor row) and 2 (Ctrl-d/u)
    │
-Fase 5 (recurrencia, done.txt, natural language)  ── opcional
+Phase 5 (recurrence, done.txt, natural language)  ── optional
 ```
 
-Estimación de superficie: Fase 0 ≈ 7 ficheros tocados; Fase 1 ≈ 10 nuevos + 4 modificados;
-Fase 2 ≈ 6; Fase 3 ≈ 7 nuevos; Fase 4 ≈ 8 nuevos (incluye el borrado del hook actual);
-Fase 5 escalonado.
+Surface estimate: Phase 0 ≈ 7 files touched; Phase 1 ≈ 10 new + 4 modified;
+Phase 2 ≈ 6; Phase 3 ≈ 7 new; Phase 4 ≈ 8 new (including deleting the current hook);
+Phase 5 staggered.
 
 ---
 
-## 11. Preguntas abiertas (no bloquean el inicio)
+## 11. Open questions (they don't block the start)
 
-1. ¿Se quiere que la web app **escriba también** `done.txt`, o `A` queda como operación exclusiva de
-   tuxedo y la web solo lee?
-2. ¿El `uid:` se escribe siempre, o solo cuando el archivo ya venía de otra fuente (para no
-   contaminar un `todo.txt` del usuario en el primer guardado)?
-3. ¿Se adopta Flyway en la Fase 0, o se acepta `ddl-auto=update` durante el desarrollo y se migra al
-   final?
+1. Should the web app **also write** `done.txt`, or does `A` stay an operation exclusive
+   to tuxedo with the web only reading?
+2. Is `uid:` always written, or only when the file already came from another source (so
+   as not to contaminate a user's `todo.txt` on the first save)?
+3. Is Flyway adopted in Phase 0, or is `ddl-auto=update` accepted during development and
+   migrated at the end?
 
 ---
 
-## 12. Registro de ejecución — Fase 0
+## 12. Execution log — Phase 0
 
-Aplicada y verificada contra Postgres 18 local + backend en :8080 + Vite en :5173, con la
-app real manejada en Chromium. Base de datos de prueba creada y eliminada al terminar.
+Applied and verified against a local Postgres 18 + the backend on :8080 + Vite on :5173,
+with the real app driven in Chromium. Test database created and deleted when finished.
 
-| Cambio | Verificación observada |
+| Change | Verification observed |
 | --- | --- |
-| `title` 500 / `description` 4000 | `varchar(500)` en el esquema generado; POST de 250 caracteres → `201` |
-| `TaskRequest` / `TaskResponse` | `userId:999` y `createdAt:1999-…` en el payload → la respuesta trae `createdAt` del servidor y el recurso queda del propietario real |
-| `updateTask` parcial | `PUT` con solo `title` devolvió `priority:"HIGH"` y `dueDate:"2026-12-01"` intactos. **Repetido por la UI**: editar solo el título dejó la tarjeta en `Alta` / `1 dic` |
-| Ownership en `/{id}` | Bob contra la tarea 1 de Alice: `GET/PUT/DELETE/PATCH` → `404` en los cuatro. Listas por usuario separadas |
-| `dueDate` a `LocalDate` | `2026-10-06` creado desde la UI se renderiza **"Mañana"** tras recargar, no "Hoy" — sin desplazamiento UTC |
-| `API_BASE` único | `api/client.ts` borrado (0 importadores); `tasks.ts` y `auth.ts` usan `api/http.ts` y respetan `VITE_API_URL` |
-| `@JsonIgnore` en `password` | `GET /api/admin/users` ya no incluye el campo |
-| *Hallazgo del smoke* | Fecha malformada `61007-02-20` → **500** silencioso. Ahora `400 {"error":"Bad Request"}`; `GlobalExceptionHandler` loguea lo no manejado |
+| `title` 500 / `description` 4000 | `varchar(500)` in the generated schema; a 250-character POST → `201` |
+| `TaskRequest` / `TaskResponse` | `userId:999` and `createdAt:1999-…` in the payload → the response carries the server's `createdAt` and the resource belongs to the real owner |
+| Partial `updateTask` | A `PUT` with only `title` returned `priority:"HIGH"` and `dueDate:"2026-12-01"` untouched. **Repeated through the UI**: editing only the title left the card at `Alta` / `1 dic` |
+| Ownership on `/{id}` | Bob against Alice's task 1: `GET/PUT/DELETE/PATCH` → `404` on all four. Separate per-user lists |
+| `dueDate` to `LocalDate` | `2026-10-06` created from the UI renders as **"Mañana"** after a reload, not "Hoy" — no UTC shift |
+| Single `API_BASE` | `api/client.ts` deleted (0 importers); `tasks.ts` and `auth.ts` use `api/http.ts` and respect `VITE_API_URL` |
+| `@JsonIgnore` on `password` | `GET /api/admin/users` no longer includes the field |
+| *Smoke finding* | Malformed date `61007-02-20` → a silent **500**. Now `400 {"error":"Bad Request"}`; `GlobalExceptionHandler` logs the unhandled ones |
 
-Tests: backend 14/14 (`TaskServiceTest` reescrito con cobertura de payload parcial y de
-ownership cruzado), frontend 4/4, `npm run build` OK.
+Tests: backend 14/14 (`TaskServiceTest` rewritten with coverage for partial payloads and
+cross-owner access), frontend 4/4, `npm run build` OK.
 
-### Deuda que queda anotada, no resuelta
+### Debt noted, not resolved
 
-- `useTasks` no tiene `onError`: un `400` se traga sin toast. No afecta a la corrección, pero
-  en la Fase 3 el watcher del archivo necesita que los fallos sean visibles.
-- ~~`ddl-auto=update` sin Flyway~~ → resuelto en la Fase 1 (ver §13).
-- Los e2e de Playwright siguen con `if (isVisible())` en todas las aserciones.
+- `useTasks` has no `onError`: a `400` is swallowed without a toast. It doesn't affect
+  correctness, but in Phase 3 the file watcher needs failures to be visible.
+- ~~`ddl-auto=update` without Flyway~~ → resolved in Phase 1 (see §13).
+- The Playwright e2e still use `if (isVisible())` in every assertion.
 
 ---
 
-## 13. Registro de ejecución — Fase 1
+## 13. Execution log — Phase 1
 
 ### Flyway
 
-Adoptado. `V1__baseline.sql` reproduce el esquema que dejaba `ddl-auto=update`;
-`V2__todotxt_columns.sql` añade los campos de todo.txt, las tablas de proyectos y contextos,
-el índice por `user_id` y el índice único parcial de `todo_uid`.
-`baseline-on-migrate=true` + `baseline-version=1` deja las bases preexistentes en V1, de modo
-que solo ejecuten lo nuevo. `ddl-auto` pasa a `validate`: Hibernate comprueba, Flyway manda.
+Adopted. `V1__baseline.sql` reproduces the schema `ddl-auto=update` used to leave;
+`V2__todotxt_columns.sql` adds the todo.txt fields, the project and context tables, the
+`user_id` index and the partial unique index on `todo_uid`.
+`baseline-on-migrate=true` + `baseline-version=1` leaves pre-existing databases at V1, so
+they only run the new stuff. `ddl-auto` switches to `validate`: Hibernate checks, Flyway
+commands.
 
-Verificado en una base vacía: `Successfully validated 2 migrations` → `Migrating to "1 - baseline"`
-→ `Migrating to "2 - todotxt columns"` → `Schema is up to date` en el arranque siguiente.
+Verified on an empty database: `Successfully validated 2 migrations` → `Migrating to "1 - baseline"`
+→ `Migrating to "2 - todotxt columns"` → `Schema is up to date` on the next boot.
 
-### Prueba de interoperabilidad contra el binario real
+### Interop test against the real binary
 
-Archivo escrito a mano, importado, exportado, y el export pasado por `tuxedo ls --json`.
+A file written by hand, imported, exported, and the export fed through `tuxedo ls --json`.
 
-| Paso | Resultado |
+| Step | Result |
 | --- | --- |
-| `POST /api/tasks/import` de 4 líneas | `imported: 4, updated: 0` |
-| `GET /api/tasks/export` | 4 líneas con `uid:` asignado, `rec:`, `t:`, `note:` y `+proyecto`/`@contexto` intactos |
-| `tuxedo ls --json` sobre nuestro export vs. sobre el original | Coinciden `done`, `priority`, `created`, `completed`, `projects`, `contexts`, `due`, `rec`, `t` en las 4 tareas |
-| Reimportar el propio export | `imported: 0, updated: 4` — sin duplicar |
-| `tuxedo do 1` + `tuxedo add` sobre el archivo → reimportar | `imported: 1, updated: 4`; el `x` llega como completada y la nueva como tarea con `rec:+2w` |
-| `POST /api/tasks/archive` | `archived: 1`, `doneFile` con la línea `x …`; `tuxedo lsa` sobre `todo.txt` + ese `done.txt` da `total: 5 of 5` |
+| `POST /api/tasks/import` of 4 lines | `imported: 4, updated: 0` |
+| `GET /api/tasks/export` | 4 lines with `uid:` assigned, `rec:`, `t:`, `note:` and `+project`/`@context` intact |
+| `tuxedo ls --json` on our export vs. on the original | `done`, `priority`, `created`, `completed`, `projects`, `contexts`, `due`, `rec`, `t` match on all 4 tasks |
+| Reimporting our own export | `imported: 0, updated: 4` — no duplicates |
+| `tuxedo do 1` + `tuxedo add` on the file → reimport | `imported: 1, updated: 4`; the `x` arrives as completed and the new one as a task with `rec:+2w` |
+| `POST /api/tasks/archive` | `archived: 1`, `doneFile` with the `x …` line; `tuxedo lsa` on `todo.txt` + that `done.txt` gives `total: 5 of 5` |
 
-#### Las dos diferencias del round-trip, y por qué son correctas
+#### The two round-trip differences, and why they're correct
 
-1. **Se ordena `@ctx +proj` como `+proj @ctx`.** El formato no distingue orden entre etiquetas.
-2. **Las líneas sin fecha de creación reciben la del día de la importación.** Es exactamente lo
-   que hace el drenaje de `inbox.txt` de tuxedo ("given a creation date if missing").
+1. **`@ctx +proj` is sorted as `+proj @ctx`.** The format doesn't distinguish order
+   between tags.
+2. **Lines without a creation date get the import date.** That's exactly what tuxedo's
+   `inbox.txt` drain does ("given a creation date if missing").
 
-Por lo demás el archivo exportado es el mismo archivo, más el `uid:`.
+Otherwise the exported file is the same file, plus the `uid:`.
 
-#### Corrección aplicada durante el smoke
+#### Fix applied during the smoke
 
-La primera versión exportaba `(B)` en toda tarea de prioridad `MEDIUM`, lo que ensuciaba cada
-línea del `todo.txt` del usuario. `MEDIUM` es el estado por defecto y el dominio no tiene
-"sin prioridad", así que ahora `MEDIUM` no emite prioridad y solo `HIGH`→`(A)` y `LOW`→`(C)`
-se escriben. Comprobado contra tuxedo: su `add` tampoco emite marca de prioridad por defecto.
+The first version exported `(B)` on every `MEDIUM` priority task, which dirtied every
+line of the user's `todo.txt`. `MEDIUM` is the default state and the domain has no
+"no priority", so now `MEDIUM` emits no priority and only `HIGH`→`(A)` and `LOW`→`(C)`
+are written. Checked against tuxedo: its `add` doesn't emit a priority marker by default
+either.
 
-Tests: backend 30/30 (16 del codec, 14 de servicio), frontend 4/4, build OK.
+Tests: backend 30/30 (16 of the codec, 14 of the service), frontend 4/4, build OK.
 
-### Pendiente para la Fase 2
+### Pending for Phase 2
 
-- `GET /api/tasks` sigue devolviendo la lista completa: `/import` y `/export` trabajan sobre
-  el conjunto entero, que es lo correcto para un archivo. La paginación llega en la Fase 2 y
-  no debe tocar estos dos endpoints.
+- `GET /api/tasks` still returns the full list: `/import` and `/export` work on the whole
+  set, which is correct for a file. Pagination arrives in Phase 2 and must not touch
+  these two endpoints.
 
 ---
 
-## 14. Registro de ejecución — Fase 2
+## 14. Execution log — Phase 2
 
 ### Backend
 
-`TaskRepository` extiende `JpaSpecificationExecutor<Task>`; `TaskSpecifications` centraliza los
-predicados. El scope por usuario vive en `ownedBy(userId)` y **no hay forma de pedir la lista sin
-él**: es el primer elemento de la composición, no un parámetro opcional.
+`TaskRepository` extends `JpaSpecificationExecutor<Task>`; `TaskSpecifications`
+centralizes the predicates. The per-user scope lives in `ownedBy(userId)` and **there is
+no way to ask for the list without it**: it's the first element of the composition, not
+an optional parameter.
 
-`TaskSort` implementa `toOrder(cb, root)` sobre el árbol de criterios en vez de usar `Sort` de
-Spring Data, porque la prioridad necesita una expresión condicional que `Sort` no puede expresar
-(el enum se guarda por nombre, así que el orden alfabético no sirve). `due` se apoya en que en
-PostgreSQL NULL ordena como mayor que todo, con lo que `ASC` deja las tareas sin fecha al final.
+`TaskSort` implements `toOrder(cb, root)` over the criteria tree instead of using Spring
+Data's `Sort`, because priority needs a conditional expression that `Sort` can't
+express (the enum is stored by name, so alphabetical order doesn't work). `due` relies on
+PostgreSQL sorting NULL above everything, so `ASC` leaves dateless tasks at the end.
 
-`@BatchSize(50)` en `projects` y `contexts`: sin él, la paginación hace un N+1 (dos colecciones
-EAGER por tarea).
+`@BatchSize(50)` on `projects` and `contexts`: without it, pagination is an N+1 (two
+EAGER collections per task).
 
-Se elimina `GET /api/tasks/completed/{completed}` y `TaskService.getTasksByCompletionStatus`: la
-paginación por `filter` lo reemplaza y la ruta antigua no tenía scope de propietario por diseño.
+`GET /api/tasks/completed/{completed}` and `TaskService.getTasksByCompletionStatus` are
+removed: `filter` pagination replaces them, and the old route had no owner scope by
+design.
 
-### Smoke con 300 tareas
+### Smoke with 300 tasks
 
-| Comprobación | Resultado |
+| Check | Result |
 | --- | --- |
-| 6 páginas de 50 | 50/50/50/50/50/50, **300 ids únicos**, `hasNext`/`hasPrevious` correctos en los extremos |
-| `page=6` (fuera de rango) | `content: []`, `totalPages: 6` |
-| `size=100000` | Topeado a 200 |
-| Aislamiento entre usuarios | Bob (1 tarea propia) no ve ninguna de las 300 de Alice |
-| `q` | `Tarea numero 042` → 1; `tarea NUMERO 100` → 1 (sin distinguir mayúsculas); `no existe` → 0 |
+| 6 pages of 50 | 50/50/50/50/50/50, **300 unique ids**, correct `hasNext`/`hasPrevious` at the extremes |
+| `page=6` (out of range) | `content: []`, `totalPages: 6` |
+| `size=100000` | Capped at 200 |
+| Isolation between users | Bob (1 own task) sees none of Alice's 300 |
+| `q` | `Tarea numero 042` → 1; `tarea NUMERO 100` → 1 (case-insensitive); `no existe` → 0 |
 | `project` | `alpha` → 150, `beta` → 150 |
-| Los seis órdenes | Dataset controlado donde cada uno da un orden distinto: file = inserción, priority = `Zeta(HIGH), Mango(MEDIUM), Alfa(LOW)`, due = `Mango, Alfa` y las dos sin fecha al final, newest/oldest invertidos, alphabetical |
+| The six sort orders | A controlled dataset where each one gives a different order: file = insertion, priority = `Zeta(HIGH), Mango(MEDIUM), Alfa(LOW)`, due = `Mango, Alfa` and the two dateless ones at the end, newest/oldest reversed, alphabetical |
 | `/counts` | Alice `{"all":300,"active":300,"completed":0}`, Bob `{"all":1,...}` |
 
 ### Frontend
 
-`useTasks(params)` con `queryKey: ['tasks', params]` y `placeholderData: keepPreviousData`; los
-contadores van en su propia query `['task-counts']` porque con paginación ya no se pueden calcular
-en cliente. Los dos `useMemo` de filtrado y orden desaparecieron de `TaskListPage`.
+`useTasks(params)` with `queryKey: ['tasks', params]` and `placeholderData: keepPreviousData`;
+the counters go in their own `['task-counts']` query because with pagination they can no
+longer be computed client-side. The two `useMemo`s for filtering and sorting disappeared
+from `TaskListPage`.
 
-Verificado en Chromium contra el backend real:
+Verified in Chromium against the real backend:
 
-- `mostrando 1–20 de 300`, `página 1 de 15`, 20 tarjetas en pantalla.
-- "Siguiente" → `mostrando 21–40 de 300`, petición `?page=1`.
-- Cambiar a "Pendientes" estando en la página 2 → vuelve a `página 1`.
-- Búsqueda con debounce: escribir → `?q=Tarea+numero+04`, un carácter menos → refetch.
-- Los defaults **no viajan**: las peticiones reales son `?page=1`, `?filter=active`, `?q=...`.
+- `mostrando 1–20 de 300`, `página 1 de 15`, 20 cards on screen.
+- "Siguiente" → `mostrando 21–40 de 300`, request `?page=1`.
+- Switching to "Pendientes" while on page 2 → goes back to `página 1`.
+- Debounced search: typing → `?q=Tarea+numero+04`, one character less → refetch.
+- The defaults **don't travel**: the real requests are `?page=1`, `?filter=active`, `?q=...`.
 
 Tests: backend 33/33, frontend 6/6, build OK.
 
-### Nota sobre un falso positivo del smoke
+### Note on a smoke false positive
 
-Rellenar el campo de búsqueda con la cadena vacía desde el script de automatización dejaba la
-lista congelada en el resultado anterior. No es un fallo de la app: el arnés fija `.value` sin
-despachar el evento que React necesita. Con pulsaciones reales (retroceso hasta vaciar el campo)
-sí refetch, y se comprobó que la lista vuelve a mostrar las 20 tareas.
+Filling the search field with the empty string from the automation script left the list
+frozen on the previous result. It's not an app bug: the harness sets `.value` without
+dispatching the event React needs. With real keystrokes (backspace until the field is
+empty) it does refetch, and it was confirmed that the list shows the 20 tasks again.
 
-### Lo que queda para la Fase 4
+### What's left for Phase 4
 
-`Ctrl-d` / `Ctrl-u` ya pueden mapearse a media página: el endpoint expone `page`, `size`,
-`hasNext` y `hasPrevious`. Falta el motor de keymap (Fase 4).
+`Ctrl-d` / `Ctrl-u` can now be mapped to half a page: the endpoint exposes `page`, `size`,
+`hasNext` and `hasPrevious`. The keymap engine is what's missing (Phase 4).
 
 ---
 
-## 15. Registro de ejecución — Fases 3 y 4
+## 15. Execution log — Phases 3 and 4
 
-### Fase 3: el espejo del archivo
+### Phase 3: the file mirror
 
-`FileHandlePort` envuelve la File System Access API de Chromium y cae a una implementación en
-memoria fuera de ella y en los tests; la UI lo dice cuando no sincroniza. `TodoDoc` mantiene el
-espejo (líneas, cabecera, uids, cursor, selección, historial de 50 pasos) y las mutaciones
-parchean líneas en lugar de reserializar el archivo entero.
+`FileHandlePort` wraps Chromium's File System Access API and falls back to an in-memory
+implementation outside it and in tests; the UI says when it isn't syncing. `TodoDoc`
+holds the mirror (lines, header, uids, cursor, selection, 50-step history) and mutations
+patch lines instead of reserializing the whole file.
 
-El encabezado de comentarios se conserva aparte: el backend no conoce los `#`, y sin esto un
-guardado perdería el bloque de cabecera del `todo.txt` del usuario.
+The comment header is kept separately: the backend doesn't know about `#`, and without
+this a save would lose the header block of the user's `todo.txt`.
 
-#### Cuatro bugs que solo aparecieron al ejecutar contra un archivo real
+#### Four bugs that only appeared when running against a real file
 
-1. **Bucle de reimportación.** El hash se comparaba contra el archivo *reconciliado* en vez de
-   contra lo leído del disco, así que el sondeo veía una diferencia en cada vuelta e importaba
-   sin parar, duplicando tareas. Ahora el hash es del texto leído.
-2. **Duplicados al reabrir.** Al vincular no se volcaba el archivo reconciliado, así que los
-   `uid:` nunca llegaban al disco y cada reapertura creaba las tareas de nuevo. Ahora vincular
-   programa el flush.
-3. **El sondeo deshacía las ediciones locales.** Un parche marca el hash como inválido, y el
-   siguiente tick leía el archivo viejo, lo tomaba por cambio externo y revertía lo que el
-   usuario acababa de escribir. Añadido `isWritePending()`: con una escritura en curso el sondeo
-   no reconcilia.
-4. **`uid:` repetido.** Al completar una recurrente, tuxedo inserta la instancia siguiente
-   conservando el mismo `uid:`. Una fila no puede representar las dos: la segunda aparición
-   creaba tarea nueva con uid propio. Fijado con test.
+1. **Reimport loop.** The hash was compared against the *reconciled* file instead of what
+   was read from disk, so the poll saw a difference on every pass and imported endlessly,
+   duplicating tasks. Now the hash is of the text that was read.
+2. **Duplicates on reopen.** On linking, the reconciled file wasn't written back, so the
+   `uid:` never reached disk and every reopen created the tasks again. Now linking
+   schedules a flush.
+3. **The poll undid local edits.** A patch marks the hash invalid, and the next tick read
+   the old file, took it for an external change and reverted what the user had just
+   written. Added `isWritePending()`: while a write is in progress the poll doesn't
+   reconcile.
+4. **Repeated `uid:`.** When completing a recurring task, tuxedo inserts the next instance
+   keeping the same `uid:`. A single row can't represent both: the second occurrence
+   created a new task with its own uid. Pinned with a test.
 
-Además, `TodoFileBar` montaba su propio `useTodoFile()`, así que había dos sondeos y dos
-escritores compitiendo por el mismo archivo. La barra es ahora presentacional.
+On top of that, `TodoFileBar` mounted its own `useTodoFile()`, so there were two polls
+and two writers competing for the same file. The bar is now presentational.
 
-### Fase 4: los keybindings
+### Phase 4: the keybindings
 
-`keymap/` tiene cuatro capas: `actions.ts` y `defaults.ts` (la tabla de tuxedo literal),
-`parseToml.ts` (el subconjunto de `~/.config/tuxedo/keybinds.toml`) y `useKeymap.ts` (el motor:
-normalización de teclas, chords con ventana de 600 ms, pila de modos). `HelpOverlay` se genera
-desde la misma tabla que ejecuta el motor, así que no hay una segunda fuente de verdad.
-`useKeyboardShortcuts.ts` queda borrado: cuatro listeners sueltos reemplazados por el motor.
+`keymap/` has four layers: `actions.ts` and `defaults.ts` (tuxedo's table, literal),
+`parseToml.ts` (the subset of `~/.config/tuxedo/keybinds.toml`) and `useKeymap.ts` (the
+engine: key normalization, chords with a 600 ms window, mode stack). `HelpOverlay` is
+generated from the same table that runs the engine, so there's no second source of truth.
+`useKeyboardShortcuts.ts` ends up deleted: four loose listeners replaced by the engine.
 
-#### Recorrido verificado con teclado real, contra el disco
+#### Walkthrough verified with a real keyboard, against disk
 
-Con un `todo.txt` de 4 líneas abierto desde el navegador:
+With a 4-line `todo.txt` opened from the browser:
 
-| Tecla | Efecto observado |
+| Key | Observed effect |
 | --- | --- |
-| `j` `k` | El cursor pasa de "Call dentist" a "Pay rent" |
-| `g` `g` | El indicador `g…` aparece en la barra y `gg` vuelve a la primera fila |
-| `G` | Última fila |
-| `x` | Contadores `Completadas 0 → 1`; en el archivo `x 2026-10-05 (A) 2026-04-28 Call dentist…` |
-| `p` | Prioridad `Media → Alta`; en el archivo aparece `(A)` |
-| `J` | La tarea baja de posición; en el archivo cambia de orden |
+| `j` `k` | The cursor moves from "Call dentist" to "Pay rent" |
+| `g` `g` | The `g…` indicator appears in the bar and `gg` returns to the first row |
+| `G` | Last row |
+| `x` | Counters `Completadas 0 → 1`; in the file `x 2026-10-05 (A) 2026-04-28 Call dentist…` |
+| `p` | Priority `Media → Alta`; `(A)` appears in the file |
+| `J` | The task moves down; its order changes in the file |
 | `d` `d` | `Todas 4 → 3` |
-| `u` | `Todas 3 → 4`, la fila vuelve a la base |
-| `?` | Abre el overlay con los chords (`gg`, `dd`, `fp`) y modificadores (`Ctrl-d`) |
-| `Esc` | Cierra el overlay |
+| `u` | `Todas 3 → 4`, the row goes back to the base |
+| `?` | Opens the overlay with the chords (`gg`, `dd`, `fp`) and modifiers (`Ctrl-d`) |
+| `Esc` | Closes the overlay |
 
-Al final, `tuxedo ls` sobre el archivo escrito por el navegador devuelve las cuatro tareas con
-sus `uid:` intactos.
+At the end, `tuxedo ls` on the file written by the browser returns the four tasks with
+their `uid:`s intact.
 
-#### Dos bugs más que encontró el smoke
+#### Two more bugs the smoke found
 
-- `pushLineOrder` manda un `PUT` con solo `sortOrder`, y `@NotBlank` en el título lo rechazaba
-  con 400 en cada tarea. El título pasó a ser opcional en `TaskRequest` y la obligatoriedad la
-  impone el servicio al crear, con `InvalidRequestException` → 400.
-- `cyclePriority` escribía la letra de tuxedo (`A`) donde el enum espera `HIGH`. Ahora hay tabla
-  `A→HIGH, B→MEDIUM, C→LOW`.
+- `pushLineOrder` sends a `PUT` with only `sortOrder`, and `@NotBlank` on the title
+  rejected it with a 400 on every task. The title became optional in `TaskRequest` and the
+  requiredness is enforced by the service on create, with `InvalidRequestException` → 400.
+- `cyclePriority` wrote tuxedo's letter (`A`) where the enum expects `HIGH`. There's now
+  an `A→HIGH, B→MEDIUM, C→LOW` table.
 
-Tests: backend 39/39, frontend 66/66 (26 del motor, 19 de la capa de datos, 15 del espejo).
+Tests: backend 39/39, frontend 66/66 (26 of the engine, 19 of the data layer, 15 of the mirror).
 
-### Lo que quedó fuera, y por qué
+### What was left out, and why
 
-- ~~**El frontend no tiene typecheck.**~~ → resuelto en §16.
-- `inbox.txt`: el backend lo resuelve por `/import`, pero el drenaje automático desde el archivo
-  hermano no está cableado en el cliente.
-- Fuera de alcance por decisión, como estaba previsto: temas (`T`), densidad (`D`), números de
-  línea (`L`), captura por QR (`s`), sidebars (`[`/`]`), notas (`o`/`O`), constructor `rec:`
-  modal y paleta de comandos (`:`), que sí está cableada como tecla pero no abre nada.
+- ~~**The frontend has no typecheck.**~~ → resolved in §16.
+- `inbox.txt`: the backend resolves it through `/import`, but the automatic drain from
+  the sibling file isn't wired up in the client.
+- Out of scope by decision, as planned: themes (`T`), density (`D`), line numbers (`L`),
+  capture QR (`s`), sidebars (`[`/`]`), notes (`o`/`O`), the modal `rec:` builder and the
+  command palette (`:`), which is wired to a key but opens nothing.
 
 ---
 
-## 16. Registro de ejecución — typecheck del frontend
+## 16. Execution log — frontend typecheck
 
-Lo que en la sección anterior quedó como pendiente ya está resuelto.
+What the previous section left as pending is now resolved.
 
-`@types/react@18`, `@types/react-dom@18` y `@types/node` instalados, `frontend/tsconfig.json`
-añadido y `npm run typecheck` en verde. El typecheck también está en `.github/workflows/ci-cd.yml`,
-justo después de `npm ci`, para que no se pudra.
+`@types/react@18`, `@types/react-dom@18` and `@types/node` installed, `frontend/tsconfig.json`
+added and `npm run typecheck` green. The typecheck is also in
+`.github/workflows/ci-cd.yml`, right after `npm ci`, so nobody can quietly drop it.
 
-**Eran 16 errores, no cientos.** El volcón que vi la primera vez venía de que `@types/react` no
-estaba instalado: sin él, cada JSX daba error y el recuento no significaba nada. Con los tipos en
-su sitio, el alcance real es manejable.
+**It was 16 errors, not hundreds.** The avalanche I saw the first time came from
+`@types/react` not being installed: without it, every JSX errored and the count meant
+nothing. With the types in place, the real scope is manageable.
 
-### Lo que destapó
+### What it uncovered
 
-| Error | Qué era |
+| Error | What it was |
 | --- | --- |
-| `Timeout` no asignable a `number` (×4) | Al añadir `@types/node`, `setTimeout` pasó a devolver el `Timeout` de Node y dejó de shadowear el `number` del DOM. El código es de navegador: ahora usa `window.setTimeout` / `window.clearTimeout`, y `0` como centinela en vez de `null`, que tampoco encajaba con la firma |
-| `TaskCard.test.tsx`: módulo no encontrado | La ruta del import era `../../types/task` desde `__tests__/`, un nivel corto |
-| `useTasks.test.tsx`: `'active'` no asignable a `'all'` | `initialProps` infería los literales del objeto y `rerender` no podía ampliarlos. Ahora el props va anotado como `TaskQueryParams` |
-| `Plugin<any>[]` no asignable a `PluginOption` | vitest 2 arrastraba su propia copia de **vite 5** mientras el proyecto usa vite 6. Subido a vitest 3, que deduplica |
-| `statements` no existe en `coverage` | Clave movida en vitest 3: ahora es `coverage.thresholds.statements` |
-| `isFocused` y `ArrowRightOnRectangleIcon` sin usar | Código muerto eliminado, no silenciado |
+| `Timeout` not assignable to `number` (×4) | When `@types/node` was added, `setTimeout` started returning Node's `Timeout` and stopped shadowing the DOM's `number`. This is browser code: it now uses `window.setTimeout` / `window.clearTimeout`, and `0` as a sentinel instead of `null`, which didn't fit the signature either |
+| `TaskCard.test.tsx`: module not found | The import path was `../../types/task` from `__tests__/`, one level short |
+| `useTasks.test.tsx`: `'active'` not assignable to `'all'` | `initialProps` inferred the literals from the object and `rerender` couldn't widen them. The prop is now annotated as `TaskQueryParams` |
+| `Plugin<any>[]` not assignable to `PluginOption` | vitest 2 dragged in its own copy of **vite 5** while the project uses vite 6. Upgraded to vitest 3, which dedupes |
+| `statements` doesn't exist in `coverage` | Key moved in vitest 3: it's now `coverage.thresholds.statements` |
+| `isFocused` and `ArrowRightOnRectangleIcon` unused | Dead code deleted, not silenced |
 
-### Un defecto de la Fase 3 que salió al verificar en runtime
+### A Phase 3 defect that surfaced when verifying at runtime
 
-Tras una recarga por cambio externo, la cabecera de comentarios del `todo.txt` desaparecía: el
-preámbulo se sacaba del archivo **reconciliado**, y el backend no conoce los `#`. Ahora sale del
-texto leído del disco. Verificado: con `# Tareas del proyecto` y `# Bloque personal`, tuxedo añade
-una tarea y le cambia la prioridad, y las dos líneas siguen ahí tras el ciclo completo.
+After a reload caused by an external change, the comment header of the `todo.txt`
+disappeared: the preamble was taken from the **reconciled** file, and the backend doesn't
+know about `#`. Now it comes from the text read off disk. Verified: with
+`# Tareas del proyecto` and `# Bloque personal`, tuxedo adds a task and changes its
+priority, and both lines are still there after the full cycle.
 
-### Limitación conocida y medida
+### Known, measured limitation
 
-Una línea **sin `uid:`** siempre crea una tarea nueva: no hay identidad con la que reconocerla.
-Eso significa que, si tuxedo añade una tarea y edita el archivo otra vez antes de que la app
-escriba los `uid:` de vuelta, esa tarea se duplica al reimportar.
+A line **without `uid:`** always creates a new task: there's no identity to recognize it
+by. That means that if tuxedo adds a task and edits the file again before the app writes
+the `uid:`s back, that task is duplicated on reimport.
 
-En cuanto la app escribe, el ciclo es estable. Medido: un archivo con las tres líneas portant
-`uid:`, importado tres veces seguidas, da `3/0`, luego `0/3`, luego `0/3` — tres filas, cero
-duplicados. El disparador es concreto y está anotado; la solución de fondo sería el cerrojo
-consultivo que usa el propio tuxedo al drenar `inbox.txt`.
+Once the app writes, the cycle is stable. Measured: a file with the three lines carrying
+`uid:`, imported three times in a row, gives `3/0`, then `0/3`, then `0/3` — three rows,
+zero duplicates. The trigger is concrete and documented; the underlying fix would be the
+advisory lock tuxedo itself uses when draining `inbox.txt`.
 
-### Estado
+### Status
 
-Backend 39/39, frontend 66/66, `typecheck` limpio, build OK.
+Backend 39/39, frontend 66/66, clean `typecheck`, build OK.
 ---
 
-## 17. Registro de ejecución — cierre
+## 17. Execution log — wrap-up
 
-### Atajos apagados sin archivo
+### Shortcuts off without a file
 
-`useKeymap` acepta `unavailable: { actions, reason }` y las ignora. Sin un todo.txt vinculado,
-`x`, `p`, `J`, `dd` y `u` no tienen uid sobre el que actuar; hasta ahora salían por el return
-temprano, en silencio. Ahora la cabecera lo dice y el overlay las lista tachadas con el motivo.
+`useKeymap` accepts `unavailable: { actions, reason }` and ignores them. Without a linked
+todo.txt, `x`, `p`, `J`, `dd` and `u` have no uid to act on; until now they exited via
+the early return, silently. Now the header says so and the overlay lists them struck
+through with the reason.
 
-Se descartó el doble fondo de escritura (mutar el archivo si lo hay, si no la API): obliga a
-decidir cuál de las dos rutas gana cuando están las dos, que es la parte difícil.
+The double write path was discarded (mutate the file if there is one, otherwise the API):
+it forces you to decide which of the two wins when both are available, which is the hard
+part.
 
-### Recurrencia, paleta e inbox
+### Recurrence, palette and inbox
 
-- `r` abre el prompt para escribir `rec:`. El spawn ya estaba; faltaba poder escribirlo.
-- `:` y Ctrl-P abren la paleta, con el ranking de tuxedo: inicio de etiqueta, frontera de
-  palabra, dentro. En cuarenta comandos la posición es el ranking.
-- Para leer `inbox.txt` hizo falta el **directorio**, no el archivo: la File System Access API
-  devuelve un handle sin decir dónde está. El selector pide una carpeta y de ahí salen
-  `todo.txt` e `inbox.txt`. Se drena en cada sondeo y se vacía **antes** de importar: vaciar
-  después dejaría las líneas ahí para la siguiente vuelta.
+- `r` opens the prompt to write `rec:`. The spawn was already there; being able to type
+  it was missing.
+- `:` and Ctrl-P open the palette, with tuxedo's ranking: tag start, word boundary,
+  inside. Across forty commands position is the ranking.
+- To read `inbox.txt` the **directory** was needed, not the file: the File System Access
+  API returns a handle without saying where it is. The picker asks for a folder and
+  `todo.txt` and `inbox.txt` come out of it. It's drained on every poll and emptied
+  **before** importing: emptying afterwards would leave the lines there for the next pass.
 
-### Deuda de las líneas sin uid: resuelta
+### Debt of the lines without uid: resolved
 
-Una línea sin `uid:` no tiene identidad, así que creaba tarea nueva siempre. Ahora, si no hay
-uid, se busca por contenido y **solo se empareja si la coincidencia es única**: con dos tareas
-idénticas no se adivina. Las fechas quedan fuera de la clave, porque la de creación la sella
-el servidor y una línea de tuxedo puede no traerla.
+A line without `uid:` has no identity, so it always created a new task. Now, if there's
+no uid, it looks up by content and **only matches if the hit is unique**: with two
+identical tasks there's no guessing. Dates are left out of the key, because the creation
+date is sealed by the server and a tuxedo line may not carry it.
 
-Comprobado contra el Docker: importar dos veces un archivo sin uid da 2 filas; antes, 3.
+Checked against Docker: importing a uid-less file twice gives 2 rows; before, 3.
 
-### e2e reescritos
+### Rewritten e2e
 
-Herméticos (interceptan la API) y con esperas por web. En el camino salieron tres trampas que
-conviene no volver a pisar:
+Hermetic (they intercept the API) and with web-first waits. Three traps came up along the
+way that are worth not stepping in again:
 
-1. El glob `**/api/tasks**` capturaba también el módulo del propio dev server
-   (`/src/api/tasks.ts`) y lo sustituía por un `{}` que dejaba la app en blanco. Ahora es un
-   predicado de ruta.
-2. El fixture de sesión no se montaba en los tests que no lo pedían por nombre, así que
-   navegaban contra el backend real de verdad.
-3. La app es un PWA: sin `serviceWorkers: 'block'` los tests assertan contra el index
-   cacheado, no contra el build del disco.
+1. The `**/api/tasks**` glob also caught the dev server's own module (`/src/api/tasks.ts`)
+   and replaced it with a `{}` that left the app blank. Now it's a path predicate.
+2. The session fixture wasn't mounted in the tests that didn't ask for it by name, so
+   they really did hit the real backend.
+3. The app is a PWA: without `serviceWorkers: 'block'` the tests assert against the
+   cached index, not against the build on disk.
 
-Y una comprobación de que la suite muerde: rompiendo `cursor_down` a propósito, el e2e de `j` y
-`k` falla. Es la diferencia entre tener tests y tener aserciones.
+Plus a check that the suite bites: deliberately breaking `cursor_down` makes the e2e for
+`j` and `k` fail. That's the difference between having tests and having assertions.
 
-### Sigue fuera de alcance, y por qué
+### Still out of scope, and why
 
-- **Sidebars (`[` y `]`).** Tuxedo tiene un panel lateral con el detalle de la tarea y otro de
-  filtros. En la web el detalle ya está en la tarjeta y los filtros son las pestañas de arriba.
-  Añadirlos sería duplicar en panel lo que ya está en la página, y el atajo no puede quedar
- apretado a la nada: si `toggle_left_pane` no hace nada, es exactamente el atajo que finge
-  funcionar que acabamos de eliminar en la opción B. O se construye el panel, o la tecla se
-  deja sin atajo. Dime cuál y lo hago.
-- **Notas (`o` y `O`).** Enlazan `note:<ruta>` a un fichero y lo abren en `$EDITOR`. La web no
-  tiene editor ni sistema de ficheros; emularlo con descargas y `<textarea>` no es lo mismo que
-  la función. Requiere una decisión de producto de la que no hay nada escrito.
+- **Sidebars (`[` and `]`).** Tuxedo has a side panel with the task detail and another
+  with filters. On the web the detail is already in the card and the filters are the tabs
+  at the top. Adding them would duplicate in a panel what's already on the page, and the
+  shortcut can't be left bound to nothing: if `toggle_left_pane` does nothing, that's
+  exactly the fake-working shortcut we just removed under option B. Either the panel gets
+  built, or the key stays unbound. Tell me which and I'll do it.
+- **Notes (`o` and `O`).** They link `note:<path>` to a file and open it in `$EDITOR`.
+  The web has no editor and no file system; emulating it with downloads and
+  `<textarea>` isn't the same as the function. It needs a product decision that isn't
+  written down anywhere.
 
-### Estado
+### Status
 
-Backend 41/41, frontend 58/58, e2e 17/17, `typecheck` limpio, e2e en el CI.
+Backend 41/41, frontend 58/58, e2e 17/17, clean `typecheck`, e2e in CI.

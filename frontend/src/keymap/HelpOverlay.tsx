@@ -4,8 +4,9 @@ import { ActionName } from './actions';
 import { Portal } from '../components/common/Portal';
 
 /**
- * El overlay `?` de tuxedo, generado desde la misma tabla de atajos que ejecuta el motor.
- * Una sola fuente de verdad: si un atajo cambia en defaults.ts, cambia aquí sin tocar nada.
+ * Tuxedo's `?` overlay, generated from the same shortcut table the engine runs. A single
+ * source of truth: if a shortcut changes in defaults.ts, it changes here with nothing else
+ * to touch.
  */
 
 const GROUPS: { title: string; actions: readonly ActionName[] }[] = [
@@ -65,7 +66,7 @@ const GROUPS: { title: string; actions: readonly ActionName[] }[] = [
   },
 ];
 
-/** Etiquetas legibles. Los nombres snake_case no significan nada en la pantalla. */
+/** Readable labels. The snake_case names mean nothing on screen. */
 const LABELS: Partial<Record<ActionName, string>> = {
   cursor_down: 'siguiente tarea',
   cursor_up: 'tarea anterior',
@@ -114,10 +115,10 @@ const LABELS: Partial<Record<ActionName, string>> = {
 export const HelpOverlay: FC<{
   keymap: Record<string, readonly string[]>;
   onClose: () => void;
-  /** Acciones apagadas ahora mismo, con el motivo. Se listan, pero tachadas. */
+  /** Actions that are off right now, with the reason. They are listed, but struck through. */
   unavailable?: { actions: readonly ActionName[]; reason: string };
 }> = ({ keymap, onClose, unavailable }) => {
-  // Esc lo cierra el motor de teclado, que es su dueño: ver onEscape en useKeymap.
+  // Esc closes it via the keymap engine, which owns it: see onEscape in useKeymap.
 
   return (
     <Portal>

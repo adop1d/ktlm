@@ -5,9 +5,8 @@ import { useAuthStore } from '../../stores/authStore';
 import { ServiceTokensModal } from './ServiceTokensModal';
 
 /**
- * La barra superior. Antes era una cabecera de tarjeta con botones redondeados; aquí es
- * una línea, como el título de una ventana de terminal: marca a la izquierda, estado y
- * acciones a la derecha.
+ * The top bar. It used to be a card header with rounded buttons; here it is a single line,
+ * like the title of a terminal window: brand on the left, status and actions on the right.
  */
 export const Header: FC = () => {
   const username = useAuthStore((state) => state.username);

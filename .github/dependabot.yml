@@ -1,9 +1,9 @@
-# Las dependencias se actualizan solas, en PR y no a la fuerza: un `npm audit fix` un martes
-# a las seis de la tarde es una forma cara de romper un despliegue.
+# Dependencies update on their own, in PRs and never forced: an `npm audit fix` on a
+# Tuesday at six in the evening is an expensive way to break a deployment.
 #
-# Se cubre lo que de verdad depende de fuera: actions, npm, maven y pip. De las cuatro, la
-# que más duele quedarse atrás es actions, porque es la que ejecuta código con permisos de
-# escritura sobre el repositorio.
+# It covers what genuinely depends on the outside: actions, npm, maven and pip. Of the
+# four, actions is the one that hurts most to fall behind, because it is the one that
+# runs code with write permissions over the repository.
 
 version: 2
 

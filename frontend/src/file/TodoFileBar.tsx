@@ -3,8 +3,8 @@ import { DocumentTextIcon, LinkIcon, XMarkIcon } from '@heroicons/react/24/outli
 import { useTodoDoc } from './todoDoc';
 
 /**
- * El vínculo con el archivo. El archivo lo lleva el servidor, así que aquí solo hay tres
- * cosas: conectarlo, traerte una lista que tengas en el disco, y desconectarlo.
+ * The link to the file. The server holds the file, so there are only three things here:
+ * connect it, bring in a list you have on disk, and disconnect it.
  */
 export const TodoFileBar: FC<{
   onOpen: () => void;

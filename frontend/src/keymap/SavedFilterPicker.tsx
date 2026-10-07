@@ -2,8 +2,8 @@ import { FC, useEffect, useState } from 'react';
 import { SavedFilter } from '../stores/savedSearchesStore';
 
 /**
- * El selector de búsquedas guardadas — la tecla `ff` de tuxedo. Es un modo del keymap: con
- * el abierto, j/k mueven y Enter aplica; Esc sale sin haber cambiado nada.
+ * The saved-search picker — tuxedo's `ff` key. It is a keymap mode: while it is open, j/k
+ * move and Enter applies; Esc leaves without having changed anything.
  */
 export const SavedFilterPicker: FC<{
   filters: SavedFilter[];
@@ -63,9 +63,9 @@ export const SavedFilterPicker: FC<{
           ) : (
             <div className="tui-pane-list">
               {filters.map((filter, index) => (
-                // El botón de borrar va al lado, no dentro: anidar un control
-                // interactivo dentro de otro no es accesible y confunde al lector de
-                // pantalla igual que a las pruebas.
+                // The delete button sits beside, not inside: nesting an interactive control
+                // inside another is not accessible and confuses the screen reader just as
+                // much as the tests.
                 <div
                   key={filter.name}
                   className="tui-pane-item-row"

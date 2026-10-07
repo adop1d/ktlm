@@ -39,7 +39,7 @@ class TaskServiceTest {
     @Mock
     private TaskRepository taskRepository;
 
-    /** Los eventos son un efecto secundario: se comprueban aparte, no ensucian estas pruebas. */
+    /** Events are a side effect: they are checked separately, they don't clutter these tests. */
     @Mock
     private ApplicationEventPublisher events;
 

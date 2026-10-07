@@ -1,6 +1,6 @@
 package ktlm.exception;
 
-/** Petición sintácticamente válida pero semánticamente imposible. Se traduce a 400. */
+/** Request syntactically valid but semantically impossible. Translated to 400. */
 public class InvalidRequestException extends RuntimeException {
 
     public InvalidRequestException(String message) {

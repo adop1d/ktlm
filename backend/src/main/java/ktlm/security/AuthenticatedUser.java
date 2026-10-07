@@ -1,7 +1,7 @@
 package ktlm.security;
 
 /**
- * Details de la autenticación: transporta el userId extraído del JWT para que los
- * controladores no tengan que reparsear el token desde getCredentials().
+ * Authentication details: carries the userId extracted from the JWT so controllers do
+ * not have to reparse the token out of getCredentials().
  */
 public record AuthenticatedUser(Long userId) {}

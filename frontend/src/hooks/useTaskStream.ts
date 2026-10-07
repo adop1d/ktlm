@@ -4,14 +4,14 @@ import { API_BASE } from '../api/http';
 import { useAuthStore } from '../stores/authStore';
 
 /**
- * Escucha los cambios de la cuenta y refresca la lista cuando llegan, en vez de preguntar
- * cada diez segundos.
+ * Listens for account changes and refreshes the list when they arrive, instead of asking
+ * every ten seconds.
  *
- * Se usa `fetch` con `ReadableStream` y no `EventSource` porque `EventSource` no admite
- * cabeceras, y aquí cada petición lleva el JWT.
+ * It uses `fetch` with `ReadableStream` rather than `EventSource` because `EventSource`
+ * does not support headers, and every request here carries the JWT.
  *
- * Reconecta con espera creciente y, al volver a recuperar el foco de la ventana, refresca
- * una vez por si el stream se cortó mientras la pestaña estaba en segundo plano.
+ * Reconnects with growing backoff and, when the window regains focus, refreshes once in
+ * case the stream dropped while the tab was in the background.
  */
 const MAX_BACKOFF_MS = 15_000;
 
@@ -52,7 +52,7 @@ export const useTaskStream = (): void => {
           if (done || cancelled) break;
 
           buffer += decoder.decode(value, { stream: true });
-          // Cada evento SSE termina en línea en blanco: solo entonces está completo.
+          // Every SSE event ends in a blank line: only then is it complete.
           const chunks = buffer.split('\n\n');
           buffer = chunks.pop() ?? '';
           for (const chunk of chunks) {
@@ -60,7 +60,7 @@ export const useTaskStream = (): void => {
           }
         }
       } catch {
-        // caerse es lo normal, no un error: se reconecta
+        // dropping is the normal case, not an error: we reconnect
       }
 
       if (cancelled) return;

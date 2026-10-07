@@ -7,9 +7,9 @@ type Props = {
   onToggle: (id: number) => void;
   onEdit: (task: Task) => void;
   onDelete: (id: number) => void;
-  /** Fila bajo el cursor del teclado. */
+  /** Row under the keyboard cursor. */
   isCursor?: boolean;
-  /** Fila marcada en modo visual. */
+  /** Row marked in visual mode. */
   isSelected?: boolean;
 };
 

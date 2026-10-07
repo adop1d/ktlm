@@ -2,9 +2,9 @@ import { Page, expect, test } from '@playwright/test';
 import { mockTasks, seedSession, seedTasks } from './fixtures';
 
 /**
- * Autenticación contra la API simulada. Este archivo NO usa el fixture de `fixtures.ts`, que
- * siembra sesión: aquí lo que se prueba es precisamente el camino de "no hay sesión", y
- * mezclar ambos hacía que un beforeEach borrara el token recién puesto.
+ * Authentication against the mocked API. This file does NOT use the `fixtures.ts` fixture,
+ * which seeds a session: what is being tested here is precisely the "no session" path, and
+ * mixing the two made a beforeEach wipe the token it had just set.
  */
 const mockAuth = (page: Page) =>
   page.route(
@@ -53,7 +53,7 @@ test.describe('sin sesión', () => {
     await page.getByLabel('Contraseña').fill('secret123');
     await page.getByRole('button', { name: 'Entrar' }).click();
 
-    // El login lleva a la app, no a la portada.
+    // Logging in lands you in the app, not on the landing page.
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.locator('.tui-titlebar')).toBeVisible();
   });

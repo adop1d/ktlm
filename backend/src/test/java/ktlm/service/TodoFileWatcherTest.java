@@ -23,12 +23,12 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
 /**
- * El vigilante sustituye al sondeo que antes vivía en el navegador. Lo que importa
- * comprobar aquí es la decisión: cuándo un cambio es nuestro y cuándo es de alguien
- * editando el archivo con su editor.
+ * The watcher replaces the polling that used to live in the browser. What matters here
+ * is the decision: when a change is ours and when it is someone editing the file with
+ * their editor.
  *
- * <p>Usa un directorio temporal de verdad porque {@link java.nio.file.WatchService} y la
- * escritura atómica son del sistema de archivos; un doble no probaría nada de eso.
+ * <p>It uses a real temporary directory because {@link java.nio.file.WatchService} and
+ * atomic writing belong to the filesystem; a double would test none of that.
  */
 class TodoFileWatcherTest {
 
@@ -55,8 +55,9 @@ class TodoFileWatcherTest {
                 .thenAnswer(i -> new ArrayList<>());
         lenient().when(taskRepository.findByUserIdAndTodoUid(anyLong(), any()))
                 .thenReturn(java.util.Optional.empty());
-        // El vigilante real, salvo recordWritten: aquí se comprueba que decide bien, no que
-        // notifique. Eso sí va contra el disco de verdad, que es lo que importa.
+        // The real watcher, except for recordWritten: what is checked here is
+        // that it decides well, not that it notifies. That one does hit the real
+        // disk, which is what matters.
         watcher = new TodoFileWatcher(store, publisher) {
             @Override
             public void recordWritten(Long userId, String content) {
@@ -105,13 +106,13 @@ class TodoFileWatcherTest {
         watcher.recordWritten(USER, "base\n");
         int antes = written.size();
 
-        // Alguien edita el archivo por fuera de la app, como con vim.
+        // Someone edits the file outside the app, like with vim.
         Files.writeString(todoFile(), "base\ny otra cosa\n", StandardCharsets.UTF_8);
         watcher.onChanged(USER);
         reconciler.onFileChanged(new TodoFileWatcher.FileChanged(USER));
 
-        // Lo que se comprueba es que se detectó y se reimportó. Qué queda escrito después
-        // lo decide el repositorio, que aquí está vacío a propósito.
+        // What is checked is that it was detected and reimported. What ends up written
+        // afterwards is up to the repository, which is empty on purpose here.
         assertEquals(antes + 1, written.size());
     }
 
@@ -122,7 +123,7 @@ class TodoFileWatcherTest {
         watcher.recordWritten(USER, "base\n");
         int antes = written.size();
 
-        // El .tmp es de la escritura atómica propia, no de una edición.
+        // The .tmp is from our own atomic write, not from an edit.
         Files.writeString(store.directoryFor(USER).resolve("todo.txt.tmp"), "basura\n");
 
         watcher.onChanged(USER);

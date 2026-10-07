@@ -3,10 +3,10 @@ import { ActionName, NORMAL_ACTIONS } from './actions';
 import { Portal } from '../components/common/Portal';
 
 /**
- * La paleta de tuxedo: `:` o Ctrl-P. Se busca por etiqueta y Enter ejecuta.
+ * The tuxedo palette: `:` or Ctrl-P. You search by label and Enter runs.
  *
- * El orden reproduce el de tuxedo —inicio de etiqueta, luego frontera de palabra, luego
- * dentro— porque en una lista de cuarenta y pico comandos la posición es el ranking.
+ * The order reproduces tuxedo's —label start, then word boundary, then anywhere inside—
+ * because with a list of forty-odd commands the position is the ranking.
  */
 
 export interface Command {
@@ -67,13 +67,13 @@ const LABELS: Record<ActionName, string> = {
   quit: 'salir',
 };
 
-/** Puntuación de un comando para una consulta. 0 = no coincide. */
+/** Score of a command for a query. 0 = no match. */
 const score = (label: string, query: string): number => {
   if (!query) return 1;
   const haystack = label.toLowerCase();
   const needle = query.toLowerCase();
 
-  // Tuxedo ordena por dónde cae la coincidencia, no por cuántas hay.
+  // Tuxedo sorts by where the match lands, not by how many there are.
   const at = haystack.indexOf(needle);
   if (at === 0) return 1000;
   if (at > 0 && haystack[at - 1] === ' ') return 500;
@@ -146,7 +146,7 @@ export const CommandPalette: FC<{
             } else if (event.key === 'Enter') {
               event.preventDefault();
               const chosen = ranked[active];
-              // Una acción apagada no se ejecuta: se ignora y el motivo ya está en la fila.
+              // An action that is off does not run: it is ignored and the reason is on the row.
               if (chosen?.available) onRun(chosen.action);
             } else if (event.key === 'Escape') {
               onClose();

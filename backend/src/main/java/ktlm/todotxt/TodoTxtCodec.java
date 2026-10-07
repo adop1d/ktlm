@@ -109,7 +109,8 @@ public class TodoTxtCodec {
         for (; i < tokens.size(); i++) {
             String token = tokens.get(i);
 
-            // Un tag pegado a otra palabra no lo es: tuxedo exige el sigilo como token suelto.
+            // A tag glued to another word is not one: tuxedo requires the sigil as a token
+            // of its own.
             if (token.length() > 1 && token.charAt(0) == '+') {
                 projects.add(token.substring(1));
                 continue;

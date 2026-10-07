@@ -2,12 +2,12 @@ import { FC } from 'react';
 import { Link } from 'react-router-dom';
 
 /**
- * La portada. El producto es una terminal que habla el idioma de tu todo.txt, así que la
- * portada es una terminal: no una ilustración de una terminal, sino el cromo real —mismos
- * tokens, mismas clases— con filas de ejemplo dentro.
+ * The landing page. The product is a terminal that speaks the language of your todo.txt, so
+ * the landing page is a terminal: not an illustration of one, but the real chrome —same
+ * tokens, same classes— with sample rows inside.
  *
- * Va en `/` y la aplicación en `/app`: entrar no debe significar saltar un login sin saber
- * qué hay detrás.
+ * It lives at `/` and the app at `/app`: getting in must not mean jumping past a login
+ * without knowing what is behind it.
  */
 
 const SAMPLE_ROWS = [
@@ -48,8 +48,8 @@ export const LandingPage: FC = () => (
     </header>
 
     <main className="lp-main">
-      {/* Asimétrico a propósito: el texto ocupa una columna estrecha y deja que la
-          terminal sea lo que manda. Un hero centrado la habría reducido a una ilustración. */}
+      {/* Deliberately asymmetric: the copy takes a narrow column and lets the terminal be
+          what leads. A centered hero would have reduced it to an illustration. */}
       <section className="lp-copy">
         <p className="lp-eyebrow">todo.txt · en el navegador · sin cuentas ajenas</p>
         <h1 className="lp-title">
@@ -79,7 +79,7 @@ export const LandingPage: FC = () => (
         </p>
       </section>
 
-      {/* La firma: el cromo real del producto, no un mock bonito. */}
+      {/* The signature: the real chrome of the product, not a pretty mock. */}
       <section className="lp-window" aria-label="Vista de la aplicación">
         <div className="tui-titlebar">
           <span className="tui-titlebar-brand">

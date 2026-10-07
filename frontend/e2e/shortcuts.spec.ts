@@ -1,14 +1,14 @@
 import { expect, seedTasks, test, waitForList } from './fixtures';
 
 /**
- * Atajos que no estaban bien del todo: `e`/`i` abrían el formulario en blanco en vez de
- * editar la tarea del cursor, y `S`, `yy` y `yb` no hacían nada.
+ * Shortcuts that were not quite right: `e`/`i` opened a blank form instead of editing the
+ * task under the cursor, and `S`, `yy` and `yb` did nothing.
  */
 test.describe('atajos que faltaban o estaban mal', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/app');
     await waitForList(page);
-    // El foco no puede quedar en un campo, o las teclas irían ahí y no al motor.
+    // Focus must not sit in a field, or the keystrokes would go there instead of to the engine.
     await page.locator('h1').click();
   });
 
@@ -22,7 +22,7 @@ test.describe('atajos que faltaban o estaban mal', () => {
     await page.keyboard.press('S');
     await expect(selector).toHaveValue('due');
 
-    // El ciclo vuelve al orden del archivo.
+    // The cycle returns to the file order.
     await page.keyboard.press('S');
     await expect(selector).toHaveValue('file');
   });
@@ -32,7 +32,7 @@ test.describe('atajos que faltaban o estaban mal', () => {
 
     const campo = page.getByPlaceholder('¿Qué necesitas hacer?');
     await expect(campo).toBeVisible();
-    // La primera fila es la del cursor, y su título es el de la semilla.
+    // The first row is the cursor's, and its title is the seeded one.
     await expect(campo).toHaveValue(seedTasks(3)[0].title);
   });
 
@@ -41,7 +41,7 @@ test.describe('atajos que faltaban o estaban mal', () => {
 
     const campo = page.getByPlaceholder('¿Qué necesitas hacer?');
     await expect(campo).toBeVisible();
-    // Y la `n` no se escribe dentro: la tecla es del motor, no del campo.
+    // And the `n` is not typed inside: the key belongs to the engine, not the field.
     await expect(campo).toHaveValue('');
   });
 
@@ -51,7 +51,7 @@ test.describe('atajos que faltaban o estaban mal', () => {
     await page.keyboard.press('y');
     await page.keyboard.press('b');
 
-    // Sin uid no hay línea que copiar, así que no dice nada: igual que `x` con la lista.
+    // Without a uid there is no line to copy, so it says nothing: same as `x` with the list.
     await expect(page.getByText('Línea copiada')).toHaveCount(0);
     await expect(page.getByText('Texto copiado')).toHaveCount(0);
   });

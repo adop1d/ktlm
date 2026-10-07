@@ -16,12 +16,12 @@ interface IssuedToken extends ServiceToken {
 }
 
 /**
- * Tokens de servicio: las credenciales que usa una automatización para hablar con la API
- * —el servidor MCP entre ellas— sin ocupar una sesión.
+ * Service tokens: the credentials an automation uses to talk to the API —the MCP server among
+ * them— without taking up a session.
  *
- * <p>El token se enseña una sola vez, aquí, y no se vuelve a mostrar. Por eso la fila
- * recién creada se queda en pantalla con el texto copiable en lugar de cerrar el diálogo:
- * si se cerrara, el token se habría perdido sin que nadie lo hubiera visto nunca.
+ * <p>The token is shown exactly once, here, and never again. That is why the newly created
+ * row stays on screen with the copyable text instead of closing the dialog: if it closed, the
+ * token would be gone and nobody would ever have seen it.
  */
 export const ServiceTokensModal: FC<{ onClose: () => void }> = ({ onClose }) => {
   const token = useAuthStore((state) => state.token);

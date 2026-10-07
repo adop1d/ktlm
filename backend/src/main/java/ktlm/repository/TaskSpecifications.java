@@ -7,16 +7,16 @@ import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 
 /**
- * Predicados de la lista paginada.
+ * Predicates for the paginated list.
  *
- * <p>El scope por usuario se aplica siempre y desde un solo sitio: sin él, una specification
- * olvidada devolvería las tareas de otra cuenta.
+ * <p>The per-user scope is always applied and from a single place: without it, a
+ * forgotten specification would return another account's tasks.
  */
 public final class TaskSpecifications {
 
     private TaskSpecifications() {}
 
-    /** Scope obligatorio. Toda consulta de la lista debe empezar por aquí. */
+    /** Mandatory scope. Every list query must start here. */
     public static Specification<Task> ownedBy(Long userId) {
         return (root, query, cb) -> cb.equal(root.get("userId"), userId);
     }
@@ -28,7 +28,7 @@ public final class TaskSpecifications {
         return (root, query, cb) -> cb.equal(root.get("completed"), filter.completed());
     }
 
-    /** Busca en título o descripción, sin distinguir mayúsculas. El comodín escapa el %. */
+    /** Searches title or description, case-insensitive. The wildcard escapes the %. */
     public static Specification<Task> matching(String term) {
         if (term == null || term.isBlank()) {
             return null;
@@ -59,7 +59,7 @@ public final class TaskSpecifications {
         };
     }
 
-    /** Aplica el orden elegido más un desempate por id, para que la paginación sea estable. */
+    /** Applies the chosen ordering plus an id tiebreaker, so pagination is stable. */
     public static Specification<Task> sortedBy(TaskSort sort) {
         return (root, query, cb) -> {
             query.orderBy(sort.toOrder(cb, root), cb.asc(root.get("id")));
@@ -67,7 +67,7 @@ public final class TaskSpecifications {
         };
     }
 
-    /** Compone las specifications no nulas. */
+    /** Composes the non-null specifications. */
     @SafeVarargs
     public static Specification<Task> allOf(Specification<Task>... parts) {
         Specification<Task> combined = null;

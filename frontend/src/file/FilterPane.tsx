@@ -2,12 +2,12 @@ import { FC, useMemo } from 'react';
 import { Task } from '../types/task';
 
 /**
- * Panel izquierdo: los mismos filtros que tuxedo muestra en su barra lateral —
- * proyectos, contextos y búsquedas guardadas — con su cuenta de coincidencias.
+ * Left pane: the same filters tuxedo shows in its sidebar — projects, contexts and saved
+ * searches — with their match counts.
  *
- * Los datos salen de las tareas que ya están en la página: no hay endpoint aparte para
- * "listar proyectos", y pedir uno por cada tecla sería una llamada de más para pintar algo
- * que ya está en la mano.
+ * The data comes from the tasks already on the page: there is no separate endpoint for
+ * "list projects", and asking for one on every keystroke would be an extra call to paint
+ * something already at hand.
  */
 
 interface PaneProps {

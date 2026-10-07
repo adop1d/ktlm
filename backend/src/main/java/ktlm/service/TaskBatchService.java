@@ -14,15 +14,15 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Aplica un lote de operaciones como una sola unidad.
+ * Applies a batch of operations as a single unit.
  *
- * <p>Vive en el servicio y no en el controlador por una razón concreta: la transacción.
- * Si cada operación abre la suya, un fallo en la quinta deja las cuatro primeras
- * aplicadas — un cambio a medias es peor que no cambiar. Aquí la transacción es una, y
- * la única forma de que algo llegue a la base es que el lote entero pase.
+ * <p>It lives in the service and not in the controller for one concrete reason: the
+ * transaction. If each operation opens its own, a failure on the fifth leaves the first
+ * four applied — a half-done change is worse than no change. Here the transaction is one,
+ * and the only way anything reaches the database is the whole batch passing.
  *
- * <p>El archivo se escribe después de confirmar, no antes. Escribirlo dentro dejaría un
- * todo.txt que cuenta tareas que luego desaparecieron, si el commit fallara.
+ * <p>The file is written after the commit, not before. Writing it inside would leave a
+ * todo.txt counting tasks that later vanished, if the commit failed.
  */
 @Service
 public class TaskBatchService {
@@ -37,7 +37,7 @@ public class TaskBatchService {
         this.todoTxt = todoTxt;
     }
 
-    /** Un lote que se paró a mitad. Dice dónde, para que el cliente pueda arreglarlo. */
+    /** A batch that stopped halfway. It says where, so the client can fix it. */
     public static class BatchFailed extends RuntimeException {
         private final int failedAt;
 
@@ -97,8 +97,8 @@ public class TaskBatchService {
 
         if ("create".equals(op)) {
             Task created = tasks.createTask(toRequest(raw), userId);
-            // El todoUid todavía no existe: se asigna al escribir el archivo, después del
-            // commit. Lo que el cliente necesita ahora es el id, que sí es estable.
+            // The todoUid does not exist yet: it is assigned when the file is written, after
+            // the commit. What the client needs now is the id, which is stable.
             return Map.of("op", op, "uid", created.getId(), "ok", true);
         }
         if ("update".equals(op)) {
@@ -134,13 +134,13 @@ public class TaskBatchService {
     }
 
     /**
-     * Solo los campos presentes. Los ausentes van a null y {@code applyTo} los deja como
-     * están: un lote de reordenación no debe ir borrando proyectos por el camino.
+     * Only the fields present. The absent ones go as null and {@code applyTo} leaves them
+     * as they are: a reordering batch must not wipe out projects along the way.
      *
-     * <p>La nota no está aquí a propósito. Es una ruta dentro del directorio del usuario y
-     * por lo tanto hay que validarla; ponerla en el lote dejaría esa puerta abierta.
-     * Las notas entran por {@code PUT /api/tasks/{id}/note}.
-     */
+     * <p>The note is deliberately not here. It is a path inside the user's directory and
+     * therefore has to be validated; allowing it in the batch would leave that door open.
+     * Notes come in through {@code PUT /api/tasks/{id}/note}.
+ */
     static TaskRequest toRequest(Map<?, ?> raw) {
         return new TaskRequest(
                 str(raw.get("title")),
@@ -151,7 +151,7 @@ public class TaskBatchService {
                 raw.get("sortOrder") == null ? null : Integer.valueOf(str(raw.get("sortOrder"))),
                 str(raw.get("recurrence")),
                 str(raw.get("threshold")),
-                null, // la nota no se escribe desde aquí: es una ruta y hay que validarla
+                null, // the note is not written from here: it is a path and must be validated
                 strList(raw.get("projects")),
                 strList(raw.get("contexts")));
     }

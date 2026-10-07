@@ -1,4 +1,4 @@
-// defineConfig de vitest, no de vite: es el que conoce la clave `test` de abajo.
+// defineConfig from vitest, not vite: it is the one that knows the `test` key below.
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -36,13 +36,13 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // Sin `html` a propósito. Si el documento está en la precarga, el service worker
-        // sirve el index.html viejo hasta que se registra una versión nueva del worker, y
-        // durante esa ventana la app carga un bundle que el servidor ya no tiene. Parece
-        // que el build no llegó y no lo es: el documento va siempre a la red.
+        // No `html` on purpose. If the document is precached, the service worker serves
+        // the old index.html until a new version of the worker is registered, and during
+        // that window the app loads a bundle the server no longer has. It looks like the
+        // build did not land and it did: the document always goes to the network.
         globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest}'],
         cleanupOutdatedCaches: true,
-        // Sin fallback de navegación: las rutas las resuelve la red, no una copia en caché.
+        // No navigation fallback: the network resolves the routes, not a cached copy.
         navigateFallback: null,
         runtimeCaching: [
           {
@@ -74,7 +74,7 @@ export default defineConfig({
     environment: 'jsdom',
     // loads this file before each test suite
     setupFiles: ['./vitest.setup.ts'],
-    // En vitest 3 los límites viven bajo `thresholds`; `statements` ya no es una clave de primer nivel.
+    // In vitest 3 the limits live under `thresholds`; `statements` is no longer a top level key.
     coverage: {
       reporter: ['text', 'json'],
       thresholds: { statements: 80 },

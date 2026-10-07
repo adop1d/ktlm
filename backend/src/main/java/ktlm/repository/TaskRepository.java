@@ -13,21 +13,21 @@ public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificat
 
     List<Task> findByUserId(Long userId);
 
-    /** Scoped por propietario: una tarea de otro usuario es indistinguible de "no existe". */
+    /** Scoped by owner: another user's task is indistinguishable from "does not exist". */
     Optional<Task> findByIdAndUserId(Long id, Long userId);
 
     long countByUserId(Long userId);
 
     long countByUserIdAndCompleted(Long userId, boolean completed);
 
-    // --- Interoperabilidad con todo.txt -------------------------------------------------
+    // --- todo.txt interoperability ----------------------------------------------------
 
-    /** Una tarea de otro usuario es indistinguible de "no existe". */
+    /** Another user's task is indistinguishable from "does not exist". */
     Optional<Task> findByUserIdAndTodoUid(Long userId, String todoUid);
 
     Optional<Task> findByTodoUid(String todoUid);
 
-    /** Orden de archivo: sortOrder primero, id como desempate estable. */
+    /** File order: sortOrder first, id as a stable tiebreaker. */
     List<Task> findByUserIdOrderBySortOrderAscIdAsc(Long userId);
 
     List<Task> findByUserIdAndCompletedOrderBySortOrderAscIdAsc(Long userId, boolean completed);

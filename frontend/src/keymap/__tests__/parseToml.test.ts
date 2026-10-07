@@ -47,8 +47,8 @@ begin_add = "n"
   });
 
   it('salta una linea malformada sin tirar el archivo entero', () => {
-    // Tuxedo hace hot-reload y, si el parseo falla a medio escribir, conserva la config
-    // anterior. Perder todo el archivo por un typo seria peor.
+    // Tuxedo hot-reloads and, if parsing fails mid-write, keeps the previous config. Losing
+    // the whole file over a typo would be worse.
     const parsed = parseKeybindsToml(`
 [normal]
 esto no es una asignacion
@@ -62,8 +62,8 @@ toggle_complete = "x"
   });
 
   it('trata "+" como tecla y no como separador de modificador', () => {
-    // Es el caso real: el parser de tuxedo parte por "+", asi que no puede escribir esta
-    // linea. Nosotros si debemos saber leerla.
+    // This is the real case: tuxedo's parser splits on "+", so it cannot write this line. We
+    // still have to read it.
     const parsed = parseKeybindsToml(`
 [normal]
 begin_prompt_project = "+"

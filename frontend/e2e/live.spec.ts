@@ -1,10 +1,10 @@
 import { expect, test, waitForList } from './fixtures';
 
 /**
- * El stream es lo que hace que una sesión abierta vea lo que hace otra sin recargar. Aquí no se
- * puede probar la entrega de punta a punta porque los e2e interceptan la API y el CI no
- * levanta el backend; eso se verifica contra Docker. Lo que sí se comprueba aquí es que el
- * cliente se suscribe, reconecta y no rompe nada.
+ * The stream is what lets an open session see what another one does without reloading.
+ * End-to-end delivery cannot be tested here because the e2e intercept the API and CI does not
+ * start the backend; that is verified against Docker. What is checked here is that the client
+ * subscribes, reconnects, and breaks nothing.
  */
 test.describe('stream de cambios', () => {
   test('el cliente se suscribe al stream al abrir la app', async ({ page }) => {
@@ -26,7 +26,7 @@ test.describe('stream de cambios', () => {
     await page.route(
       (url) => url.pathname.endsWith('/api/tasks/stream'),
       async (route) => {
-        // Cortar la conexión a proposito es lo que pasa cuando se duerme el portatil.
+        // Cutting the connection on purpose is what happens when the laptop goes to sleep.
         await route.abort();
         cortes += 1;
       }
@@ -37,7 +37,7 @@ test.describe('stream de cambios', () => {
     await page.waitForTimeout(1_200);
 
     expect(fallos).toEqual([]);
-    // La navegacion sigue viva aunque el stream no exista.
+    // Navigation stays alive even when the stream does not exist.
     await page.keyboard.press('j');
     await expect(page.locator('.tui-row--cursor')).toHaveCount(1);
   });

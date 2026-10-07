@@ -2,8 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 /**
- * Cómo se ve. Todo lo que tuxeda cambia con una tecla vive aquí, y persiste: un tema que se
- * pierde al recargar es un tema que no existe.
+ * How it looks. Everything tuxedo changes with a keypress lives here, and it persists: a
+ * theme that is lost on reload is a theme that does not exist.
  */
 
 export const THEMES = ['noir', 'dawn', 'muted-slate', 'nord', 'catppuccin', 'gruvbox'] as const;
@@ -12,7 +12,7 @@ export type Theme = (typeof THEMES)[number];
 export const DENSITIES = ['compact', 'comfortable', 'cozy'] as const;
 export type Density = (typeof DENSITIES)[number];
 
-/** dawn es el único claro. Los demás son oscuros, así que llegar a ellos enciende el modo. */
+/** dawn is the only light one. The rest are dark, so switching to them turns the mode on. */
 export const THEME_DARK: Record<Theme, boolean> = {
   noir: true,
   dawn: false,
@@ -52,13 +52,13 @@ const siguiente = <T,>(lista: readonly T[], actual: T): T =>
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
-      // Una terminal es oscura de serie. El toggle sigue ahí para quien prefiera claro.
+      // A terminal is dark by default. The toggle stays for whoever prefers light.
       darkMode: true,
       toggleDarkMode: () => set(state => ({ darkMode: !state.darkMode })),
 
       theme: 'noir',
-      // Cambiar de tema arrastra el modo: pedir dawn sobre un fondo oscuro daría un tema
-      // claro con sombras de oscuro, que es peor que no tener temas.
+      // Switching theme drags the mode along: asking for dawn on a dark background would
+      // give a light theme with dark shadows, which is worse than having no themes.
       cycleTheme: () => set(state => {
         const theme = siguiente(THEMES, state.theme);
         return { theme, darkMode: THEME_DARK[theme] };

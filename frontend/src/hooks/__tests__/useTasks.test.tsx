@@ -99,7 +99,7 @@ describe('useTasks hook', () => {
     rerender({ p: 1 });
     await waitFor(() => expect(result.current.isFetching).toBe(true));
 
-    // Sin keepPreviousData esto sería undefined y la lista parpadearía.
+    // Without keepPreviousData this would be undefined and the list would flicker.
     expect(result.current.page?.content[0]?.id).toBe(1);
     expect(result.current.isLoading).toBe(false);
 

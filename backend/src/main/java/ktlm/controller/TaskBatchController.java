@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Aplica varias operaciones como una sola unidad. El trabajo está en
- * {@link TaskBatchService}; aquí solo hay translating de HTTP.
+ * Applies several operations as a single unit. The work lives in
+ * {@link TaskBatchService}; here there is only HTTP translation.
  */
 @RestController
 @RequestMapping("/api/tasks/batch")
@@ -37,7 +37,7 @@ public class TaskBatchController {
             List<Map<String, Object>> results = batch.apply(userId, operations);
             return ResponseEntity.ok(Map.of("applied", results.size(), "results", results));
         } catch (TaskBatchService.BatchFailed e) {
-            // applied 0 siempre: la transacción entera ha caído.
+            // applied is always 0: the whole transaction went down.
             return ResponseEntity.badRequest().body(Map.of(
                     "applied", 0,
                     "failedAt", e.getFailedAt(),

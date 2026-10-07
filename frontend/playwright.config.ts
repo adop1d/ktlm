@@ -3,16 +3,16 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  // El CI ya reintentaba; en local también. Hay tests con ventana de tiempo (el chord de
-  // 600 ms) que bajo carga de CPU pueden fallar sin que haya un fallo de verdad.
+  // CI was already retrying; locally too. There are tests with a time window (the 600 ms
+  // chord) that under CPU load can fail without there being a real failure.
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
-    // La app es un PWA: sin esto el service worker sirve el index cacheado y los tests
-    // assertan contra un build viejo que no es el que está en disco.
+    // The app is a PWA: without this the service worker serves the cached index and the
+    // tests assert against an old build that is not the one on disk.
     serviceWorkers: 'block',
   },
   projects: [

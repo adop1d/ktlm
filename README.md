@@ -2,24 +2,24 @@
 
 # tareas
 
-Gestor de `todo.txt` que habla el idioma de tu archivo y se maneja con teclas de terminal.
+A `todo.txt` manager that speaks your file's language and is driven by terminal keys.
 
-No guarda las tareas en una base de datos proprietary: **lee y escribe el mismo `todo.txt`
-que ya usas**. Si tienes [tuxedo](https://github.com/webstonehq/tuxedo) abierto al lado, los
-dos ven lo mismo, se reconcilian y ninguno pisa al otro.
+It does not keep the tasks in some proprietary database: **it reads and writes the same
+`todo.txt` you already use**. If you have [tuxedo](https://github.com/webstonehq/tuxedo)
+open next to it, both see the same thing, they reconcile, and neither clobbers the other.
 
 ---
 
-## Arranque rápido
+## Quick start
 
 ```bash
 docker compose up -d
 ```
 
-- Portada y app: <http://localhost/>
+- Landing page and app: <http://localhost/>
 - API: <http://localhost:8080/api>
 
-Sin Docker:
+Without Docker:
 
 ```bash
 # backend (necesita un Postgres en localhost:5432)
@@ -30,123 +30,123 @@ cd backend && DB_URL=jdbc:postgresql://localhost:5432/postgres \
 cd frontend && npm install && npm run dev
 ```
 
-Requisitos: Java 21, Node 22 y PostgreSQL.
+Requirements: Java 21, Node 22 and PostgreSQL.
 
-## Rutas
+## Routes
 
-| Ruta | Qué es |
+| Route | What it is |
 |---|---|
-| `/` | Portada pública. Describe qué es esto antes de pedirte una cuenta |
-| `/login` | Entrar y registrarse |
-| `/app` | La lista. Protegida: sin sesión, manda al login |
+| `/` | Public landing page. Explains what this is before asking you for an account |
+| `/login` | Sign in and sign up |
+| `/app` | The list. Protected: no session, it sends you to login |
 
 ---
 
-## Las teclas
+## The keys
 
-Los atajos son **los de tuxedo**, no un juego inventado. Si ya tienes tu
-`~/.config/tuxedo/keybinds.toml` con ajustes, la web los lee.
+The shortcuts are **tuxedo's**, not an invented set. If you already have your
+`~/.config/tuxedo/keybinds.toml` tweaked, the web reads it.
 
-| Tecla | Qué hace |
+| Key | What it does |
 |---|---|
-| `j` `k` | Mover el cursor |
-| `gg` `G` | Primera y última |
-| `Ctrl-d` `Ctrl-u` | Media página |
-| `n` | Tarea nueva |
-| `e` `i` | Editar (modo normal / modo insert) |
-| `x` | Completar |
-| `d` `d` | Borrar |
-| `p` | Cambiar prioridad: `(A)` → `(B)` → `(C)` → ninguna |
-| `J` `K` | Mover la tarea de posición |
-| `r` | Recurrencia (`rec:`) |
-| `u` | Deshacer, 50 pasos |
-| `c` `+` | Añadir contexto / proyecto |
-| `y` `y` / `y` `b` | Copiar la línea / el texto |
-| `v` `espacio` | Selección múltiple |
-| `/` | Buscar |
-| `f` `s` | Guardar la búsqueda actual |
-| `f` `f` | Abrir una búsqueda guardada |
-| `f` `p` / `f` `c` | Filtrar por proyecto / contexto |
-| `[` `]` | Panel de filtros / panel de detalle |
-| `a` | Ver `done.txt` |
-| `A` | Archivar las completadas a `done.txt` |
-| `:` o `Ctrl-P` | Paleta de comandos |
-| `?` | Todos los atajos |
+| `j` `k` | Move the cursor |
+| `gg` `G` | First and last |
+| `Ctrl-d` `Ctrl-u` | Half page |
+| `n` | New task |
+| `e` `i` | Edit (normal mode / insert mode) |
+| `x` | Complete |
+| `d` `d` | Delete |
+| `p` | Cycle priority: `(A)` → `(B)` → `(C)` → none |
+| `J` `K` | Move the task's position |
+| `r` | Recurrence (`rec:`) |
+| `u` | Undo, 50 steps |
+| `c` `+` | Add context / project |
+| `y` `y` / `y` `b` | Copy the line / the text |
+| `v` `space` | Multiple selection |
+| `/` | Search |
+| `f` `s` | Save the current search |
+| `f` `f` | Open a saved search |
+| `f` `p` / `f` `c` | Filter by project / context |
+| `[` `]` | Filter panel / detail panel |
+| `a` | View `done.txt` |
+| `A` | Archive completed to `done.txt` |
+| `:` or `Ctrl-P` | Command palette |
+| `?` | All shortcuts |
 
-Sin un `todo.txt` vinculado, las acciones que necesitan `uid` — `x`, `p`, `J`, `dd`, `u`,
-`A`— **se apagan y la barra de estado lo dice**. Un atajo que no puede actuar se anuncia; no
-hace nada en silencio.
+Without a linked `todo.txt`, the actions that need a `uid` — `x`, `p`, `J`, `dd`, `u`,
+`A`— **switch off and the status bar says so**. A shortcut that cannot act announces
+itself; it never does nothing silently.
 
 ---
 
-## Interoperabilidad con todo.txt
+## todo.txt interoperability
 
-### Cómo se reconoce una tarea entre dos programas
+### How a task is recognized across two programs
 
-Cada línea lleva un token `uid:`. Tuxedo conserva cualquier `clave:valor` que no conozca, así
-que añadirlo produce un archivo que sigue siendo un `todo.txt` válido para él y, a la vez,
-permite reconciliar archivo y base de datos sin duplicar. Si no quieres verlo, en
+Every line carries a `uid:` token. Tuxedo keeps any `key:value` it doesn't know, so
+adding it produces a file that is still a valid `todo.txt` for it and, at the same time,
+lets file and database reconcile without duplicating. If you don't want to see it, in
 `~/.config/tuxedo/config.toml`:
 
 ```toml
 hide_keys = uid
 ```
 
-### Captura
+### Capture
 
-Cualquier cosa que sepa escribir una línea en el `inbox.txt` hermano crea una tarea:
+Anything that knows how to write a line to the sibling `inbox.txt` creates a task:
 
 ```sh
 echo "Llamar al dentista mañana" >> ~/ruta/todo/../inbox.txt
 ```
 
-La app lo drena en cada sondeo, le aplica la misma gramática de lenguaje natural que el prompt
-`n`, y lo vacía antes de importar para no reprocesarlo.
+The app drains it on every poll, applies the same natural-language grammar as the `n`
+prompt, and empties it before importing so nothing gets reprocessed.
 
 ### Endpoints
 
-| Método | Ruta | Qué hace |
+| Method | Route | What it does |
 |---|---|---|
-| `POST` | `/api/tasks/import` | `text/plain` → upsert por `uid`, devuelve el archivo reconciliado |
-| `GET` | `/api/tasks/export` | El `todo.txt` completo del usuario |
-| `POST` | `/api/tasks/batch` | Varias operaciones en una transacción. O entran todas, o ninguna |
-| `POST` | `/api/tasks/archive` | Manda las completadas a `done.txt` |
-| `GET` | `/api/tasks/file` | El `todo.txt` del usuario, tal cual (`text/plain`) |
-| `PUT` | `/api/tasks/file` | Reemplaza el archivo entero y devuelve la versión reconciliada |
-| `GET` | `/api/tasks/archived` | Lo que hay en `done.txt` |
-| `GET` | `/api/tasks/stream` | Cambios de esta cuenta por SSE |
-| `GET` | `/api/tasks/{id}/note` | El texto de la nota (`text/plain`) |
-| `PUT` | `/api/tasks/{id}/note` | Guarda la nota. Vaciar borra el archivo y quita `note:` |
-| `POST` | `/api/auth/service-tokens` | Emite un token de servicio. Se devuelve **una sola vez** |
+| `POST` | `/api/tasks/import` | `text/plain` → upsert by `uid`, returns the reconciled file |
+| `GET` | `/api/tasks/export` | The user's complete `todo.txt` |
+| `POST` | `/api/tasks/batch` | Several operations in one transaction. Either all go in, or none |
+| `POST` | `/api/tasks/archive` | Sends completed to `done.txt` |
+| `GET` | `/api/tasks/file` | The user's `todo.txt`, as-is (`text/plain`) |
+| `PUT` | `/api/tasks/file` | Replaces the whole file and returns the reconciled version |
+| `GET` | `/api/tasks/archived` | What's in `done.txt` |
+| `GET` | `/api/tasks/stream` | Changes to this account over SSE |
+| `GET` | `/api/tasks/{id}/note` | The note text (`text/plain`) |
+| `PUT` | `/api/tasks/{id}/note` | Saves the note. Emptying deletes the file and drops `note:` |
+| `POST` | `/api/auth/service-tokens` | Issues a service token. Returned **once** |
 
 ---
 
-## Arquitectura
+## Architecture
 
 ```
-┌─ navegador ────────────────────┐      ┌─ Spring Boot ─────────────────┐
-│  TodoDoc   espejo del archivo   │      │  TodoTxtCodec                 │
-│  useKeymap motor vim/chords     │─────▶│  TodoStore      el archivo    │
-│  FileHandlePort  importar disco │      │  TodoFileWatcher vigilante    │
+┌─ browser ──────────────────────┐      ┌─ Spring Boot ─────────────────┐
+│  TodoDoc   the file's mirror    │      │  TodoTxtCodec                 │
+│  useKeymap vim/chord engine     │─────▶│  TodoStore      the file      │
+│  FileHandlePort  import from disk│     │  TodoFileWatcher watcher      │
 └───────────────────────────────┘      └───────────┬────────────────────┘
-                                                       │ índice
+                                                       │ index
                                               ┌────────▼────────┐
                                               │ Postgres + Flyway│
                                               └─────────────────┘
 ```
 
-- **El archivo es la fuente de verdad; la base de datos es el índice.** El servidor guarda
-  el `todo.txt` de cada usuario en su directorio y solo lo reconstruye desde la base cuando
-  hace falta. Así el móvil, el escritorio y el servidor MCP ven lo mismo, y escribir desde
-  fuera no es un caso especial: es el camino normal.
-- **Cambios externos**: un vigilante del sistema de ficheros lo detecta; cada 30 s un barrido
-  compara el hash por si el sistema no avisó —Docker usa overlayfs y no siempre avisa—. Si no
-  coincide, **gana el archivo** y se recarga, descartando el historial de undo, igual que
-  hace tuxedo.
-- **Escritura pendiente**: un parche local marca el hash como inválido; el vigilante no
-  reconcilia hasta que el volcado termina, o se desharía lo recién escrito.
-- **Flyway** es la única fuente del esquema: `V1` el baseline, `V2` los campos de todo.txt,
-  `V3` los tokens de servicio y `V4` las notas.
+- **The file is the source of truth; the database is the index.** The server keeps each
+  user's `todo.txt` in their directory and only rebuilds it from the database when
+  needed. That way the phone, the desktop and the MCP server all see the same thing,
+  and writing from outside isn't a special case: it's the normal path.
+- **External changes**: a filesystem watcher detects them; every 30 s a sweep compares
+  the hash in case the system didn't notify —Docker uses overlayfs and doesn't always
+  notify—. If it doesn't match, **the file wins** and it reloads, discarding the undo
+  history, same as tuxedo does.
+- **Pending write**: a local patch marks the hash invalid; the watcher doesn't reconcile
+  until the dump finishes, or it would undo what was just written.
+- **Flyway** is the only source of the schema: `V1` the baseline, `V2` the todo.txt
+  fields, `V3` the service tokens and `V4` the notes.
 
 ### Stack
 
@@ -156,23 +156,23 @@ La app lo drena en cada sondeo, le aplica la misma gramática de lenguaje natura
 
 ---
 
-## Diseño
+## Design
 
-Interfaz de terminal, no de tarjeta: una sola familia monoespaciada para todo, filas con
-columnas de ancho fijo como celdas, esquinas a cero, tema oscuro por defecto y una barra de
-estado fija abajo con el modo, la posición, los contadores y el líder del chord.
+A terminal interface, not a card one: a single monospace family for everything, rows with
+fixed-width columns as cells, corners at zero, dark theme by default and a fixed status
+bar at the bottom with the mode, the position, the counters and the chord leader.
 
-- **Fuente**: [Inconsolata Nerd Font](https://www.nerdfonts.com/) (SIL OFL 1.1), autoalojada y
-  subconjuntada a los rangos que la app usa: **62 KB por peso** en vez de 2.2 MB. La licencia
-  está en `frontend/public/fonts/OFL.txt`.
-- **Tokens**: `frontend/src/styles/design-tokens.css` (color, tipografía, espaciado)
-- **Cromo**: `frontend/src/styles/terminal.css` (paneles, barra, rejilla, portales)
-- **Marcadores de las filas en ASCII**, no en símbolos raros: depender de que el terminal
-  traiga un glifo es pedir que un día salga una caja.
-- **El cromo fijo va en un portal** sobre `document.body`. La página se anima con `transform`,
-  y un ancestro con `transform` se convierte en el bloque contenedor del `position: fixed` de
-  sus descendientes: sin el portal, los modales se centran dentro de una caja más pequeña que
-  la ventana y la barra nunca llega al borde inferior.
+- **Font**: [Inconsolata Nerd Font](https://www.nerdfonts.com/) (SIL OFL 1.1), self-hosted
+  and subset to the ranges the app uses: **62 KB per weight** instead of 2.2 MB. The
+  licence is in `frontend/public/fonts/OFL.txt`.
+- **Tokens**: `frontend/src/styles/design-tokens.css` (colour, typography, spacing)
+- **Chrome**: `frontend/src/styles/terminal.css` (panels, bar, grid, portals)
+- **Row markers in ASCII**, not in weird symbols: depending on the terminal shipping a
+  glyph is asking for a box to show up one day.
+- **Fixed chrome goes in a portal** over `document.body`. The page animates with
+  `transform`, and an ancestor with `transform` becomes the containing block for its
+  descendants' `position: fixed`: without the portal, modals centre inside a box smaller
+  than the window and the bar never reaches the bottom edge.
 
 ---
 
@@ -184,126 +184,127 @@ cd frontend && npm run typecheck    # TypeScript en modo estricto
 cd frontend && npm test            # 55 tests
 cd frontend && npm run test:e2e    # Playwright, 44
 
-# El servidor MCP, de punta a punta contra el backend levantado:
+# The MCP server, end to end against a running backend:
 cd mcp && KTLM_SERVICE_TOKEN=ktlm_... .venv/bin/python smoke.py
 ```
 
-Los e2e interceptan la API, así que no necesitan el backend levantado. En el CI corren los
-cuatro, con el typecheck y los e2e antes del build.
+The e2e intercept the API, so they don't need the backend running. In CI all four run,
+with the typecheck and the e2e before the build.
 
 ---
 
-## Limitaciones conocidas
+## Known limitations
 
-- **Una línea sin `uid:` se duplica** si el archivo se edita por fuera dos veces antes de que la
-  app escriba de vuelta. Cuando no hay ambigüedad se reconoce por contenido; con dos tareas
-  idénticas no se adivina. En cuanto la app escribe, el ciclo es estable.
-- La captura por QR es un **generador**, no un lector: muestra la dirección de la app para
-  abrirla en el móvil. Es lo que hace tuxedo y es lo que se puede hacer sin pedirle a la app
-  que use la cámara.
+- **A line without `uid:` gets duplicated** if the file is edited from outside twice
+  before the app writes back. When there's no ambiguity it's recognized by content; with
+  two identical tasks there's no guessing. Once the app writes, the cycle is stable.
+- QR capture is a **generator**, not a reader: it shows the app's address so you can open
+  it on your phone. That's what tuxedo does, and it's what you can do without asking the
+  app to use the camera.
 
-### Notas
+### Notes
 
-`o` escribe la nota de la tarea del cursor; `O` abre la que ya tiene. En el archivo
-`note:` **no guarda el texto, guarda una ruta** —igual que en tuxedo—, y el texto vive en
-un archivo del directorio del usuario.
+`o` writes the note of the task under the cursor; `O` opens the one it already has. In the
+file, `note:` **doesn't store the text, it stores a path** —same as in tuxedo— and the
+text lives in a file in the user's directory.
 
-No es una decisión de gusto. El token se separa por espacios, así que un texto de varias
-palabras se truncaría en la primera; y una nota de verdad suele tener varias líneas. Con un
-archivo de por medio caben las dos cosas.
+It isn't a matter of taste. The token is space-separated, so multi-word text would be
+truncated at the first word; and a real note usually has several lines. A file in between
+accommodates both.
 
 ```
 2026-10-07 Llamar a pagos +trabajo note:notas/nota-46.md uid:46
 ```
 
-La ruta es relativa al directorio del usuario y se valida antes de tocarla: sin `..` y
-comprobando que el archivo resuelto sigue dentro, incluidos los enlaces simbólicos, que
-salen del directorio aunque la ruta «parezca» interna.
+The path is relative to the user's directory and is validated before it gets touched: no
+`..`, and checking that the resolved file stays inside — symlinks included, since they
+leave the directory even when the path "looks" internal.
 
-Las notas no se escriben desde `/batch` a propósito: son una ruta y por lo tanto hay que
-validarlas, y meterlas en el lote dejaría esa puerta abierta.
+Notes are deliberately not writable from `/batch`: one is a path and therefore has to be
+validated, and putting it in the batch would leave that door open.
 
-### Temas, densidad y números de línea
+### Themes, density and line numbers
 
-`T` abre el selector, `D` cambia la densidad y `L` enciende los números de línea. Los seis
-temas son los de tuxedo —noir, dawn, muted-slate, nord, catppuccin, gruvbox— y dawn es el
-único claro: cambiar a él apaga el modo oscuro, porque pedir un tema claro sobre sombras de
-oscuro queda peor que no tener temas.
+`T` opens the picker, `D` changes the density and `L` turns on line numbers. The six
+themes are tuxedo's —noir, dawn, muted-slate, nord, catppuccin, gruvbox— and dawn is the
+only light one: switching to it turns off dark mode, because asking for a light theme
+over dark shadows looks worse than not having themes at all.
 
-`?` muestra un QR con la dirección de la app para abrirla en el móvil.
+`?` shows a QR with the app's address so you can open it on your phone.
 
 ---
 
-## Servidor MCP
+## MCP server
 
-`mcp/` es un servidor MCP que habla con la API y expone doce herramientas: `listar`,
+`mcp/` is an MCP server that talks to the API and exposes twelve tools: `listar`,
 `obtener`, `agregar`, `actualizar`, `completar`, `deshacer`, `borrar`, `reorganizar`,
-`archivo`, `quien_soy`, `leer_nota` y `escribir_nota`.
+`archivo`, `quien_soy`, `leer_nota` and `escribir_nota`.
 
-No reimplementa nada: las reglas de formato, los `uid` y la escritura del archivo son los del
-servidor, así que no puede desincronizarse de la web.
+It reimplements nothing: the formatting rules, the `uid`s and the file writing are the
+server's, so it can't drift out of sync with the web.
 
 ```bash
 cd mcp
 python3 -m venv .venv && .venv/bin/pip install -e .
-export KTLM_SERVICE_TOKEN=ktlm_...      # se crea en la app, en la barra: «tokens»
-.venv/bin/python -m ktlm_mcp.server    # stdio, por defecto
+export KTLM_SERVICE_TOKEN=ktlm_...      # created in the app, in the bar: "tokens"
+.venv/bin/python -m ktlm_mcp.server    # stdio, the default
 ```
 
-### Credenciales
+### Credentials
 
-Usa **tokens de servicio**, no JWT. Uno por usuario y por herramienta, que se revocan sin
-invalidar la sesión de quien los creó, y que no pueden archivar tareas: esa decisión es de
-una persona.
+It uses **service tokens**, not JWT. One per user and per tool, revocable without
+invalidating the session of whoever created them, and they cannot archive tasks: that
+decision belongs to a human.
 
-### Por qué `/batch`
+### Why `/batch`
 
-`reorganizar` no es azúcar sobre n llamadas. Sin él, un agente que mueve veinte tareas hace
-veinte peticiones y el `todo.txt` se reescribe veinte veces, con la posibilidad de que otra
-cosa se cuele entremedias. El lote es una transacción —o entra todo, o nada— y escribe el
-archivo una sola vez al final. También evita tener que cargar el `todo.txt` entero en cada paso.
+`reorganizar` isn't sugar on top of n calls. Without it, an agent moving twenty tasks
+makes twenty requests and the `todo.txt` gets rewritten twenty times, with the chance of
+something else slipping in between. The batch is a transaction —either all of it goes in,
+or none— and it writes the file once at the end. It also avoids having to load the whole
+`todo.txt` on every step.
 
-Por eso **toda** escritura del servidor MCP pasa por `/batch`, incluso la de una sola
-operación: el navegador lleva su propio espejo del archivo, este cliente no, y el lote es el
-único camino que lo escribe.
+That's why **every** write from the MCP server goes through `/batch`, even a
+single-operation one: the browser carries its own mirror of the file, this client
+doesn't, and the batch is the only path that writes it.
 
-### Configuración
+### Configuration
 
-| Variable | Por defecto | Para qué |
+| Variable | Default | What it's for |
 |---|---|---|
-| `KTLM_API_URL` | `http://localhost:8080` | Dónde está la API |
-| `KTLM_SERVICE_TOKEN` | — | Obligatoria. El token de servicio |
-| `KTLM_MCP_TRANSPORT` | `stdio` | `http` para streamable-http en el puerto `KTLM_MCP_PORT` |
+| `KTLM_API_URL` | `http://localhost:8080` | Where the API is |
+| `KTLM_SERVICE_TOKEN` | — | Required. The service token |
+| `KTLM_MCP_TRANSPORT` | `stdio` | `http` for streamable-http on the `KTLM_MCP_PORT` port |
 
 ---
 
-## Seguridad
+## Security
 
-- **Sin secretos en el repositorio.** `.env` está ignorado y `.env.example` es la
-  plantilla, sin nada dentro. `JWT_SECRET` y `DB_PASSWORD` no tienen valor por defecto:
-  `docker compose up` se niega a arrancar si faltan, diciendo cuál.
-- **`.dockerignore` en cada contexto.** El de la raíz no sirve: el contexto del build es
-  `./backend` y `./frontend`, así que hay uno en cada uno. Sin eso, un `.env` se iba a la
-  capa del builder con `COPY . .`.
-- **Postgres no se publica.** El backend llega a la base por la red de compose. Antes
-  estaba en `0.0.0.0:5432` con una contraseña escrita en el propio fichero.
-- **Login y registro limitados**: diez intentos por cuenta cada quince minutos. El login
-  se cuenta por nombre de usuario —una IP se rota en un segundo, un nombre no— y el
-  registro por IP, porque al revés sería un arma para bloquear la cuenta de otro.
-- **Registro validado de verdad.** Las restricciones estaban en la entidad `User`, que es
-  lo que se guarda, así que `@Valid` no miraba nada: una contraseña de un carácter se
-  guardaba hasheada.
-- **El rol es una lista cerrada**, no texto libre: `POST /api/admin/users/roles` escribía
-  en `user_roles` lo que le mandaran.
-- **Los errores 500 no devuelven el mensaje.** Varios incluyen rutas absolutas del
-  servidor.
-- **Cabeceras**: CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`.
-- **`/api/auth/**` ya no es `permitAll`**, solo `login` y `register`. Con el comodín, un
-  endpoint nuevo en ese controlador sin `@PreAuthorize` quedaba público.
+- **No secrets in the repository.** `.env` is ignored and `.env.example` is the template,
+  empty. `JWT_SECRET` and `DB_PASSWORD` have no default: `docker compose up` refuses to
+  start if they're missing, and says which one.
+- **`.dockerignore` in every context.** The root one is useless: the build context is
+  `./backend` and `./frontend`, so there's one in each. Without that, a `.env` rode into
+  the builder layer with `COPY . .`.
+- **Postgres isn't published.** The backend reaches the database over the compose network.
+  It used to sit on `0.0.0.0:5432` with a password written into the file itself.
+- **Login and signup are rate-limited**: ten attempts per account every fifteen minutes.
+  Login is counted by username —an IP rotates in a second, a username doesn't— and signup
+  by IP, because the other way round would be a weapon for locking someone else's account
+  out.
+- **Signup is genuinely validated.** The constraints lived on the `User` entity, which is
+  what gets persisted, so `@Valid` wasn't looking at anything: a one-character password
+  was stored, hashed.
+- **The role is a closed list**, not free text: `POST /api/admin/users/roles` wrote
+  whatever you sent it into `user_roles`.
+- **500 errors don't return the message.** Several include absolute server paths.
+- **Headers**: CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`.
+- **`/api/auth/**` is no longer `permitAll`**, only `login` and `register`. With the
+  wildcard, a new endpoint in that controller without `@PreAuthorize` ended up public.
 
 ---
 
-## Licencia
+## License
 
-MIT. `todo.txt` es un formato abierto de Gina Trapani; la tipografía, Inconsolata Nerd Font, es
+MIT. `todo.txt` is an open format by Gina Trapani; the typeface, Inconsolata Nerd Font, is
 SIL OFL 1.1.

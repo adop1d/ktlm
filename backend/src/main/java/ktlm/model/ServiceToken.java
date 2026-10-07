@@ -12,13 +12,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Un token de servicio: la credencial que usa una automatización para hablar con la API.
+ * A service token: the credential an automation uses to talk to the API.
  *
- * <p>Solo se guarda el hash. El token en claro se devuelve una vez, al crearlo, y a partir
- * de ahí ya no existe en ninguna parte —igual que una contraseña—.
+ * <p>Only the hash is stored. The plaintext token is returned once, on creation, and
+ * from then on it does not exist anywhere —same as a password.
  *
- * <p>Se revocan por marca de tiempo y no borrando: la fila se queda como rastro de que
- * existió ese token.
+ * <p>Tokens are revoked by timestamp and not deleted: the row stays as a trace that
+ * that token existed.
  */
 @Entity
 @Table(name = "service_token")

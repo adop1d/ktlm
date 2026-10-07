@@ -47,39 +47,39 @@ public class Task {
 
     private LocalDateTime updatedAt;
 
-    private Long userId;  // Para asociar tarea con usuario
+    private Long userId;  // Associates the task with a user
 
-    // --- Interoperabilidad con todo.txt -------------------------------------------------
+    // --- todo.txt interoperability ------------------------------------------------------
 
-    /** Fecha de completado; solo presente en tareas cerradas. */
+    /** Completion date; only present on closed tasks. */
     private LocalDateTime completedAt;
 
-    /** Literal del token `rec:` sin el prefijo, p. ej. "+1m". */
+    /** Literal of the `rec:` token without the prefix, e.g. "+1m". */
     @Size(max = 50)
     private String recurrence;
 
-    /** Literal del token `t:` sin el prefijo, p. ej. "-3d". */
+    /** Literal of the `t:` token without the prefix, e.g. "-3d". */
     @Size(max = 50)
     private String threshold;
 
     /**
-     * Cuerpo largo de la tarea, sin el prefijo del token `note:`.
+     * Long body of the task, without the `note:` token prefix.
      *
-     * <p>Es lo que se abre en el editor con `O` y lo que se escribe con `o`. Cabe en una
-     * línea del archivo pero no en el título, así que va aparte.
+     * <p>It is what opens in the editor with `O` and what gets written with `o`. It fits in
+     * one line of the file but not in the title, so it goes separately.
      */
     @Size(max = 4000)
     private String note;
 
     /**
-     * Identidad estable para el round-trip archivo <-> base de datos. Se escribe como el
-     * token `uid:` de la línea, que tuxedo conserva sin alterar. Único por cuenta.
+     * Stable identity for the file <-> database round-trip. It is written as the line's
+     * `uid:` token, which tuxedo preserves unaltered. Unique per account.
      */
     @Column(name = "todo_uid")
     @Size(max = 64)
     private String todoUid;
 
-    /** Otros tokens key:valor del archivo que no son due/rec/t/uid, en orden de aparición. */
+    /** Other key:value tokens from the file that are not due/rec/t/uid, in appearance order. */
     @Column(columnDefinition = "text")
     private String extras;
 

@@ -12,9 +12,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * El contrato se fija contra el comportamiento real de tuxedo 2026.8.1, no contra una idea de
- * lo que "debería" ser todo.txt: los tags son tokens sueltos, los comentarios se saltan y el
- * orden de serialización es el suyo.
+ * The contract is pinned against the real behavior of tuxedo 2026.8.1, not against an
+ * idea of what todo.txt "should" be: tags are loose tokens, comments are skipped and the
+ * serialization order is tuxedo's own.
  */
 class TodoTxtCodecTest {
 
@@ -63,7 +63,7 @@ class TodoTxtCodecTest {
 
     @Test
     void createdDateIsOnlyTakenFromStrictIsoToken() {
-        // "2026" es un año suelto: no es una fecha y debe quedarse en el cuerpo.
+        // "2026" is a bare year: not a date, so it has to stay in the body.
         ParsedTask t = codec.parse("2026 no es fecha").get(0);
 
         assertNull(t.created());
@@ -161,8 +161,8 @@ class TodoTxtCodecTest {
         ParsedTask t = codec.parse(once).get(0);
 
         assertEquals(once, twice, "el round-trip debe ser estable tambien con ruido");
-        // Una URL es "clave:valor" tanto como lo es due:, asi que acaba en extras. No es un
-        // error: el formato no distingue una cosa de la otra.
+        // A URL is "key:value" just as due: is, so it ends up in extras. That is not a
+        // bug: the format does not tell one from the other.
         assertTrue(t.extras().containsKey("http"));
         assertNull(t.due(), "una due: no ISO no es una fecha");
     }

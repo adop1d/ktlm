@@ -4,11 +4,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Reimporta los archivos que cambiaron por fuera.
+ * Reimports the files that changed from outside.
  *
- * <p>Existe para que el vigilante no dependa de {@link TodoTxtService}: los dos se necesitan
- * y Spring no puede cablear un círculo. El vigilante publica el evento, este lo escucha y
- * hace el trabajo.
+ * <p>It exists so the watcher does not depend on {@link TodoTxtService}: both are needed
+ * and Spring cannot wire a cycle. The watcher publishes the event, this one listens and
+ * does the work.
  */
 @Component
 public class TodoFileReconciler {
@@ -28,9 +28,9 @@ public class TodoFileReconciler {
         if (content.isBlank()) {
             return;
         }
-        // Ahora manda el archivo: es la fuente. importFile escribe de vuelta la versión
-        // reconciliada, avisa al vigilante de que el cambio ya es nuestro y publica el
-        // TasksChanged que refresca las sesiones abiertas.
+        // The file is in charge now: it is the source. importFile writes back the
+        // reconciled version, tells the watcher the change is already ours and publishes
+        // the TasksChanged that refreshes the open sessions.
         todoTxt.importFile(userId, content);
     }
 }

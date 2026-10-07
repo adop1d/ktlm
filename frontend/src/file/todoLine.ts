@@ -1,14 +1,14 @@
 /**
- * Lectura mínima de una línea todo.txt, solo lo justo para parchear líneas en el espejo.
+ * Minimal read of a todo.txt line, just enough to patch lines in the mirror.
  *
- * El mapeo rico (proyectos, contextos, recurrencia, prioridades) vive en el backend, que es
- * quien manda. Aquí no se duplica: se reaprovecha lo que ya se sabe hacer.
+ * The rich mapping (projects, contexts, recurrence, priorities) lives in the backend, which
+ * is in charge. It is not duplicated here: what is already known to work gets reused.
  */
 
 export interface TodoLine {
   done: boolean;
   priority: string | null;
-  /** Fecha de completado de una tarea cerrada; distinta de la de creación. */
+  /** Completion date of a closed task; different from the creation date. */
   completed: string | null;
   created: string | null;
   body: string;
@@ -78,8 +78,8 @@ export const formatTodoLine = (line: TodoLine): string => {
   const head: string[] = [];
   if (line.done) {
     head.push('x');
-    // La fecha de completado y la de creación son distintas: confundirlas fecharía mal
-    // cualquier tarea ya cerrada.
+    // The completion date and the creation date are distinct: confusing them would misdate
+    // any already-closed task.
     if (line.completed) head.push(line.completed);
   }
   if (line.priority) head.push(`(${line.priority})`);
@@ -91,7 +91,7 @@ export const formatTodoLine = (line: TodoLine): string => {
   return tail.join(' ').trim();
 };
 
-/** Avanza una fecha ISO según un token `rec:` (p. ej. "+1m", "2w", "+3d"). */
+/** Advances an ISO date according to a `rec:` token (e.g. "+1m", "2w", "+3d"). */
 export const advanceIsoDate = (iso: string, recurrence: string): string | null => {
   const match = recurrence.match(/^([+-]?)(\d+)([dbwmy])$/);
   if (!match) return null;
@@ -115,7 +115,7 @@ export const advanceIsoDate = (iso: string, recurrence: string): string | null =
       date.setUTCFullYear(date.getUTCFullYear() + amount);
       break;
     case 'b': {
-      // Días hábiles: lunes a viernes, saltando fines de semana en lugar de contarlos.
+      // Business days: Monday to Friday, skipping weekends instead of counting them.
       let remaining = Math.abs(amount);
       const step = amount >= 0 ? 1 : -1;
       while (remaining > 0) {

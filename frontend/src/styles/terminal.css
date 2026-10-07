@@ -1,24 +1,24 @@
 /**
- * Cromo de terminal: paneles con dibujo de cajas, barra de estado fija y rejilla de lista.
+ * Terminal chrome: box drawing panels, a fixed status bar and the list grid.
  *
- * Todo aquí es estructural. El color sigue viniendo de los tokens de design-tokens.css,
- * para que cambiar la paleta no toque estos ficheros.
+ * Everything here is structural. The color still comes from the tokens in
+ * design-tokens.css, so changing the palette does not touch these files.
  */
 
-/* ======================== TIPOGRAFÍA BASE ======================== */
+/* ======================== BASE TYPOGRAPHY ======================== */
 
 body {
   font-family: var(--font-body);
   font-variant-ligatures: none;
-  /* Una rejilla de terminal: los glifos ocupan la misma celda. */
+  /* A terminal grid: every glyph occupies the same cell. */
   font-feature-settings: 'calt' 0;
 }
 
-/* ======================== PANEL DE CAJA ======================== */
+/* ======================== BOX PANEL ======================== */
 
 /*
- * El borde se dibuja con caracteres en lugar de con CSS: es lo que hace que un panel se
- * lea como una caja de terminal y no como una tarjeta.
+ * The border is drawn with characters instead of with CSS: that is what makes a panel
+ * read as a terminal box and not as a card.
  */
 .tui-panel {
   position: relative;
@@ -26,7 +26,7 @@ body {
   background: var(--surface-base);
 }
 
-/* La esquina superior izquierda lleva el byte que abre la caja. */
+/* The top left corner carries the byte that opens the box. */
 .tui-panel::before {
   content: '┌';
   position: absolute;
@@ -50,11 +50,11 @@ body {
   position: relative;
 }
 
-/* ======================== BARRA DE ESTADO ======================== */
+/* ======================== STATUS BAR ======================== */
 
 /*
- * Fija abajo, como la de vim o tuxedo. Es el sitio donde vive el modo, el chord armado y
- * los contadores: lo que en una terminal se lee sin levantar la vista del texto.
+ * Fixed at the bottom, like vim's or tuxedo's. It is where the mode, the armed chord and
+ * the counters live: what in a terminal you read without taking your eyes off the text.
  */
 .tui-status {
   position: fixed;
@@ -118,12 +118,12 @@ body {
   font: inherit;
 }
 
-/* Deja hueco para la barra, para que la última fila no quede debajo. */
+/* Leaves room for the bar so the last row does not end up underneath it. */
 .tui-with-status {
   padding-bottom: 2.25rem;
 }
 
-/* ======================== LAYOUT DE TRES PANELES ======================== */
+/* ======================== THREE PANEL LAYOUT ======================== */
 
 .tui-body {
   display: grid;
@@ -145,7 +145,7 @@ body {
 }
 
 @media (max-width: 900px) {
-  /* En pantallas estrechas los paneles seiations encima en vez de partir la lista. */
+  /* On narrow screens the panels stack on top of each other instead of splitting the list. */
   .tui-body--left,
   .tui-body--right,
   .tui-body--both {
@@ -153,11 +153,11 @@ body {
   }
 }
 
-/* ======================== REJILLA DE TARJETAS ======================== */
+/* ======================== CARD GRID ======================== */
 
 /*
- * La lista deja de ser una columna de tarjetas y pasa a filas alineadas: el ancho de la
- * columna de prioridad y el de las fechas son fijos, como columnas de terminal.
+ * The list stops being a column of cards and becomes aligned rows: the priority column
+ * width and the dates width are fixed, like terminal columns.
  */
 .tui-list {
   display: flex;
@@ -167,8 +167,8 @@ body {
 
 .tui-row {
   display: grid;
-  /* index · prioridad · cuerpo · meta. Los anchos son fijos: eso es una columna de
-     terminal, y es lo que hace que los ojos bajen en vertical y no en diagonal. */
+  /* index · priority · body · meta. The widths are fixed: that is a terminal column,
+     and it is what makes the eyes drop vertically instead of diagonally. */
   grid-template-columns: 2.5rem 1.5rem minmax(0, 1fr) auto;
   column-gap: 0.75rem;
   align-items: baseline;
@@ -235,11 +235,11 @@ body {
   color: var(--color-primary);
 }
 
-/* ======================== MODALES ======================== */
+/* ======================== MODALS ======================== */
 
 /*
- * El alto máximo va en la caja, no en la tarjeta interior: si va en la tarjeta, el
- * contenedor crece y el scroll se pierde, que es justo el fallo que tenía la ayuda.
+ * The max height goes on the box, not on the inner card: on the card the container grows
+ * and the scroll is lost, which is exactly the bug the help had.
  */
 .tui-overlay {
   position: fixed;
@@ -285,7 +285,7 @@ body {
   color: var(--color-accent);
 }
 
-/* ======================== LISTAS DE LA BARRA LATERAL ======================== */
+/* ======================== SIDEBAR LISTS ======================== */
 
 .tui-pane-list {
   display: flex;
@@ -351,7 +351,7 @@ body {
   display: inline-flex;
   gap: 0.15rem;
   margin-left: 0.5rem;
-  /* Se revelan al pasar el ratón o cuando la fila tiene el cursor, como las tarjetas. */
+  /* They show up on hover or when the row has the cursor, like the cards. */
   opacity: 0;
   transition: opacity var(--transition-fast);
 }
@@ -383,11 +383,11 @@ body {
   outline-offset: 1px;
 }
 
-/* ======================== APLANADO DE CONTROLES ======================== */
+/* ======================== CONTROL FLATTENING ======================== */
 
 /*
- * Los botones y campos vienen de una biblioteca de tarjetas con bordes redondeados. En una
- * terminal casi nada es redondo, así que aquí se aplanan sin reescribir el marcado.
+ * The buttons and fields come from a card library with rounded borders. In a terminal
+ * almost nothing is round, so they get flattened here without rewriting the markup.
  */
 .btn-primary,
 .btn-secondary,
@@ -428,14 +428,14 @@ body {
   outline: none;
 }
 
-/* El indicador de modo va con el color de acento, que es lo que da el aire de terminal. */
+/* The mode indicator takes the accent color, which is what gives it the terminal feel. */
 kbd {
   font-family: var(--font-mono);
 }
 
-/* ======================== BARRA DE TÍTULO ======================== */
+/* ======================== TITLE BAR ======================== */
 
-/* Una línea, como el título de una ventana de terminal. */
+/* One line, like the title of a terminal window. */
 .tui-titlebar {
   position: sticky;
   top: 0;
@@ -499,12 +499,12 @@ kbd {
   outline-offset: 1px;
 }
 
-/* ======================== PORTADA ======================== */
+/* ======================== LANDING ======================== */
 
 /*
- * La portada no es una pantalla de producto con texto encima: es la ventana de la terminal
- *ampliada a página. Por eso reutiliza el mismo cromo —filas, status line, chips de modo— en
- * vez de inventar un lenguaje visual paralelo que luego habría que mantener.
+ * The landing page is not a product screen with text on top: it is the terminal window
+ * blown up to a full page. That is why it reuses the same chrome —rows, status line, mode
+ * chips— instead of inventing a parallel visual language that would then need maintaining.
  */
 
 .lp {
@@ -622,7 +622,7 @@ kbd {
   max-width: 30rem;
 }
 
-/* La ventana: el mismo cromo de la app, con una fila más de título. */
+/* The window: the same chrome as the app, with one more title row. */
 .lp-window {
   border: 1px solid var(--border-default);
   background: var(--surface-base);
@@ -636,7 +636,7 @@ kbd {
   letter-spacing: 0.06em;
 }
 
-/* La tabla de atajos ES la lista de features: no hay que repetirla en prosa. */
+/* The shortcuts table IS the feature list: it does not need repeating in prose. */
 .lp-keys {
   padding-top: 1rem;
   border-top: 1px solid var(--border-default);
@@ -734,7 +734,7 @@ kbd {
 }
 
 @media (min-width: 62rem) {
-  /* Asimétrico a propósito: el texto va a un lado y la terminal manda. */
+  /* Deliberately asymmetric: the copy goes to one side and the terminal leads. */
   .lp-main {
     grid-template-columns: 20rem minmax(0, 1fr);
     align-items: start;
@@ -757,17 +757,17 @@ kbd {
 }
 
 /*
- * La maqueta de la portada usa la misma barra de estado, pero como parte de la ventana y no
- * fijada al pie: heredando el `position: fixed` cruzaba la página entera.
+ * The landing mock uses the same status bar, but as part of the window and not pinned to
+ * the foot: inheriting `position: fixed` made it cross the whole page.
  */
 .tui-status--inline {
   position: static;
 }
 
 /*
- * La columna de metadatos no puede crecer libre: en un móvil el `auto` de la rejilla se
- * comía el ancho y la ventana se salía de la pantalla. Se le permite encogerse y se
- * esconde en pantallas estrechas, donde el dato no cabe sin romper la lectura.
+ * The metadata column cannot grow freely: on a phone the grid's `auto` ate the width and
+ * the window ran off the screen. It is allowed to shrink and it is hidden on narrow
+ * screens, where the data does not fit without breaking the reading.
  */
 .tui-row-meta {
   min-width: 0;
@@ -794,9 +794,9 @@ kbd {
 }
 
 /*
- * En CSS Grid un hijo tiene `min-width: auto`, así que un contenido que no cede —una barra
- * con `white-space: nowrap`, una fila con columnas fijas— ensancha su columna y empuja la
- * página entera. Poner `min-width: 0` en los hijos es lo que deja que encojan.
+ * In CSS Grid a child has `min-width: auto`, so content that does not give way —a bar with
+ * `white-space: nowrap`, a row with fixed columns— widens its column and pushes the whole
+ * page. Setting `min-width: 0` on the children is what lets them shrink.
  */
 .tui-body > *,
 .lp-main > *,

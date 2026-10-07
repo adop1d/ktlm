@@ -2,20 +2,20 @@ import { FC, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 
 /**
- * Captura para el móvil: un QR con la dirección de esta misma app.
+ * A handoff to the phone: a QR with the address of this very app.
  *
- * <p>Es lo que hace tuxedo con `?` —abrir la PWA en el teléfono— y es un generador, no un
- * lector. Generar es lo útil: el móvil ya tiene cámara, la app no.
+ * <p>It is what tuxedo does with `?` —open the PWA on the phone— and it is a generator, not a
+ * reader. Generating is the useful half: the phone already has a camera, the app does not.
  */
 export const ShareQr: FC<{ onClose: () => void }> = ({ onClose }) => {
-  // La URL de la barra de direcciones es la que vale; si alguien entra por localhost en el
-  // móvil no le va a servir, y eso mismo es lo que muestra el QR.
+  // The address bar URL is the one that counts; if someone arrives via localhost on the phone
+  // it will not help them, and the QR shows exactly that.
   const url = typeof window === 'undefined' ? '' : window.location.origin;
   const [svg, setSvg] = useState('');
   const [copiado, setCopiado] = useState(false);
 
-  // toString devuelve una promesa. Meterla en un useMemo daría una promesa como si fuera
-  // el SVG, y dangerouslySetInnerHTML no sabría qué hacer con eso.
+  // toString returns a promise. Putting it in a useMemo would yield a promise as if it were
+  // the SVG, and dangerouslySetInnerHTML would have no idea what to do with that.
   useEffect(() => {
     let vivo = true;
     if (!url) return;

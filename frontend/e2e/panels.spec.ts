@@ -1,6 +1,6 @@
 import { expect, seedTasks, test, waitForList } from './fixtures';
 
-/** `[` y `]` abren los paneles laterales, igual que en tuxedo. */
+/** `[` and `]` open the side panels, same as in tuxedo. */
 test.describe('paneles laterales', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/app');
@@ -16,7 +16,7 @@ test.describe('paneles laterales', () => {
     await page.keyboard.press(']');
     await expect(page.getByRole('complementary', { name: 'Detalle' })).toBeVisible();
 
-    // ambos a la vez: tres columnas
+    // both at once: three columns
     const clases = await page.locator('.tui-body').getAttribute('class');
     expect(clases).toContain('tui-body--both');
   });
@@ -33,7 +33,7 @@ test.describe('paneles laterales', () => {
     await page.keyboard.press('[');
     await page.getByRole('complementary', { name: 'Filtros' }).getByRole('button', { name: '+salud' }).click();
 
-    // El backend recibe el filtro y devuelve solo ese proyecto.
+    // The backend receives the filter and returns only that project.
     await expect(page.locator('.tui-row')).toHaveCount(2);
   });
 
@@ -60,7 +60,7 @@ test.describe('paneles laterales', () => {
       const r = el.getBoundingClientRect();
       return { bottom: Math.round(r.bottom), alto: window.innerHeight };
     });
-    // La diferencia es de redondeo de subpixel, no de positioning.
+    // The difference is subpixel rounding, not positioning.
     expect(Math.abs(caja.bottom - caja.alto)).toBeLessThanOrEqual(1);
   });
 
@@ -91,7 +91,7 @@ test.describe('la lista se lee como una rejilla de terminal', () => {
       return { display: cs.display, columnas: cs.gridTemplateColumns, gap: cs.columnGap };
     });
     expect(estilos.display).toBe('grid');
-    // Cuatro columnas: índice, prioridad, cuerpo y metadatos.
+    // Four columns: index, priority, body and metadata.
     expect(estilos.columnas.split(' ')).toHaveLength(4);
     expect(Number.parseFloat(estilos.gap)).toBeGreaterThan(0);
 
@@ -106,7 +106,7 @@ test.describe('la lista se lee como una rejilla de terminal', () => {
     await expect(page.locator('.tui-row--cursor')).toHaveCount(1);
     await page.keyboard.press('j');
     await expect(page.locator('.tui-row--cursor')).toHaveCount(1);
-    // La que estaba marcada ya no lo está.
+    // The one that was marked no longer is.
     await expect(page.locator('.tui-row').first()).not.toHaveClass(/tui-row--cursor/);
   });
 });

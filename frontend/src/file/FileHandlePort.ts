@@ -1,12 +1,12 @@
 /**
- * Leer un todo.txt del disco para importarlo.
+ * Read a todo.txt from disk to import it.
  *
- * Antes esto era el archivo de trabajo: el navegador elegía una carpeta y todo lo que se
- * editaba iba a disco desde aquí. Ya no. El archivo lo lleva el servidor y la File System
- * Access API sobrevive únicamente como forma de traerte una lista que tengas en el disco.
+ * This used to be the working file: the browser picked a folder and everything edited went to
+ * disk from here. Not anymore. The server holds the file, and the File System Access API
+ * survives only as a way to bring in a list you already have on disk.
  *
- * Es de Chromium. Fuera de ahí, importar no está disponible y la interfaz lo dice en vez de
- * fingir.
+ * It is Chromium-only. Anywhere else importing is unavailable, and the interface says so
+ * instead of pretending.
  */
 
 interface FsaFileHandleLike {
@@ -28,7 +28,7 @@ export interface PickedFile {
   content: string;
 }
 
-/** Abre un todo.txt del disco y lo devuelve entero. null si se cancela. */
+/** Opens a todo.txt from disk and returns it whole. null if cancelled. */
 export const pickTodoFile = async (): Promise<PickedFile | null> => {
   if (!isFileSystemAccessSupported()) {
     return null;

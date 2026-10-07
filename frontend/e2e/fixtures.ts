@@ -1,9 +1,9 @@
 import { Page, expect, test as base } from '@playwright/test';
 
 /**
- * Los e2e interceptan la API en vez de hablar con un backend de verdad. Es lo que los hace
- * herméticos y, sobre todo, lo que hace que una aserción rota **falle** en lugar de
- * deslizarse por un `if (isVisible())`.
+ * The e2e intercept the API instead of talking to a real backend. That is what makes them
+ * hermetic and, above all, what makes a broken assertion **fail** instead of
+ * sliding past an `if (isVisible())`.
  */
 
 export interface SeedTask {
@@ -27,7 +27,7 @@ export const seedTasks = (count: number, prefix = 'Tarea'): SeedTask[] =>
   Array.from({ length: count }, (_, index) => ({
     id: index + 1,
     title: `${prefix} ${String(index + 1).padStart(3, '0')}`,
-    // Una de cada cinco llega completada: el filtro de pestañas necesita dónde mirar.
+    // One in five arrives completed: the tab filter needs something to look at.
     completed: index % 5 === 0,
     priority: index % 7 === 0 ? 'HIGH' : index % 3 === 0 ? 'LOW' : 'MEDIUM',
     dueDate: index % 2 === 0 ? '2026-12-01' : undefined,
@@ -37,8 +37,8 @@ export const seedTasks = (count: number, prefix = 'Tarea'): SeedTask[] =>
     recurrence: null,
     threshold: null,
     todoUid: String(index + 1),
-    // Una de cada dos lleva proyecto y una de cada tres contexto: el panel de
-    // filtros necesita de dónde sacar la lista.
+    // One in two carries a project and one in three a context: the filter panel needs
+    // somewhere to build the list from.
     projects: index % 2 === 0 ? ['salud'] : ['casa'],
     contexts: index % 3 === 0 ? ['oficina'] : [],
   }));
@@ -47,12 +47,12 @@ export interface ApiState {
   tasks: SeedTask[];
 }
 
-/** Intercepta /api/tasks con un conjunto en memoria. */
+/** Intercepts /api/tasks with an in-memory dataset. */
 export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
-  // Predicado de ruta y no glob: `**/api/tasks**` también capturaba el módulo del propio
-  // dev server (/src/api/tasks.ts) y lo sustituía por un `{}` que dejaba la app en blanco.
-  // El stream queda fuera a propósito: es un event-stream y el mock le devolvería un JSON
-  // de página, que es peor que no mockearlo.
+  // A route predicate, not a glob: `**/api/tasks**` also caught the dev server's own
+  // module (/src/api/tasks.ts) and replaced it with a `{}` that left the app blank.
+  // The stream is excluded on purpose: it is an event stream and the mock would return it
+  // page JSON, which is worse than not mocking it at all.
   await page.route(
     (url) => url.pathname.startsWith('/api/tasks') && !url.pathname.endsWith('/stream'),
     async (route) => {
@@ -66,9 +66,9 @@ export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
       return route.fulfill({ json: { all: total, active: total - completed, completed } });
     }
 
-    //done.txt y el todo.txt no son la lista de tareas. Sin esto caen en la rama de
-    // abajo y devuelven un objeto de página donde se espera un array o un texto, que
-    // revienta el render en vez de fallar la aserción.
+    // done.txt and todo.txt are not the task list. Without this they fall into the branch
+    // below and return a page object where an array or text is expected, which blows up
+    // the render instead of failing the assertion.
     if (url.pathname.endsWith('/archived')) {
       return route.fulfill({ json: [] as string[] });
     }
@@ -89,8 +89,8 @@ export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
       const project = url.searchParams.get('project');
       const context = url.searchParams.get('context');
 
-      // Sin esto el mock miente: devolvería la lista entera y los filtros pasarían sin
-      // probar nada, que es justo lo que hacen las aserciones condicionales.
+      // Without this the mock lies: it would return the whole list and the filters would pass
+      // without testing anything, which is exactly what conditional assertions do.
       let visible = state.tasks;
       if (filter === 'active') visible = visible.filter((task) => !task.completed);
       if (filter === 'completed') visible = visible.filter((task) => task.completed);
@@ -165,11 +165,11 @@ const seedSession = (page: Page, token = 'fake-jwt') =>
     );
   }, token);
 
-/** Test con la API de tareas simulada y la sesión ya sembrada. */
+/** Test with the task API mocked and the session already seeded. */
 export const test = base.extend<{ api: ApiState }>({
-  // auto: sin esto el fixture solo se monta si algún test lo pide por nombre, y casi ninguno
-  // lo hace. La sesión y los mocks se aplicaban solo a los que lo destructuraban, y el
-  // resto navegaba contra el backend real de verdad.
+  // auto: without it the fixture is only set up if some test asks for it by name, and almost none
+  // do. The session and the mocks only applied to the ones that destructured it, and the rest
+  // navigated against the real backend for real.
   api: [
     async ({ page }, use) => {
       const state: ApiState = { tasks: seedTasks(3) };
@@ -184,14 +184,14 @@ export const test = base.extend<{ api: ApiState }>({
 export { expect, seedSession };
 
 /**
- * Espera a que la lista esté pintada. Se ancla en la rejilla y no en un título: el título
- * puede cambiar sin que la app esté rota, y el fallo que importa es "no llegó la lista".
+ * Waits until the list is painted. It anchors on the grid, not on a title: the title can
+ * change without the app being broken, and the failure that matters is "the list never came".
  */
 export const waitForList = async (page: Page) => {
   await expect(page.locator('.tui-titlebar')).toBeVisible();
-  // La barra aparece incluso con la lista vacía, así que no basta: hay que esperar a que
-  // la lista se asiente, ya sea con filas o con el estado vacío. Sin esto, una tecla de
-  // navegación puede llegar antes de que haya filas que mover.
+  // The title bar shows even with an empty list, so that is not enough: wait for the list
+  // to settle, either with rows or with the empty state. Without this, a navigation key can
+  // arrive before there are rows to move.
   await page.waitForFunction(
     () => document.querySelectorAll('.tui-row').length > 0 ||
       (document.body.innerText.includes('No hay tareas') ||

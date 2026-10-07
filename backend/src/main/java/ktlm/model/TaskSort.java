@@ -5,14 +5,14 @@ import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Root;
 
 /**
- * Modo de orden de la lista paginada. `file`, `priority` y `due` son los tres ciclos de tuxedo;
- * los otros tres cubren lo que la UI ya ofrecía.
+ * Ordering mode for the paginated list. `file`, `priority` and `due` are tuxedo's three
+ * cycles; the other three cover what the UI already offered.
  *
- * <p>El orden se expresa sobre el árbol de criterios en vez de con {@code Sort} porque la
- * prioridad necesita una expresión condicional que {@code Sort} no puede representar.
+ * <p>The ordering is expressed over the criteria tree instead of with {@code Sort} because
+ * priority needs a conditional expression that {@code Sort} cannot represent.
  */
 public enum TaskSort {
-    /** Orden del archivo: sortOrder, que es la posición en el todo.txt. */
+    /** File order: sortOrder, which is the position in the todo.txt. */
     FILE {
         @Override
         public Order toOrder(CriteriaBuilder cb, Root<Task> root) {
@@ -22,8 +22,8 @@ public enum TaskSort {
     PRIORITY {
         @Override
         public Order toOrder(CriteriaBuilder cb, Root<Task> root) {
-            // HIGH antes que MEDIUM antes que LOW: el enum se almacena por nombre, así que
-            // el orden alfabético no sirve.
+            // HIGH before MEDIUM before LOW: the enum is stored by name, so
+            // alphabetical order does not work.
             return cb.asc(cb.<Integer>selectCase()
                     .when(cb.equal(root.get("priority"), Task.Priority.HIGH), 0)
                     .when(cb.equal(root.get("priority"), Task.Priority.LOW), 2)
@@ -33,8 +33,8 @@ public enum TaskSort {
     DUE {
         @Override
         public Order toOrder(CriteriaBuilder cb, Root<Task> root) {
-            // En PostgreSQL NULL se ordena como mayor que todo, así que ASC deja las tareas
-            // sin fecha al final, que es lo que espera el usuario.
+            // In PostgreSQL NULL sorts above everything, so ASC leaves the tasks
+            // without a date at the end, which is what the user expects.
             return cb.asc(root.get("dueDate"));
         }
     },

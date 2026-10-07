@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Alta y revocación de tokens de servicio.
+ * Creating and revoking service tokens.
  *
- * <p>Exige sesión normal: un token de servicio no puede crear más tokens de servicio, o
- * bastaría uno para escalar privilegios indefinidamente.
+ * <p>Requires a normal session: a service token cannot create more service tokens, or
+ * one would be enough to escalate privileges indefinitely.
  */
 @RestController
 @RequestMapping("/api/auth/service-tokens")
@@ -48,7 +48,7 @@ public class ServiceTokenController {
                 .toList();
     }
 
-    /** El token en claro se devuelve aquí y en ningún otro sitio. */
+    /** The plain token is returned here and nowhere else. */
     @PostMapping
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public ResponseEntity<Map<String, Object>> issue(@RequestBody Map<String, String> body) {

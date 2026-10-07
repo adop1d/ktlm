@@ -1,6 +1,6 @@
 package ktlm.exception;
 
-/** Recurso ausente o no visible para el usuario autenticado. Se traduce a 404. */
+/** Resource missing or not visible to the authenticated user. Translated to 404. */
 public class ResourceNotFoundException extends RuntimeException {
 
     public ResourceNotFoundException(String message) {

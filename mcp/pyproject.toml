@@ -1,7 +1,7 @@
 [project]
 name = "ktlm-mcp"
 version = "1.0.0"
-description = "Servidor MCP para KTLM"
+description = "MCP server for KTLM"
 requires-python = ">=3.11"
 dependencies = ["mcp>=2.3", "httpx>=0.27"]
 

@@ -66,8 +66,8 @@ public class GlobalExceptionHandler {
      * Handles bad credentials exception for authentication failures.
      */
     /**
-     * Autenticado pero sin permiso: 403, no 500. Un token de servicio que intenta archivar
-     * cae aquí, y un 500 lo haría parecer un fallo del servidor en vez de una negativa.
+     * Authenticated but not permitted: 403, not 500. A service token trying to archive
+     * lands here, and a 500 would make it look like a server failure instead of a denial.
      */
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(
@@ -109,7 +109,7 @@ public class GlobalExceptionHandler {
 
 
     /**
-     * Peticiones bien formadas pero imposibles (una tarea sin título). 400, no 500.
+     * Well-formed but impossible requests (a task with no title). 400, not 500.
      */
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidRequest(InvalidRequestException ex) {
@@ -127,9 +127,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-        // El mensaje se registra aquí y no se devuelve. Varios de estos mensajes llevan
-        // dentro rutas absolutas —las de NoteService incluyen el IOException de
-        // Files.writeString— y eso es un mapa del servidor servido a cualquiera que llame.
+        // The message is logged here and not returned. Several of these messages carry
+        // absolute paths inside —the NoteService ones include the IOException from
+        // Files.writeString— and that is a map of the server handed to any caller.
         log.error("Unhandled runtime exception", ex);
 
         Map<String, Object> response = new HashMap<>();

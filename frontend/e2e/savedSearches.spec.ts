@@ -1,8 +1,8 @@
 import { expect, seedTasks, test, waitForList } from './fixtures';
 
 /**
- * Búsquedas guardadas (fs/ff) y vista de archivo (a). Las tres teclas venían cableadas al
- * `default` del keymap, es decir, no hacían nada.
+ * Saved searches (fs/ff) and the file view (a). All three keys were wired to the keymap's
+ * `default`, which is to say they did nothing.
  */
 test.describe('búsquedas guardadas', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,10 +12,10 @@ test.describe('búsquedas guardadas', () => {
 
   test('fs abre el prompt y guarda la búsqueda actual con nombre', async ({ page }) => {
     await page.getByPlaceholder('Buscar tareas...').fill('Tarea 002');
-    // El debounce son 300 ms: sin esperar, se guardaría el filtro vacío.
+    // The debounce is 300 ms: without waiting, the empty filter would be saved.
     await page.waitForTimeout(500);
-    // Con el foco dentro del buscador el keymap no dispara, a propósito: si no, escribir
-    // "fs" en la caja de busqueda guardaria una búsqueda por accidente.
+    // With focus inside the search box the keymap deliberately does not fire: otherwise,
+    // typing "fs" in the search box would save a search by accident.
     await page.locator('h1').click();
 
     await page.keyboard.press('f');
@@ -33,14 +33,14 @@ test.describe('búsquedas guardadas', () => {
     await page.keyboard.press('f');
     await page.keyboard.press('s');
 
-    // El prompt ni se abre: no hay nada que guardar.
+    // The prompt does not even open: there is nothing to save.
     await expect(page.getByRole('dialog', { name: 'Guardar esta búsqueda' })).toHaveCount(0);
   });
 
   test('ff muestra lo guardado y Enter lo aplica', async ({ page }) => {
     await page.getByPlaceholder('Buscar tareas...').fill('Tarea 002');
     await page.waitForTimeout(500);
-    // Con el foco en el buscador el keymap ignora la tecla, a propósito.
+    // With focus in the search box the keymap ignores the key, on purpose.
     await page.locator('h1').click();
     await page.keyboard.press('f');
     await page.keyboard.press('s');
@@ -48,7 +48,7 @@ test.describe('búsquedas guardadas', () => {
     await prompt.getByLabel('Guardar esta búsqueda').fill('las doses');
     await prompt.getByRole('button', { name: 'Guardar' }).click();
 
-    // Se limpia la búsqueda y luego se recupera con ff.
+    // The search is cleared and then recovered with ff.
     await page.getByPlaceholder('Buscar tareas...').fill('');
     await page.waitForTimeout(500);
     await page.locator('h1').click();
@@ -57,7 +57,7 @@ test.describe('búsquedas guardadas', () => {
 
     const picker = page.getByRole('dialog', { name: 'Búsquedas guardadas' });
     await expect(picker).toBeVisible();
-    // Dos botones hermanos (aplicar y borrar) comparten texto: se ancla en el de la fila.
+    // Two sibling buttons (apply and delete) share text: anchor on the one in the row.
     await expect(picker.locator('.tui-pane-item', { hasText: 'las doses' })).toBeVisible();
 
     await page.keyboard.press('Enter');
@@ -80,7 +80,7 @@ test.describe('vista de archivo', () => {
     await page.goto('/app');
     await waitForList(page);
 
-    // Sin archivo vinculado no hay done.txt hermano que leer.
+    // Without a linked file there is no sibling done.txt to read.
     await page.keyboard.press('a');
 
     await expect(page.getByLabel('Archivo de hechas')).toContainText('Nada archivado todavía');
@@ -110,6 +110,6 @@ test('los atajos de archivo quedan visibles en la ayuda', async ({ page }) => {
   await expect(ayuda).toContainText('ff');
   await expect(ayuda).toContainText('fs');
   await expect(ayuda).toContainText('ver archivo');
-  // Las acciones apagadas sin archivo se listan, pero con el motivo.
+    // Actions disabled without a file are listed, but with the reason.
   await expect(ayuda).toContainText('Apagados');
 });

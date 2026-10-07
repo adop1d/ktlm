@@ -45,39 +45,40 @@ jobs:
     needs: [test-backend, test-frontend]
     steps:
       - uses: actions/checkout@v4
-      # `docker build` y no `docker compose build`, a propósito. Compose interpola el
-      # fichero entero antes de hacer nada —incluido `build`— y se niega a arrancar si
-      # JWT_SECRET o DB_PASSWORD no están. Para construir imágenes eso no viene al caso:
-      # los Dockerfile copian código, y ninguna variable de entorno llega a la imagen.
+      # `docker build` and not `docker compose build`, on purpose. Compose interpolates
+      # the whole file before doing anything —including `build`— and refuses to start if
+      # JWT_SECRET or DB_PASSWORD are missing. None of that applies to building images:
+      # the Dockerfiles copy code, and no environment variable reaches the image.
       #
-      # La alternativa era inventar valores en el paso para que la interpolación pase.
-      # Funciona, pero ata el build a unos secretos que no usa y que nadie debería
-      # guardar en el repositorio para que un build funcione.
+      # The alternative was inventing values in the step so interpolation would pass.
+      # It works, but it ties the build to secrets it doesn't use and that nobody should
+      # store in the repository just to make a build work.
       - name: Build Docker images
         run: |
           docker build -t ktlm-backend:latest ./backend
           docker build -t ktlm-frontend:latest ./frontend
-          # Para subir a un registro, haría falta un login previo:
+          # To push to a registry you would need a prior login:
           #   echo "${{ secrets.REGISTRY_TOKEN }}" | docker login -u "${{ secrets.REGISTRY_USER }}" --password-stdin
           #   docker push ktlm-backend:latest
           #   docker push ktlm-frontend:latest
 
-      # El .dockerignore es lo único que impide que un .env con secretos acabe en una
-      # capa, y en una capa da igual borrarlo después. Merece un paso que lo compruebe.
+      # The .dockerignore is the only thing stopping a .env full of secrets from ending
+      # up in a layer, and once it's in a layer, deleting it afterwards is pointless.
+      # It deserves a step that checks it.
       #
-      # Se mira la etapa `builder` del frontend y no la imagen final porque es la que hace
-      # `COPY . .`: es donde se colaría. La imagen final solo lleva el dist, así que
-      # mirarla daría verde siempre, que es la forma más fácil de tener un test que no
-      # comprueba nada.
+      # It looks at the frontend's `builder` stage rather than the final image because
+      # that's the one doing `COPY . .`: that's where it would slip in. The final image
+      # only carries the dist, so checking it would always be green, which is the easiest
+      # way to have a test that checks nothing.
       - name: Verify no .env reached the images
         run: |
           docker build --target builder -t ktlm-frontend-builder ./frontend
           if docker run --rm --entrypoint sh ktlm-frontend-builder -c 'test -e /app/.env'; then
-            echo "::error::el .env acabó en la imagen del frontend"
+            echo "::error::the .env ended up inside the frontend image"
             exit 1
           fi
           if docker run --rm --entrypoint sh ktlm-backend:latest -c 'test -e /app/.env'; then
-            echo "::error::el .env acabó en la imagen del backend"
+            echo "::error::the .env ended up inside the backend image"
             exit 1
           fi
           echo "ninguna imagen lleva un .env"

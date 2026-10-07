@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * La portada es la primera pantalla: entrar no debe ser encontrarse un login sin contexto.
+ * The landing page is the first screen: entering should not mean landing on a contextless login.
  */
 test.describe('portada', () => {
   test.beforeEach(async ({ page }) => {
-    // Sin sesión sembrada a propósito: la portada es pública y se tiene que ver sin entrar.
+    // No session seeded on purpose: the landing page is public and must render without logging in.
     await page.addInitScript(() => window.localStorage.removeItem('auth-store'));
     await page.goto('/');
   });
@@ -20,7 +20,7 @@ test.describe('portada', () => {
     const ventana = page.getByLabel('Vista de la aplicación');
     await expect(ventana).toBeVisible();
 
-    // La firma es el cromo real, no una ilustración: filas y barra de estado de verdad.
+    // The look is real chrome, not an illustration: real rows and status bar.
     await expect(ventana.locator('.tui-row')).toHaveCount(4);
     await expect(ventana.locator('.tui-status')).toContainText('normal');
     await expect(ventana.locator('.tui-row--done')).toHaveCount(1);
@@ -29,7 +29,7 @@ test.describe('portada', () => {
   test('el botón de entrar lleva a la app', async ({ page }) => {
     await page.getByRole('link', { name: 'abrir la app' }).click();
 
-    // Sin sesión, /app está protegido y manda al login. Con sesión, la lista.
+    // Without a session, /app is protected and redirects to the login. With one, the list.
     await expect(page).toHaveURL(/\/login$/);
   });
 

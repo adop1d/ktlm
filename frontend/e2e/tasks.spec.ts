@@ -39,17 +39,17 @@ test.describe('lista de tareas', () => {
   });
 
   test('sin archivo vinculado, los atajos de archivo se anuncian apagados', async ({ page }) => {
-    // Es el contrato de la opción B: un atajo que no puede actuar se dice, no finge.
-    // El aviso vive ahora en la barra de estado, que es donde se lee el estado del teclado.
+    // This is the contract of option B: a shortcut that cannot act says so, it does not pretend.
+    // The notice now lives in the status bar, which is where the keyboard state is read.
     await expect(page.getByRole('status')).toContainText('x p J dd u apagados');
     await expect(page.getByText('Sin todo.txt vinculado')).toBeVisible();
   });
 });
 
 test.describe('teclado', () => {
-  // El chord tiene una ventana de 600 ms por diseño, así que el resto del reloj no se
-  // usa como referencia. El margen extra cubre laCPU cargada por los workers en paralelo
-  // sin volver el bloque serial: en serie, un solo fallo se come los cinco siguientes.
+  // The chord has a 600 ms window by design, so the rest of the clock is not used as a
+  // reference. The extra headroom covers the CPU loaded by the workers running in parallel
+  // without turning the block serial: in serial, a single failure eats the five after it.
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/app');
@@ -119,7 +119,7 @@ test.describe('teclado', () => {
 
     await page.keyboard.press('x');
 
-    // La acción está apagada: el contador de completadas no se mueve.
+    // The action is disabled: the completed counter does not move.
     await expect(contador).toHaveText(antes ?? '');
     await expect(page.locator('.tui-row').first()).not.toHaveClass(/line-through/);
   });

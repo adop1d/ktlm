@@ -20,27 +20,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Vigila los archivos todo.txt del servidor y reimporta los que cambian por fuera.
+ * Watches the server's todo.txt files and reimports the ones that change from outside.
  *
- * <p>Es esto lo que antes hacía el navegador sondeando su copia local. Con el archivo en el
- * servidor, quien vigila es el servidor: si alguien abre el todo.txt con `vim`, aquí se
- * entera sin que nadie pregunte. Usa {@link WatchService} del sistema de archivos y no un
- * temporizador: no hay sondeo, hay eventos.
+ * <p>This is what the browser used to do by polling its local copy. With the file on the
+ * server, the server is the one watching: if someone opens the todo.txt with `vim`, this
+ * finds out without anyone asking. It uses {@link WatchService} from the filesystem and not
+ * a timer: no polling, events.
  *
- * <p>El hash de lo último que escribimos es lo que decide si el cambio es nuestro o de
- * fuera. Sin esa comparación, una mutación de la API podría interpretarse como edición
- * externa e importar un archivo viejo por encima de lo que acabamos de guardar.
+ * <p>The hash of the last thing we wrote decides whether the change is ours or from
+ * outside. Without that comparison, an API mutation could be read as an external edit and
+ * import a stale file over what we just saved.
  */
 @Component
 public class TodoFileWatcher {
 
-    /** Margen antes de releer: un editor escribe en ráfagas y el temporal todavía no cuenta. */
+    /** Margin before re-reading: an editor writes in bursts and the temp file does not count yet. */
     private static final long SETTLE_MS = 150;
 
     private final TodoStore store;
     private final ApplicationEventPublisher events;
 
-    /** Hash de lo último que escribimos nosotros, por usuario. */
+    /** Hash of the last thing we wrote ourselves, per user. */
     private final Map<Long, String> lastWritten = new ConcurrentHashMap<>();
     private final Map<Long, Path> watched = new ConcurrentHashMap<>();
     private final Map<Path, Long> owner = new ConcurrentHashMap<>();
@@ -55,17 +55,17 @@ public class TodoFileWatcher {
     }
 
     /**
-     * El archivo cambió por fuera. Lo publica para que otro lo reimporte: el vigilante y el
-     * servicio de todo.txt se necesitan mutuamente y Spring no puede cablear un círculo.
+     * The file changed from outside. It publishes it for someone else to reimport: the
+     * watcher and the todo.txt service need each other and Spring cannot wire a cycle.
      */
     public record FileChanged(Long userId) {}
 
-    /** El servicio lo llama tras cada escritura, para no reimportar lo nuestro. */
+    /** The service calls it after each write, so we do not reimport our own. */
     public void recordWritten(Long userId, String content) {
         lastWritten.put(userId, TodoStore.hashOf(content));
     }
 
-    /** Empieza a vigilar el directorio del usuario. Idempotente. */
+    /** Starts watching the user's directory. Idempotent. */
     public synchronized void watch(Long userId) {
         if (watched.containsKey(userId)) {
             return;
@@ -76,8 +76,8 @@ public class TodoFileWatcher {
         } catch (IOException e) {
             return;
         }
-        // Si nunca escribimos, damos por bueno lo que hay: si no, el primer arranque
-        // dispararía una importación de un archivo que el usuario ya tenía.
+        // If we never wrote, we take what is there as good: otherwise the first boot would
+        // trigger an import of a file the user already had.
         lastWritten.putIfAbsent(userId, store.hash(userId));
 
         try {
@@ -85,8 +85,8 @@ public class TodoFileWatcher {
             watched.put(userId, dir);
             owner.put(dir, userId);
         } catch (IOException e) {
-            // Un directorio que no se puede vigilar no es motivo para tumbar la app: se
-            // reconciliará de todos modos en la siguiente escritura.
+            // A directory that cannot be watched is no reason to take the app down: it will
+            // be reconciled anyway on the next write.
             lastWritten.remove(userId);
         }
     }
@@ -106,7 +106,7 @@ public class TodoFileWatcher {
             try {
                 watchService.close();
             } catch (IOException ignored) {
-                // al apagar da igual
+                // it does not matter on shutdown
             }
         }
     }
@@ -124,7 +124,7 @@ public class TodoFileWatcher {
                         continue;
                     }
                     if (changed.getFileName().toString().endsWith(".tmp")) {
-                        continue;  // es nuestra propia escritura atómica
+                        continue;  // it is our own atomic write
                     }
                     onChanged(owner.get(changed.getParent()));
                 }
@@ -135,12 +135,12 @@ public class TodoFileWatcher {
             } catch (ClosedWatchServiceException e) {
                 return;
             } catch (Exception e) {
-                // Un fallo puntual no puede tumbar el vigilante entero.
+                // A one-off failure cannot take down the whole watcher.
             }
         }
     }
 
-    /** Reimporta si el cambio no es nuestro. Ahora manda el archivo: es la fuente. */
+    /** Reimports if the change is not ours. The file is in charge now: it is the source. */
     void onChanged(Long userId) {
         if (userId == null) {
             return;
@@ -163,13 +163,13 @@ public class TodoFileWatcher {
     }
 
     /**
-     * Red de seguridad del {@link WatchService}.
+     * Safety net for the {@link WatchService}.
      *
-     * <p>Los eventos del sistema de archivos son la vía rápida: llegan al instante. Pero no
-     * son fiables en todas partes —sobre overlayfs, que es lo que usa Docker, hay casos en que
-     * no entrega nada—. El barrido compara el hash con lo último que escribimos, así que no
-     * cuesta nada cuando no ha pasado nada y cubre el hueco cuando el sistema de archivos
-     * no avisa.
+     * <p>Filesystem events are the fast path: they arrive instantly. But they are not
+     * reliable everywhere —on overlayfs, which is what Docker uses, there are cases where it
+     * delivers nothing—. The sweep compares the hash with the last thing we wrote, so it
+     * costs nothing when nothing has happened and covers the gap when the filesystem does
+     * not notify.
      */
     @Scheduled(fixedDelay = 30_000, initialDelay = 30_000)
     public void sweep() {
@@ -181,7 +181,7 @@ public class TodoFileWatcher {
         }
     }
 
-    /** Sólo para pruebas: quién es dueño de un directorio. */
+    /** Tests only: who owns a directory. */
     Long ownerOf(Path dir) {
         return owner.get(dir);
     }

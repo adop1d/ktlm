@@ -3,12 +3,12 @@ import { KeymapMode } from './useKeymap';
 import { Portal } from '../components/common/Portal';
 
 /**
- * La barra de estado de abajo: donde una terminal muestra el modo y la posición, y donde
- * tuxedo muestra el líder del chord. Es el sitio donde se lee el estado sin apartar la
- * vista de la lista.
+ * The status bar at the bottom: where a terminal shows the mode and the position, and where
+ * tuxedo shows the chord leader. It is where you read the state without looking away from
+ * the list view.
  *
- * Va montada en un portal porque, dentro de la página animada, `position: fixed` se
- * resolvía contra el contenedor de la animación y la barra nunca llegaba al borde inferior.
+ * It is mounted in a portal because, inside the animated page, `position: fixed` resolved
+ * against the animation container and the bar never reached the bottom edge.
  */
 
 export interface StatusHint {
@@ -22,7 +22,7 @@ export const StatusBar: FC<{
   position: string;
   counts: { all: number; active: number; completed: number } | undefined;
   linked: boolean;
-  /** Nombre del archivo en vista cuando no es la lista activa. */
+  /** Name of the file in view when it is not the active list. */
   view?: string | null;
   hints: StatusHint[];
 }> = ({ mode, pendingChord, position, counts, linked, view, hints }) => (

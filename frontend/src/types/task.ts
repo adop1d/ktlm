@@ -10,16 +10,16 @@ export interface Task {
   sortOrder: number;
   createdAt: string; // ISO string from backend
   updatedAt: string;
-  // --- Interoperabilidad con todo.txt ---
-  /** Fecha de completado, presente solo en tareas cerradas. */
+  // --- Interoperability with todo.txt ---
+  /** Completion date, present only on closed tasks. */
   completedAt?: string;
-  /** Literal del token `rec:` sin el prefijo, p. ej. "+1m". */
+  /** Literal of the `rec:` token without the prefix, e.g. "+1m". */
   recurrence?: string | null;
-  /** Literal del token `t:` sin el prefijo, p. ej. "-3d". */
+  /** Literal of the `t:` token without the prefix, e.g. "-3d". */
   threshold?: string | null;
-  /** Ruta del archivo de nota, tal cual va en el token `note:`. */
+  /** Note file path, exactly as it goes in the `note:` token. */
   note?: string | null;
-  /** Identidad estable en el archivo, la que hace de clave del round-trip. */
+  /** Stable identity in the file, the one that serves as the round-trip key. */
   todoUid?: string | null;
   projects: string[];
   contexts: string[];
@@ -29,7 +29,7 @@ export type TaskSort = 'file' | 'priority' | 'due' | 'newest' | 'oldest' | 'alph
 
 export type TaskFilter = 'all' | 'active' | 'completed';
 
-/** Parámetros de paginación/filtrado/orden que acepta GET /api/tasks. */
+/** Pagination/filter/sort parameters accepted by GET /api/tasks. */
 export interface TaskQueryParams {
   page?: number;
   size?: number;

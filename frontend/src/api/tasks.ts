@@ -11,7 +11,7 @@ const BASE = `${API_BASE}/api/tasks`;
 
 const DEFAULTS = { page: 0, size: 20, filter: 'all', sort: 'file' } as const;
 
-/** Los defaults no viajan: mantiene la URL y la cache key limpias. */
+/** Defaults do not travel: keeps the URL and the cache key clean. */
 export const getTasks = (params: TaskQueryParams = {}) => {
   const qs = new URLSearchParams();
   if (params.page !== undefined && params.page !== DEFAULTS.page) qs.set('page', String(params.page));
@@ -42,10 +42,10 @@ export interface TodoImportResult {
   file: string;
 }
 
-/** POST text/plain: el backend no admite JSON aquí porque el archivo es texto crudo. */
+/** POST text/plain: the backend does not accept JSON here because the file is raw text. */
 export const importTodoFile = (content: string) =>
-  // El endpoint consume text/plain: el Content-Type por defecto del helper sería json y
-  // el servidor lo rechazaría por tipo de medio.
+  // The endpoint consumes text/plain: the helper's default Content-Type would be json and
+  // the server would reject it by media type.
   fetchJSON<TodoImportResult>(`${BASE}/import`, {
     method: 'POST',
     body: content,
@@ -61,8 +61,8 @@ export const exportTodoFile = (token: string | null) =>
   });
 
 /**
- * El archivo del servidor, como texto. Lo crea si no existía. No se parsea como JSON
- * porque es un archivo, no una respuesta de API.
+ * The file from the server, as text. Creates it if it did not exist. Not parsed as JSON
+ * because it is a file, not an API response.
  */
 export const readTodoFile = (): Promise<string> =>
   fetch(`${API_BASE}/api/tasks/file`, { headers: authHeader() }).then(async (res) => {
@@ -70,7 +70,7 @@ export const readTodoFile = (): Promise<string> =>
     return res.text();
   });
 
-/** Reemplaza el archivo entero y devuelve la versión reconciliada, con los uid ya puestos. */
+/** Replaces the whole file and returns the reconciled version, with the uid already set. */
 export const replaceTodoFile = (content: string) =>
   fetch(`${API_BASE}/api/tasks/file`, {
     method: 'PUT',
@@ -81,19 +81,19 @@ export const replaceTodoFile = (content: string) =>
     return res.text();
   });
 
-/** Lo que hay en done.txt, ahora servido por el servidor. */
+/** What's in done.txt, now served by the backend. */
 export const readArchived = () => fetchJSON<string[]>(`${BASE}/archived`);
 
 export const archiveCompleted = () =>
   fetchJSON<{ archived: number; doneFile: string }>(`${BASE}/archive`, { method: 'POST' });
-/** El texto de la nota de una tarea. Vacío si no tiene. */
+/** The text of a task's note. Empty if it has none. */
 export const readNote = (uid: number) =>
   fetch(`${API_BASE}/api/tasks/${uid}/note`, { headers: authHeader() }).then(async (res) => {
     if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.text();
   });
 
-/** Guarda la nota. Vaciar borra el archivo y quita el token `note:` de la línea. */
+/** Saves the note. Emptying it deletes the file and strips the `note:` token from the line. */
 export const writeNote = (uid: number, content: string) =>
   fetch(`${API_BASE}/api/tasks/${uid}/note`, {
     method: 'PUT',

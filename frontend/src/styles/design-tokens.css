@@ -1,19 +1,19 @@
 /**
- * KTLM - sistema visual de terminal.
+ * KTLM - terminal visual system.
  *
- * Dirección: la lista es el cuerpo de una TUI. Tipografía monoespaciada, paneles con
- * caracteres de dibujo de cajas, esquinas vivas y una barra de estado fija abajo. Se
- * conserva la paleta y los acentos, pero el cromado CRT queda como textura de fondo y
- * no como ruido sobre el texto.
+ * Direction: the list is the body of a TUI. Monospaced typography, panels with box
+ * drawing characters, sharp corners and a fixed status bar at the bottom. The palette
+ * and the accents stay, but the CRT chrome becomes background texture and not noise
+ * over the text.
  */
 
-/* ======================== TIPOGRAFÍA ======================== */
+/* ======================== TYPOGRAPHY ======================== */
 
 /*
- * Inconsolata Nerd Font (SIL OFL 1.1), subconjuntada a los rangos que la app usa de
- * verdad: latin, dibujo de cajas, formas geometricas, flechas y glifos powerline.
- * Autoalojada y no por CDN: la app es un PWA que debe funcionar sin red, y la licencia
- * OFL obliga a Redistribuir el binario, no a enlazarlo.
+ * Inconsolata Nerd Font (SIL OFL 1.1), subset to the ranges the app really uses:
+ * latin, box drawing, geometric shapes, arrows and powerline glyphs.
+ * Self-hosted and not from a CDN: the app is a PWA that has to work with no network,
+ * and the OFL license requires redistributing the binary, not linking to it.
  */
 @font-face {
   font-family: 'Inconsolata Nerd Font';
@@ -31,7 +31,7 @@
   font-display: swap;
 }
 
-/* ======================== ANIMACIONES ======================== */
+/* ======================== ANIMATIONS ======================== */
 
 @keyframes slide-in-right {
   from { transform: translateX(100%); opacity: 0; }
@@ -147,13 +147,13 @@
 /* ======================== DESIGN TOKENS ======================== */
 
 :root {
-  /* Typography: una sola familia monoespaciada para todo, como en una terminal. */
+  /* Typography: a single monospaced family for everything, like in a terminal. */
   --font-display: 'Inconsolata Nerd Font', ui-monospace, 'SF Mono', Menlo, monospace;
   --font-mono: 'Inconsolata Nerd Font', ui-monospace, 'SF Mono', Menlo, monospace;
   --font-body: 'Inconsolata Nerd Font', ui-monospace, 'SF Mono', Menlo, monospace;
   --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* La terminal mide en celdas: la rejilla de la lista se apoya en esto. */
+  /* The terminal measures in cells: the list grid relies on this. */
   --cell: 0.6rem;
   
   /* Text Hierarchy - Light Mode */
@@ -219,14 +219,14 @@
   --space-10: 64px;
   --space-12: 96px;
   
-  /* Border Radius: en terminal casi nada es redondo. */
+  /* Border radius: in a terminal almost nothing is round. */
   --radius-sm: 0px;
   --radius-md: 2px;
   --radius-lg: 2px;
   --radius-xl: 2px;
   --radius-full: 9999px;
 
-  /* Paneles de caja: el borde dibujado con caracteres, no con bordes CSS. */
+  /* Box panels: the border is drawn with characters, not with CSS borders. */
   --panel-border: var(--border-emphasis);
   --panel-chrome: var(--surface-elevated);
   
@@ -318,16 +318,16 @@
 .crt-flicker { animation: crt-flicker 0.15s infinite; }
 
 /* ======================== DISABLED VIEW TRANSITIONS ======================== */
-/* ======================== TEMAS ======================== */
+/* ======================== THEMES ======================== */
 
 /*
- * Los cinco de tuxedo, más noir, que es el de serie. Se aplican sobre `dark` o sobre la
- * raíz, así que un tema claro tiene que apagar `dark` — no vale con tener colores claros,
- * porque el resto de la hoja sigue leyendo `.dark` para sombras y bordes.
+ * tuxedo's five, plus noir, which is the default. They apply over `dark` or over the
+ * root, so a light theme has to switch `dark` off — light colors on their own are not
+ * enough, because the rest of the sheet still reads `.dark` for shadows and borders.
  *
- * Solo se redefinen lo que cambia de verdad: fondo, texto y acento. Redefinir los cuatro
- * backgrounds y los cuatro bordes por tema serían casi quinientas líneas para que se note
- * poco.
+ * Only what actually changes is redefined: background, text and accent. Redefining the
+ * four backgrounds and the four borders per theme would be close to five hundred lines
+ * for very little visible difference.
  */
 
 [data-theme='dawn'] {
@@ -413,8 +413,8 @@
 /* ======================== DENSIDAD ======================== */
 
 /*
- * Tres pasos, como en tuxedo. Se ajusta el alto de fila y no el tamaño de la letra: con
- * letra más pequeña el texto se lee peor de lo que parece al.reduce la fila.
+ * Three steps, like in tuxedo. Row height is adjusted, not font size: with smaller text
+ * the copy reads worse than it looks like it does, and shrinking the row is what helps.
  */
 
 [data-density='compact'] { --cell: 0.3rem; --row-height: 1.6rem; --font-scale: 0.9; }
@@ -423,7 +423,7 @@
 
 .tui-row { min-height: var(--row-height, 2rem); }
 
-/* Números de línea. Apagados de serie como en tuxedo, y `L` los enciende. El orden de
-   estas dos reglas importa: la que gana es la última, así que la condición va después. */
+/* Line numbers. Off by default like in tuxedo, and `L` turns them on. The order of these
+   two rules matters: the last one wins, so the condition goes after. */
 .tui-row-index { display: none; }
 [data-line-numbers] .tui-row-index { display: inline-block; }

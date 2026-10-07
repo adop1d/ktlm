@@ -2,9 +2,9 @@ import { FC } from 'react';
 import { Task } from '../types/task';
 
 /**
- * Panel derecho: el detalle de la tarea bajo el cursor, INCLUDING la línea tal cual vive
- * en el archivo. Esa última parte es la razón de existir — es lo que permite copiar la
- * línea y llevársela a tuxedo sin reconstruirla a mano.
+ * Right pane: the detail of the task under the cursor, INCLUDING the line exactly as it lives
+ * in the file. That last part is the whole reason it exists — it lets you copy the line and
+ * take it to tuxedo without rebuilding it by hand.
  */
 
 const field = (label: string, value: string) => (
@@ -29,7 +29,7 @@ export const DetailPane: FC<{ task: Task | null | undefined }> = ({ task }) => {
   const due = task.dueDate ?? '—';
   const done = task.completedAt?.slice(0, 10) ?? '—';
 
-  // La línea se reconstruye en el mismo orden que usa tuxedo al escribir.
+  // The line is rebuilt in the same order tuxedo uses when writing.
   const raw = [
     task.completed ? 'x' : null,
     task.completedAt?.slice(0, 10) ?? null,

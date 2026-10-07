@@ -14,22 +14,22 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 /**
- * Las notas: el archivo que va detrás de una tarea.
+ * Notes: the file that sits behind a task.
  *
- * <p>`note:` en el todo.txt no guarda el texto, guarda una ruta, que es lo que hace tuxedo:
- * `O` abre ese archivo en el editor. Aquí es un archivo del directorio del usuario, y la
- * ruta es relativa a él: absoluta, en el archivo se vería el HOME del contenedor y dejaría de
- * ser portable.
+ * <p>`note:` in todo.txt does not store the text, it stores a path, which is what tuxedo
+ * does: `O` opens that file in the editor. Here it is a file inside the user's directory,
+ * and the path is relative to it: absolute, the file would show the container's HOME and
+ * stop being portable.
  *
- * <p>Por eso la ruta se valida en dos pasos: sin `..`, y luego comprobando que el archivo
- * resuelto sigue dentro del directorio del usuario. El primero evita rutas desperdiciadas,
- * el segundo es el que de verdad importa, porque un `..` filtrado a medias o un enlace
- * simbólico alcanzan el archivo de otro usuario. La comprobación es la segunda, siempre.
+ * <p>So the path is validated in two steps: without `..`, then by checking that the
+ * resolved file is still inside the user's directory. The first avoids wasted paths, the
+ * second is the one that really matters, because a half-filtered `..` or a symbolic link
+ * reaches another user's file. The check is the second one, always.
  */
 @Service
 public class NoteService {
 
-    /** Tope de una nota. Es texto para leer en un editor, no un disco que rellenar. */
+    /** Cap on a note. It is text to read in an editor, not a disk to fill up. */
     private static final int MAX_NOTE = 1_000_000;
 
     private final TaskRepository tasks;
@@ -42,7 +42,7 @@ public class NoteService {
         this.todoTxt = todoTxt;
     }
 
-    /** Texto de la nota, o cadena vacía si la tarea no tiene. Nunca lanza por no existir. */
+    /** The note's text, or an empty string if the task has none. Never throws for not existing. */
     @Transactional(readOnly = true)
     public String read(Long userId, Long taskId) {
         Path ruta = rutaDe(userId, taskId);
@@ -57,16 +57,16 @@ public class NoteService {
     }
 
     /**
-     * Guarda la nota y apunta la tarea a ella.
+     * Saves the note and points the task at it.
      *
-     * <p>Guardar vacío borra el archivo y quita el token `note:` de la línea: una nota que
-     * se vacía no debería dejar un archivo vacío y una ruta colgando.
+     * <p>Saving empty deletes the file and drops the `note:` token from the line: a note
+     * that gets emptied should not leave an empty file and a dangling path behind.
      */
     @Transactional
     public void write(Long userId, Long taskId, String contenido) {
         if (contenido != null && contenido.length() > MAX_NOTE) {
-            // Sin esto, un solo POST puede escribir un gigabyte en el volumen de todos los
-            // usuarios. Tomcat no acota un cuerpo text/plain que llega entero a la memoria.
+            // Without this, a single POST can write a gigabyte into every user's
+            // volume. Tomcat does not bound a text/plain body that arrives whole in memory.
             throw new IllegalArgumentException("La nota es demasiado grande");
         }
         Task task = tasks.findById(taskId)
@@ -81,7 +81,7 @@ public class NoteService {
                 task.setNote(null);
             } else {
                 Files.writeString(destino, contenido, StandardCharsets.UTF_8);
-                // Relativa al directorio del usuario: en el archivo, portable.
+                // Relative to the user's directory: portable in the file.
                 task.setNote("notas/" + destino.getFileName());
             }
             tasks.save(task);
@@ -89,10 +89,10 @@ public class NoteService {
             throw new IllegalStateException("No se pudo guardar la nota: " + e.getMessage(), e);
         }
 
-        // El token `note:` vive en la línea del archivo, así que guardar la nota sin
-        // reescribir el archivo dejaría la tarea apuntando a algo que no sale. Y después
-        // de confirmar, no antes: escribirlo dentro dejaría un todo.txt con una nota que
-        // luego desaparece si la transacción falla.
+        // The `note:` token lives in the file's line, so saving the note without
+        // rewriting the file would leave the task pointing at something that is not there.
+        // And after the commit, not before: writing it inside would leave a todo.txt with a
+        // note that later disappears if the transaction fails.
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -112,11 +112,11 @@ public class NoteService {
     }
 
     /**
-     * Resuelve la ruta y comprueba que no se sale del directorio del usuario.
+     * Resolves the path and checks that it does not escape the user's directory.
      *
-     * <p>Es la comprobación que importa. Un `..` o un enlace simbólico pueden salir del
-     * directorio aunque la ruta «parezca» interna, así que se normaliza y se compara con
-     * la raíz real.
+     * <p>This is the check that matters. A `..` or a symbolic link can escape the
+     * directory even when the path "looks" internal, so it is normalized and compared with
+     * the real root.
      */
     private Path resolverDentro(Long userId, String relativa) {
         if (relativa.contains("..")) {
@@ -132,8 +132,8 @@ public class NoteService {
         if (!destino.startsWith(raiz)) {
             throw new IllegalArgumentException("La nota se sale del directorio del usuario");
         }
-        // normalize() no sigue enlaces simbólicos. Si la nota existe, se compara la ruta
-        // real: un enlace dentro del directorio puede apuntar al archivo de otro usuario.
+        // normalize() does not follow symbolic links. If the note exists, the real path is
+        // compared: a link inside the directory can point at another user's file.
         if (Files.exists(destino)) {
             try {
                 if (!destino.toRealPath().startsWith(raiz.toRealPath())) {
@@ -146,7 +146,7 @@ public class NoteService {
         return destino;
     }
 
-    /** El nombre por defecto que propone `o` cuando la tarea no tiene nota. */
+    /** The default name `o` suggests when the task has no note. */
     public static String nombreSugerido(Task task) {
         String base = task.getTitle() == null ? "nota" : task.getTitle()
                 .toLowerCase(Locale.ROOT)

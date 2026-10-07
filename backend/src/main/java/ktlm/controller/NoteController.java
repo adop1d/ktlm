@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * El texto de la nota de una tarea.
+ * The note text of a task.
  *
- * <p>La línea del archivo solo lleva la ruta —`note:notas/nota-12.md`—, así que el
- * contenido va aparte. Va aparte porque la ruta es un token y el contenido no cabe en uno.
+ * <p>The file line only carries the path —`note:notas/nota-12.md`—, so the content
+ * goes separately. Separately because the path is a token and the content does not fit
+ * in one.
  */
 @RestController
 @RequestMapping("/api/tasks")
@@ -38,7 +39,7 @@ public class NoteController {
         return ResponseEntity.ok(notes.read(currentUser.id(), id));
     }
 
-    /** Vaciar el contenido borra el archivo y quita el token `note:` de la línea. */
+    /** Emptying the content deletes the file and drops the `note:` token from the line. */
     @PutMapping(value = "/{id}/note", consumes = MediaType.TEXT_PLAIN_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public ResponseEntity<Map<String, Object>> write(@PathVariable Long id, @RequestBody String contenido) {

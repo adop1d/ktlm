@@ -16,7 +16,7 @@ export const useTasks = (params: TaskQueryParams) => {
     queryFn: api.getTaskCounts,
   });
 
-  // El prefijo cubre todas las páginas.
+  // The prefix covers every page.
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['tasks'] });
     qc.invalidateQueries({ queryKey: ['task-counts'] });

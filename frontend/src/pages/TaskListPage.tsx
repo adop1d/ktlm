@@ -34,7 +34,7 @@ import { ClipboardDocumentListIcon, ExclamationTriangleIcon, MagnifyingGlassIcon
 
 const PAGE_SIZE = 20;
 
-/** El ciclo de `S`: los tres de tuxedo y los que ya tenia la app. */
+/** The `S` cycle: tuxedo's three plus the ones the app already had. */
 const SORT_CYCLE: Record<TaskSort, TaskSort> = {
   file: 'priority',
   priority: 'due',
@@ -81,7 +81,7 @@ export const TaskListPage: FC = () => {
   const addToast = useToastStore(state => state.addToast);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const todoFile = useTodoFile();
-  // Una sola escucha por pantalla: el servidor empuja, el cliente no pregunta.
+  // One listener per screen: the server pushes, the client does not ask.
   useTaskStream();
   const [showHelp, setShowHelp] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
@@ -99,7 +99,7 @@ export const TaskListPage: FC = () => {
   const saveFilter = useSavedFilters((state) => state.save);
   const removeFilter = useSavedFilters((state) => state.remove);
 
-  /** Lo que hay abierto ahora mismo, que es lo que se guarda con fs. */
+  /** Whatever is open right now, which is what gets saved with fs. */
   const currentFilter = {
     q: debouncedSearch,
     filter,
@@ -115,8 +115,8 @@ export const TaskListPage: FC = () => {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Único sitio donde se vuelve a la primera página: cambiar qué se lista
-  // invalida la página actual y dejaría al usuario en una página vacía.
+  // The only place that goes back to the first page: changing what is listed
+  // invalidates the current page and would leave the user on an empty one.
   useEffect(() => {
     setPage(0);
   }, [filter, debouncedSearch, sort, project, context]);
@@ -164,8 +164,8 @@ export const TaskListPage: FC = () => {
         return;
       case 'begin_edit':
       case 'begin_edit_insert':
-        // e e i editan la tarea del cursor. Abrir el formulario en blanco aqui era abrir
-        // una tarea nueva con la tecla de editar.
+        // e e i edit the task under the cursor. Opening a blank form here was opening
+        // a new task with the edit key.
         if (!task) return;
         setEditing(task);
         setShowForm(true);
@@ -198,7 +198,7 @@ export const TaskListPage: FC = () => {
       case 'archive_completed':
         return void todoFile.archive();
       case 'reschedule':
-        // `r` abre el prompt de recurrencia; es la tecla que tuxedo usa para el mismo builder.
+        // `r` opens the recurrence prompt; it is the key tuxedo uses for the same builder.
         setRecurrenceTarget(rows[cursor] ?? null);
         return;
       case 'toggle_visual':
@@ -220,7 +220,7 @@ export const TaskListPage: FC = () => {
       case 'open_share':
         setShowQr(true);
         return;
-      // Apariencia: son globales, así que van al store y no a estado de esta página.
+      // Appearance: these are global, so they go to the store and not to this page's state.
       case 'cycle_theme':
         cycleTheme();
         return;
@@ -240,13 +240,13 @@ export const TaskListPage: FC = () => {
           addToast('info', 'No hay ninguna tarea debajo del cursor');
           return;
         }
-        // `O` en tuxedo abre la nota que ya existe; aquí las dos teclas abren el editor,
-        // que con una nota vacía es un editor vacío. Un aviso, no un no-op.
+        // `O` in tuxedo opens the note if there is one; here both keys open the editor,
+        // which with an empty note is an empty editor. A warning, not a no-op.
         if (action === 'note_open' && !task.note) {
           addToast('info', 'Esa tarea todavía no tiene nota');
         }
-        // id, no sortOrder: sortOrder es la posición en la línea y el endpoint de nota
-        // habla con la fila. Con la primera tarea, sortOrder es 0 y no hay tarea 0.
+        // id, not sortOrder: sortOrder is the position in the file and the note endpoint
+        // talks about the row. With the first task, sortOrder is 0 and there is no task 0.
         setNota({ uid: task.id, titulo: task.title });
         return;
       }
@@ -287,8 +287,8 @@ export const TaskListPage: FC = () => {
     }
   };
 
-  // Las acciones que mutan datos pasan por el todo.txt. Sin archivo vinculado no hay uid
-  // sobre el que actuar, y fingir que funcionan es peor que mostrarlas apagadas.
+  // Actions that mutate data go through the todo.txt. With no linked file there is no uid
+  // to act on, and pretending they work is worse than showing them dimmed.
   const isLinked = useTodoDoc((state) => state.status === 'linked' || state.status === 'in-memory');
   const [nota, setNota] = useState<{ uid: number; titulo: string } | null>(null);
   const [themeMenu, setThemeMenu] = useState(false);
@@ -311,7 +311,7 @@ export const TaskListPage: FC = () => {
     'copy_body',
   ];
 
-  /** Copia la linea tal cual esta en el archivo: eso, y no el titulo, es lo que se lleva uno. */
+  /** Copies the line exactly as it is in the file: that, and not the title, is what you take away. */
   const copyLine = async (sortOrder?: number) => {
     if (sortOrder === undefined) return;
     const { lines, uidByLine } = useTodoDoc.getState();
@@ -322,7 +322,7 @@ export const TaskListPage: FC = () => {
     addToast('success', 'Línea copiada');
   };
 
-  /** Copia solo el cuerpo, sin prioridad, fechas ni etiquetas. */
+  /** Copies only the body, without priority, dates or tags. */
   const copyBody = async (sortOrder?: number) => {
     if (sortOrder === undefined) return;
     const { lines, uidByLine } = useTodoDoc.getState();
@@ -338,7 +338,7 @@ export const TaskListPage: FC = () => {
     keymap: DEFAULT_NORMAL_KEYMAP,
     onAction: onKeyAction,
     enabled: !isLoading,
-    // Esc cierra el overlay de arriba, en este orden: ayuda, paleta, filtro, prompt.
+    // Esc closes the overlay above, in this order: help, palette, filter, prompt.
     onEscape: () => {
       setShowHelp(false);
       setShowPicker(false);

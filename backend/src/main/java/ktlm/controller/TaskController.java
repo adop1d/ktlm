@@ -45,9 +45,9 @@ public class TaskController {
     }
 
     /**
-     * Cambios de esta cuenta, empujados por el servidor. Es lo que sustituye a preguntar
-     * cada cierto tiempo: en cuanto alguien completa una tarea desde el móvil, la otra
-     * pantalla se entera.
+     * Changes on this account, pushed by the server. It is what replaces polling every
+     * so often: as soon as someone completes a task from the phone, the other screen
+     * finds out.
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
@@ -122,11 +122,11 @@ public class TaskController {
         return todoTxtService.importFile(currentUser.id(), todoTxt);
     }
 
-    // ---------- El archivo, ahora del servidor ----------
+    // ---------- The file, now from the server ----------
 
     /**
-     * El todo.txt tal cual está en disco. Es lo que consume el navegador para el espejo y
-     * lo que leería un servidor MCP: mismo archivo, mismos bytes.
+     * The todo.txt exactly as it sits on disk. It is what the browser consumes for the
+     * mirror and what an MCP server would read: same file, same bytes.
      */
     @GetMapping(value = "/file", produces = "text/plain; charset=UTF-8")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
@@ -139,9 +139,9 @@ public class TaskController {
     }
 
     /**
-     * Reemplaza el archivo entero. La respuesta trae el contenido reconciliado, que es el
-     * que hay que escribir: si el cliente guardara lo que envió sin más, volvería a meter
-     * los uid antiguos.
+     * Replaces the whole file. The response carries the reconciled content, which is the
+     * one to write: if the client saved what it sent as-is, it would put the old uid
+     * back in.
      */
     @PutMapping(value = "/file", consumes = "text/plain", produces = MediaType.TEXT_PLAIN_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
@@ -149,14 +149,14 @@ public class TaskController {
         return todoTxtService.importFile(currentUser.id(), todoTxt).file();
     }
 
-    /** Reconstruye el archivo desde la base. Para cuando se edita a mano y se rompe. */
+    /** Rebuilds the file from the database. For when it is hand-edited and breaks. */
     @PostMapping(value = "/file/rebuild", produces = MediaType.TEXT_PLAIN_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public String rebuildFile() {
         return todoTxtService.rebuildFile(currentUser.id());
     }
 
-    /** Lo que hay en done.txt: la vista de archivo, ahora servida por el servidor. */
+    /** What is in done.txt: the file view, now served by the server. */
     @GetMapping("/archived")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public List<String> archived() {
@@ -164,8 +164,8 @@ public class TaskController {
     }
 
     /**
-     * Una línea al inbox.txt. Cualquier cosa que sepa escribir una línea ahí crea una
-     * tarea: un atajo de iOS, un cron, un `echo`.
+     * A line to inbox.txt. Anything that can write a line there creates a task: an iOS
+     * shortcut, a cron, an `echo`.
      */
     @PostMapping(value = "/inbox", consumes = "text/plain", produces = MediaType.TEXT_PLAIN_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
@@ -176,8 +176,8 @@ public class TaskController {
     }
 
     /**
-     * Vacía el inbox pasándolo por el importador. Un archivo con mensajes esperaría al
-     * próximo ciclo; esto lo resuelve ya, que es lo que hace el servidor MCP.
+     * Empties the inbox by pushing it through the importer. A file with messages would
+     * wait for the next cycle; this resolves it now, which is what the MCP server does.
      */
     @PostMapping(value = "/inbox/drain", produces = MediaType.TEXT_PLAIN_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
@@ -187,8 +187,8 @@ public class TaskController {
         return todoTxtService.export(userId);
     }
 
-    // Sin ROLE_MCP a propósito: archivar es irreversible desde la app y se decidió que lo
-    // haga una persona. El resto de la API sí acepta un token de servicio.
+    // No ROLE_MCP on purpose: archiving is irreversible from the app and it was decided
+    // that a person does it. The rest of the API does accept a service token.
     @PostMapping("/archive")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public TodoTxtService.ArchiveResult archive() {

@@ -13,21 +13,21 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Empuja los cambios de tareas a las sesiones abiertas, en vez de que cada cliente pregunte
- * cada diez segundos.
+ * Pushes task changes to the open sessions, instead of every client polling every ten
+ * seconds.
  *
- * SSE y no WebSocket porque el flujo va en una sola dirección y no necesita reconexión
- * negociada; y fetch con ReadableStream en vez de EventSource porque EventSource no admite
- * cabeceras, y aquí cada petición va autenticada.
+ * SSE and not WebSocket because the stream goes one way and needs no negotiated
+ * reconnection; and fetch with ReadableStream instead of EventSource because EventSource
+ * does not support headers, and here every request is authenticated.
  *
- * El registro es en memoria y por usuario. Con varias réplicas detrás haría falta un bus
- * compartido (LISTEN/NOTIFY de Postgres o Redis); hoy el compose es una sola instancia y eso
- * no lo justifica todavía.
+ * The registry is in memory and per user. With several replicas behind it you would need a
+ * shared bus (Postgres LISTEN/NOTIFY or Redis); today the compose is a single instance and
+ * that does not justify it yet.
  */
 @Component
 public class TaskEventStream {
 
-    /** Muy por encima de los 25 s que impone nginx, para que no lo corte por debajo. */
+    /** Well above the 25 s nginx imposes, so it does not cut it shorter. */
     private static final long TIMEOUT_MS = 30 * 60 * 1000;
 
     private final Map<Long, Set<SseEmitter>> byUser = new ConcurrentHashMap<>();
@@ -52,8 +52,8 @@ public class TaskEventStream {
         });
         emitter.onError(error -> remove.run());
 
-        // Un comentario abre la conexión al instante: sin esto, un proxy puede esperar
-        // hasta el primer evento real y el cliente cree que se quedó colgado.
+        // A comment opens the connection instantly: without it, a proxy may wait until the
+        // first real event and the client thinks it hung.
         try {
             emitter.send(SseEmitter.event().name("connected").data("ok"));
         } catch (IOException e) {
@@ -64,13 +64,13 @@ public class TaskEventStream {
     }
 
     /**
-     * Escribe en un emitter sin que dos hilos se pisen.
+     * Writes to an emitter without two threads stepping on each other.
      *
-     * <p>{@code SseEmitter.send} no es thread-safe: dos escrituras a la vez se entrelazan y
-     * el flujo sale corrupto. Y eso pasaba de verdad —{@code publish} lo llaman el vigilante
-     * de archivos y las peticiones HTTP, y el barrido de abajo llama a su vez cada minuto,
-     * todo sobre los mismos emitters— y el síntoma era un cliente que se caía con
-     * ERR_EMPTY_RESPONSE sin que nadie hubiera cerrado nada.
+     * <p>{@code SseEmitter.send} is not thread-safe: two writes at once interleave and the
+     * stream comes out corrupt. And that really happened —{@code publish} is called by the
+     * file watcher and by HTTP requests, and the sweep below calls it in turn every minute,
+     * all over the same emitters— and the symptom was a client dropping with
+     * ERR_EMPTY_RESPONSE without anyone having closed anything.
      */
     private static boolean enviar(SseEmitter emitter, SseEmitter.SseEventBuilder evento) {
         synchronized (emitter) {
@@ -88,18 +88,18 @@ public class TaskEventStream {
         if (emitters == null) return;
         for (SseEmitter emitter : emitters) {
             if (!enviar(emitter, SseEmitter.event().name("tasks").data("changed"))) {
-                // La conexión está muerta: el emitter se encarga de limpiarse.
+                // The connection is dead: the emitter takes care of cleaning itself up.
                 emitter.complete();
             }
         }
     }
 
     /**
-     * Desconecta lo que el cliente dejó abierto sin cerrar del todo.
+     * Disconnects what the client left open without closing it fully.
      *
-     * <p>También se lleva la entrada del mapa cuando se queda vacía. Quitarla del conjunto
-     * no basta: la clave del usuario se quedaba ahí para siempre, con un conjunto vacío, y
-     * un usuario por cada cuenta creada ocupaba memoria sin abrir nunca el stream.
+     * <p>It also drops the map entry when it becomes empty. Removing it from the set is not
+     * enough: the user's key stayed there forever, with an empty set, and one user per
+     * account created occupied memory without ever opening the stream.
      */
     @Scheduled(fixedRate = 60_000)
     public void sweepStaleConnections() {
@@ -111,7 +111,7 @@ public class TaskEventStream {
         });
     }
 
-    /** Evento interno: las tareas de un usuario cambiaron. */
+    /** Internal event: a user's tasks changed. */
     public record TasksChanged(Long userId) {}
 
     @Component

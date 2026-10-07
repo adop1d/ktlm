@@ -3,12 +3,12 @@ import { CheckIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Task } from '../../types/task';
 
 /**
- * Una fila de la lista. En una terminal cada línea es una fila de celdas con columnas
- * alineadas: aquí el índice, la prioridad y el cuerpo ocupan posiciones fijas, y el
- * puntero de cursor y la marca de completada se leen sin pasar por el color.
+ * A row of the list. In a terminal every line is a row of cells with aligned columns: here the
+ * index, the priority and the body sit in fixed positions, and the cursor pointer and the
+ * completed marker read without going through color.
  *
- * Los botones se descubren al pasar el ratón igual que en la tarjeta de la que viene:
- * quitarlos sería quitar una vía de uso, no simplificar.
+ * The buttons are discovered by hovering the same way they are in the card this row comes
+ * from: removing them would take away a way to use it, not simplify anything.
  */
 
 const PRIORITY_LETTER = { HIGH: 'A', MEDIUM: 'B', LOW: 'C' } as const;
@@ -101,5 +101,5 @@ const TaskRowBase: FC<{
   </div>
 );
 
-/** La lista llega a veinte filas y se repinta en cada pulsación: memo amortigua el trabajo. */
+/** The list reaches twenty rows and repaints on every keystroke: memo takes the edge off. */
 export const TaskRow = memo(TaskRowBase);

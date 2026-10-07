@@ -26,13 +26,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Lo que importa aquí es la identidad: un uid identifica una fila, y el archivo puede
- * llevar el mismo uid en más de una línea cuando tuxedo genera la instancia siguiente de
- * una recurrente.
+ * What matters here is identity: a uid identifies a row, and the file may carry the same
+ * uid on more than one line when tuxedo generates the next instance of a recurring task.
  *
- * <p>El {@link TodoStore} va de verdad contra un directorio temporal: el comportamiento
- * interesante —escritura atómica, inbox que se vacía antes de importar— es del sistema de
- * archivos, y un store simulado no probaría nada de eso.
+ * <p>The {@link TodoStore} goes against a real temporary directory: the interesting
+ * behavior —atomic writing, inbox emptied before importing— belongs to the filesystem,
+ * and a simulated store would test none of that.
  */
 @ExtendWith(MockitoExtension.class)
 class TodoTxtServiceTest {
@@ -49,8 +48,8 @@ class TodoTxtServiceTest {
     private TodoStore store;
 
     /**
-     * Doble del vigilante: no mira el disco, pero registra que el cambio es nuestro. El
-     * vigilante de verdad se prueba aparte, contra un directorio temporal.
+     * Watcher double: it does not look at the disk, but it records that the change is
+     * ours. The real watcher is tested separately, against a temporary directory.
      */
     private final class RecordingWatcher extends TodoFileWatcher {
         RecordingWatcher(TodoStore store) {
@@ -64,13 +63,13 @@ class TodoTxtServiceTest {
 
         @Override
         public void watch(Long userId) {
-            // no hace falta vigilar nada en un test del servicio
+            // no need to watch anything in a service test
         }
     }
 
     private final List<String> written = new ArrayList<>();
-    /** Por id y no en una lista: el importador guarda dos veces y el doble tiene que
-     *  reproducirlo, no contar dos veces la misma fila. */
+    /** By id and not in a list: the importer saves twice and the double has to reproduce
+     *  that, not count the same row twice. */
     private final Map<Long, Task> rows = new LinkedHashMap<>();
     private long nextId = 100;
 
@@ -87,7 +86,7 @@ class TodoTxtServiceTest {
         behaveLikeADatabase();
     }
 
-    /** Simula el repository en memoria: resuelve ids y busca por uid como haría la tabla. */
+    /** Simulates the in-memory repository: resolves ids and searches by uid like the table would. */
     private void behaveLikeADatabase() {
         lenient()
                 .when(taskRepository.save(any(Task.class)))
@@ -111,7 +110,7 @@ class TodoTxtServiceTest {
                     boolean completed = invocation.getArgument(1);
                     return rows.values().stream().filter(t -> t.isCompleted() == completed).toList();
                 });
-        // Los candidatos del emparejamiento por contenido: lo que hay ahora mismo.
+        // The candidates for content matching: what is there right now.
         lenient()
                 .when(taskRepository.findByUserId(anyLong()))
                 .thenAnswer(invocation -> new ArrayList<>(rows.values()));
@@ -166,7 +165,7 @@ class TodoTxtServiceTest {
     void importFile_RepeatedUidOnTwoLines_CreatesTheSecondOneInsteadOfOverwriting() {
         seed("1", "Pay rent");
 
-        // Es lo que escribe tuxedo al completar una recurrente: misma uid en las dos líneas.
+        // This is what tuxedo writes when completing a recurring task: same uid on both lines.
         TodoTxtService.ImportResult result = service.importFile(USER,
                 "x 2026-10-05 2026-05-09 Pay rent rec:+1m uid:1\n" +
                 "2026-10-05 Pay rent rec:+1m uid:1\n");
@@ -183,7 +182,7 @@ class TodoTxtServiceTest {
     void importFile_LineaSinUid_ReconoceLaTareaPorContenido() {
         seed("7", "Tarea externa");
 
-        // Tuxedo escribe sin uid si el archivo aún no lo lleva. Antes esto duplicaba.
+        // Tuxedo writes without uid if the file does not carry one yet. This used to duplicate.
         TodoTxtService.ImportResult result = service.importFile(USER, "Tarea externa\n");
 
         assertEquals(0, result.imported());
@@ -202,8 +201,8 @@ class TodoTxtServiceTest {
     void export_SaleDelArchivoYNoDeLaBase() {
         store.write(USER, "# cabecera que solo vive en el archivo\n");
 
-        // La cabecera y el formato exacto no se reconstructen desde la tabla: se pierden, y
-        // con ellos las columnas que nadie guardó.
+        // The header and the exact format are not rebuilt from the table: they are
+        // lost, and with them the columns nobody stored.
         assertTrue(service.export(USER).startsWith("# cabecera"));
     }
 
@@ -239,7 +238,7 @@ class TodoTxtServiceTest {
 
         assertTrue(archivo.contains("Refill prescription"));
         assertEquals(1, rows.size(), rows.toString());
-        // Vaciarlo ANTES de importar es lo que evita reprocesar en cada pasada.
+        // Emptying it BEFORE importing is what avoids reprocessing on every pass.
         assertTrue(store.readInboxLines(USER).isEmpty());
     }
 

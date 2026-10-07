@@ -48,10 +48,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            // CSRFoff es correcto —no hay cookie, la credencial va en una cabecera— pero
-            // eso no compensa con ninguna cabecera. Una XSS en la SPA se ejecutaba sin red
-            // de seguridad detrás, y los títulos y las notas se renderizan desde el
-            // servidor.
+            // Turning CSRF off is right — there is no cookie, the credential travels in a
+            // header — but that buys nothing without any headers at all. An XSS in the SPA
+            // used to run with no security net behind it, and titles and notes are
+            // rendered from the server.
             .headers(headers -> headers
                 .contentSecurityPolicy(csp -> csp.policyDirectives(
                         "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"))
@@ -61,17 +61,18 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Solo login y register. Con "/api/auth/**" entero, un endpoint nuevo en
-                // ese controlador sin @PreAuthorize quedaba público sin querer.
+                // Only login and register. With the whole "/api/auth/**", a new endpoint
+                // in that controller without @PreAuthorize was public by accident.
                 .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                 .requestMatchers("/api/tasks/**").authenticated()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            // El token de servicio se prueba antes que el JWT: si no hay, deja pasar al de JWT.
+            // The service token is tried before the JWT: if there is none, the JWT filter
+            // gets its turn.
             .addFilterBefore(serviceTokenFilter, JwtAuthenticationFilter.class)
-            // Antes de autenticar: cuenta los intentos,uris haya más detrás o no.
+            // Before authenticating: it counts the attempts, whatever else is behind it.
             .addFilterBefore(loginRateLimiter, JwtAuthenticationFilter.class);
 
         return http.build();

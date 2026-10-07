@@ -9,11 +9,11 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * `note:` es una ruta, no un texto.
+ * `note:` is a path, not a text.
  *
- * <p>Es lo que hace tuxedo: `note:{path}`, y `O` abre ese archivo en el editor. No es una
- * decisión de gusto —el token se separa por espacios, así que un texto con varias palabras
- * se trunca en la primera— y encaja con que KTM ya tenga un directorio por usuario.
+ * <p>That is what tuxedo does: `note:{path}`, and `O` opens that file in the editor. It is
+ * not a matter of taste —the token is split on spaces, so a multi-word text gets cut at
+ * the first one— and it fits KTM already having one directory per user.
  */
 class TodoTxtServiceNoteTest {
 
@@ -31,7 +31,7 @@ class TodoTxtServiceNoteTest {
         String reescrito = codec.serialize(lineas);
         assertThat(reescrito).containsOnlyOnce("note:");
         assertThat(reescrito).contains("note:notas/contrato.md");
-        // La ruta no puede tragarse el uid que va detrás.
+        // The path must not swallow the uid that comes after it.
         assertThat(reescrito).contains("uid:7");
     }
 

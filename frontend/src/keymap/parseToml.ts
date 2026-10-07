@@ -1,11 +1,11 @@
 import type { Keymap } from './actions';
 
 /**
- * Subconjunto de TOML suficiente para `~/.config/tuxedo/keybinds.toml`.
+ * Subset of TOML good enough for `~/.config/tuxedo/keybinds.toml`.
  *
- * Tuxedo hace hot-reload de su config y, si el parseo falla a medio escribir, deja la
- * anterior intacta. Aquí se replica: una línea mala se salta y el resto del archivo sigue
- * sirviendo, en vez de tirar el archivo entero por un typo.
+ * Tuxedo hot-reloads its config and, if parsing fails mid-write, leaves the previous one
+ * untouched. That is replicated here: a bad line is skipped and the rest of the file keeps
+ * working, instead of throwing the whole file away over a typo.
  */
 export interface ParsedKeybinds {
   normal?: Keymap;
@@ -14,7 +14,7 @@ export interface ParsedKeybinds {
 
 const KNOWN_SECTION: Record<string, true> = { normal: true, recurrence: true };
 
-/** Las claves que el motor conoce. Una desconocida se ignora en vez de pasar al keymap. */
+/** The keys the engine knows. An unknown one is ignored instead of reaching the keymap. */
 const KNOWN_NORMAL_ACTION: Record<string, true> = {
   cursor_down: true, cursor_up: true, cursor_top: true, cursor_bottom: true,
   half_page_down: true, half_page_up: true,
@@ -41,8 +41,8 @@ const KNOWN_RECURRENCE_ACTION: Record<string, true> = {
 };
 
 /**
- * Quita el comentario del final sin tocar un `#` que esté dentro de un valor entrecomillado.
- * Es el caso real: `open_help = "?"` convive con comentarios de sección.
+ * Strips the trailing comment without touching a `#` inside a quoted value. That is the real
+ * case: `open_help = "?"` lives alongside section comments.
  */
 const stripComment = (line: string): string => {
   let quote = '';
@@ -67,7 +67,7 @@ const unquote = (text: string): string => {
   return quoted ? text.slice(1, -1) : text;
 };
 
-/** `"a"` -> `['a']`; `["a", "b"]` -> `['a', 'b']`; cualquier otra cosa -> null. */
+/** `"a"` -> `['a']`; `["a", "b"]` -> `['a', 'b']`; anything else -> null. */
 const parseValue = (raw: string): string[] | null => {
   const text = raw.trim();
   if (text.startsWith('[') && text.endsWith(']')) {
@@ -83,7 +83,7 @@ const parseValue = (raw: string): string[] | null => {
 };
 
 export const parseKeybindsToml = (source: string): ParsedKeybinds => {
-  // Acumulador mutable: Keymap es de solo lectura y aquí se está construyendo.
+  // Mutable accumulator: Keymap is read-only and this is where one is being built.
   const out: {
     normal?: Record<string, readonly string[]>;
     recurrence?: Record<string, readonly string[]>;
@@ -110,9 +110,8 @@ export const parseKeybindsToml = (source: string): ParsedKeybinds => {
     const key = pair[1];
     if (!(section === 'normal' ? KNOWN_NORMAL_ACTION : KNOWN_RECURRENCE_ACTION)[key]) continue;
 
-    // El valor se toma literal, sin trocear por "+": `begin_prompt_project = "+"` debe dar
-    // ['+'] y no una lista vacía. Tuxedo no puede escribir esa línea, pero nosotros sí
-    // debemos saber leerla.
+    // The value is taken literally, not split on "+": `begin_prompt_project = "+"` must yield
+    // ['+'] and not an empty list. Tuxedo cannot write that line, but we still have to read it.
     const value = parseValue(pair[2]);
     if (value === null) continue;
 

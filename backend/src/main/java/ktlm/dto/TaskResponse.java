@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** Representación de solo lectura de una tarea para el cliente. */
+/** Read-only representation of a task for the client. */
 public record TaskResponse(
         Long id,
         String title,

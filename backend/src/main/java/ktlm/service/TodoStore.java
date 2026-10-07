@@ -13,17 +13,17 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 /**
- * El directorio de archivos todo.txt, ahora del servidor.
+ * The directory of todo.txt files, now on the server.
  *
- * <p>Cada usuario tiene el suyo bajo {@code data/todo/<userId>/} con los tres archivos que
- * usa tuxedo: {@code todo.txt}, {@code done.txt} e {@code inbox.txt}.
+ * <p>Every user has one under {@code data/todo/<userId>/} with the three files tuxedo uses:
+ * {@code todo.txt}, {@code done.txt} and {@code inbox.txt}.
  *
- * <p>Cambiar esto es lo que desbloquea al resto: mientras el archivo fuera del navegador,
- * un móvil no podía verlo y un servidor MCP no tenía por dónde entrar. Ahora hay un solo
- * archivo y todos leen del mismo sitio.
+ * <p>Changing this is what unlocks the rest: while the file was in the browser, a phone
+ * could not see it and an MCP server had no way in. Now there is one file and everyone
+ * reads from the same place.
  *
- * <p>La escritura es atómica —temporal y renombrado— porque tuxedo hace lo mismo y porque
- * un corte a mitad dejaría un todo.txt truncado.
+ * <p>The write is atomic —temp file and rename— because tuxedo does the same and because
+ * a cut halfway would leave a truncated todo.txt.
  */
 @Component
 public class TodoStore {
@@ -42,7 +42,7 @@ public class TodoStore {
         return root.resolve(String.valueOf(userId));
     }
 
-    /** El todo.txt del usuario. Si no existe todavía, devuelve vacío y lo crea al escribir. */
+    /** The user's todo.txt. If it does not exist yet, returns empty and creates it on write. */
     public String read(Long userId) {
         return readFile(directoryFor(userId).resolve(TODO));
     }
@@ -51,7 +51,7 @@ public class TodoStore {
         return readFile(directoryFor(userId).resolve(DONE));
     }
 
-    /** Las líneas del done.txt, sin comentarios ni vacías. Es lo que consume la vista de archivo. */
+    /** The lines of done.txt, without comments or blanks. This is what the file view consumes. */
     public List<String> readDoneLines(Long userId) {
         return readDone(userId).lines()
                 .map(String::trim)
@@ -77,9 +77,9 @@ public class TodoStore {
     }
 
     /**
-     * Añade una línea al inbox y la devuelve. Vaciarlo ANTES de importar es lo que evita
-     * reprocesar lo mismo en cada pasada; si la importación fallara, esas líneas se
-     * pierden, que es el mismo compromiso que hace el drenaje de tuxedo.
+     * Adds a line to the inbox and returns it. Emptying it BEFORE importing is what avoids
+     * reprocessing the same thing on every pass; if the import failed, those lines are
+     * lost, which is the same trade-off tuxedo's drain makes.
      */
     public String consumeInbox(Long userId) {
         Path inbox = directoryFor(userId).resolve(INBOX);
@@ -91,7 +91,7 @@ public class TodoStore {
         return pending;
     }
 
-    /** Añade una línea al inbox conservando lo que ya hubiera. */
+    /** Adds a line to the inbox keeping whatever was already there. */
     public void appendInbox(Long userId, String line) {
         Path inbox = directoryFor(userId).resolve(INBOX);
         writeFile(inbox, readFile(inbox) + line.strip() + "\n");
@@ -102,8 +102,8 @@ public class TodoStore {
     }
 
     /**
-     * Compara el archivo con lo último importado. Es lo que permite decidir si hay que
-     * reimportar, sin tener que hacerlo siempre.
+     * Compares the file with what was last imported. It is what lets us decide whether to
+     * reimport, without having to do it every time.
      */
     public String hash(Long userId) {
         return hashOf(read(userId));
@@ -142,8 +142,8 @@ public class TodoStore {
             try {
                 Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (AtomicMoveNotSupportedException e) {
-                // Algunos sistemas de archivos no lo soportan; el renombrado a secas sigue
-                // siendo mucho mejor que escribir encima.
+                // Some filesystems do not support it; a plain rename is still
+                // much better than writing over it.
                 Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException e) {

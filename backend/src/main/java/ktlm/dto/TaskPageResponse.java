@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-/** Una página de tareas, con los metadatos que el cliente necesita para paginar. */
+/** A page of tasks, with the metadata the client needs to paginate. */
 public record TaskPageResponse(
         List<TaskResponse> content,
         int page,

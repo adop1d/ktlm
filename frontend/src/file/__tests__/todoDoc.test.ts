@@ -54,7 +54,7 @@ describe('todoLine', () => {
   });
 
   it('salta fines de semana en días hábiles', () => {
-    // 2026-05-15 es viernes: +1b debe caer en lunes, no en sábado.
+    // 2026-05-15 is a Friday: +1b must land on Monday, not Saturday.
     expect(advanceIsoDate('2026-05-15', '+1b')).toBe('2026-05-18');
   });
 

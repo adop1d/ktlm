@@ -1,7 +1,7 @@
-"""Habla con el servidor MCP por stdio y comprueba que las herramientas hacen lo que dicen.
+"""Talks to the MCP server over stdio and checks that the tools do what they say.
 
-No es un test unitario: arranca el servidor de verdad y le pide herramientas por el
-protocolo. Es lo único que demuestra que arranca, se anuncia y responde.
+Not a unit test: it starts the real server and asks it for tools over the protocol.
+It's the only thing that proves it starts, announces itself and answers.
 
     KTLM_SERVICE_TOKEN=ktlm_... .venv/bin/python smoke.py
 """
@@ -37,34 +37,34 @@ async def main() -> int:
             await sesion.initialize()
 
             herramientas = sorted(t.name for t in (await sesion.list_tools()).tools)
-            print("herramientas:", ", ".join(herramientas))
+            print("tools: ", ", ".join(herramientas))
             for esperada in ("listar", "agregar", "reorganizar", "completar", "archivo"):
                 if esperada not in herramientas:
-                    fallos.append(f"falta la herramienta {esperada}")
+                    failures.append(f"falta la herramienta {esperada}")
 
             quien = texto(await sesion.call_tool("quien_soy", {}))
             print("token:", quien)
-            if "token válido" not in quien:
-                fallos.append("el token de servicio no vale")
+            if "token valid" not in quien:
+                failures.append("el token de servicio no vale")
 
             antes = await sesion.call_tool("listar", {"tamano": 1})
             total_antes = antes.structured_content["total"]
 
             creada = await sesion.call_tool(
                 "agregar",
-                {"titulo": "tarea del smoke", "proyectos": ["smoke"], "prioridad": "HIGH"},
+                {"titulo": "smoke task", "proyectos": ["smoke"], "prioridad": "HIGH"},
             )
             uid = creada.structured_content["uid"] if creada.structured_content else 0
-            print("creada con uid", uid)
+            print("created with uid", uid)
             if not uid:
-                fallos.append(f"agregar no devolvió uid: {creada.content}")
+                failures.append(f"agregar no devolvió uid: {creada.content}")
 
-            # Tiene que estar en el archivo: de eso se trata, de que el MCP escriba.
+            # It has to be in the file: that's the whole point, that the MCP writes.
             archivo = texto(await sesion.call_tool("archivo", {}))
-            if "tarea del smoke" not in archivo:
-                fallos.append("la tarea no llegó al todo.txt")
+            if "smoke task" not in archivo:
+                failures.append("la tarea no llegó al todo.txt")
             if "+smoke" not in archivo:
-                fallos.append("el proyecto no llegó al todo.txt")
+                failures.append("el proyecto no llegó al todo.txt")
 
             await sesion.call_tool("completar", {"uid": uid})
             await sesion.call_tool("borrar", {"uid": uid})
@@ -72,16 +72,16 @@ async def main() -> int:
             despues = await sesion.call_tool("listar", {"tamano": 1})
             total_despues = despues.structured_content["total"]
             if total_despues != total_antes:
-                fallos.append(f"el script dejó rastro: {total_antes} → {total_despues}")
+                failures.append(f"el script dejó rastro: {total_antes} → {total_despues}")
             else:
-                print(f"limpio: {total_antes} tareas antes y después")
+                print(f"clean: {total_antes} tasks before and after")
 
-    if fallos:
-        print("\nFALLOS:")
-        for fallo in fallos:
-            print(" -", fallo)
+    if failures:
+        print("\nFAILURES:")
+        for failure in failures:
+            print(" -", failure)
         return 1
-    print("\ntodo correcto")
+    print("\nall good")
     return 0
 
 
