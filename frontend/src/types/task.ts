@@ -7,6 +7,8 @@ export interface Task {
   completed: boolean;
   priority: TaskPriority;
   dueDate?: string;
+  /** Comienzo de la tarea. No es parte de todo.txt; viaja como `start:`. */
+  startDate?: string;
   sortOrder: number;
   createdAt: string; // ISO string from backend
   updatedAt: string;

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -37,6 +38,9 @@ public class TodoTxtService {
 
     /** The note token in the file. It lives in extras, but has its own column. */
     private static final String KEY_NOTE = "note";
+
+    /** Same arrangement for the start date: a column here, a `start:` token there. */
+    private static final String KEY_START = "start";
 
     private static final Map<Task.Priority, Character> PRIORITY_TO_TODO = Map.of(
             Task.Priority.HIGH, 'A',
@@ -345,7 +349,7 @@ public class TodoTxtService {
                 task.isCompleted(),
                 task.getCompletedAt() == null ? null : task.getCompletedAt().toLocalDate(),
                 task.getTodoUid(),
-                conNota(parseExtras(task.getExtras()), task.getNote()),
+                conTags(parseExtras(task.getExtras()), task.getNote(), task.getStartDate()),
                 "");
     }
 
@@ -355,6 +359,15 @@ public class TodoTxtService {
         // emit it twice on the same line.
         String note = extras.remove(KEY_NOTE);
         task.setNote(note == null || note.isBlank() ? null : note);
+
+        String start = extras.remove(KEY_START);
+        try {
+            task.setStartDate(start == null || start.isBlank() ? null : LocalDate.parse(start.trim()));
+        } catch (DateTimeParseException e) {
+            // A malformed date is not worth failing an import over, and it is already gone
+            // from extras: it would otherwise come back as a raw token nobody can query.
+            task.setStartDate(null);
+        }
         task.setTitle(line.body());
         task.setPriority(toPriority(line.priority()));
         task.setDueDate(line.due());
@@ -387,14 +400,24 @@ public class TodoTxtService {
         return Task.Priority.MEDIUM;
     }
 
-    /** The note goes back into extras, which is where the codec writes it as `note:`. */
-    private static Map<String, String> conNota(Map<String, String> extras, String note) {
-        if (note == null || note.isBlank()) {
-            return extras;
+    /**
+     * The note and the start date go back into extras, which is where the codec writes them
+     * as `note:` and `start:`.
+     *
+     * <p>They are removed from extras on the way in and put back on the way out, so they
+     * never end up in the line twice — and if they did, the second one would be the one the
+     * parser saw.
+     */
+    private static Map<String, String> conTags(
+            Map<String, String> extras, String note, LocalDate startDate) {
+        Map<String, String> resultado = new LinkedHashMap<>(extras);
+        if (note != null && !note.isBlank()) {
+            resultado.put(KEY_NOTE, note);
         }
-        Map<String, String> conNota = new LinkedHashMap<>(extras);
-        conNota.put(KEY_NOTE, note);
-        return conNota;
+        if (startDate != null) {
+            resultado.put(KEY_START, startDate.toString());
+        }
+        return resultado;
     }
 
     /** Extras are stored as space-separated "key:value" tokens. */

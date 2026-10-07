@@ -43,13 +43,34 @@ class TaskServiceTest {
     @Mock
     private ApplicationEventPublisher events;
 
-    @InjectMocks
     private TaskService taskService;
+    private RecordingTodoTxt todoTxt;
+
+    /**
+     * A hand-rolled double instead of a mock: Mockito cannot instrument TodoTxtService in
+     * this environment. It counts the rewrites, which is the only thing these tests care
+     * about — that a mutation causes exactly one.
+     */
+    private static final class RecordingTodoTxt extends TodoTxtService {
+        int escrituras;
+
+        RecordingTodoTxt() {
+            super(null, null, null, null, null);
+        }
+
+        @Override
+        public String persistToFile(Long userId) {
+            escrituras++;
+            return "";
+        }
+    }
 
     private Task sampleTask;
 
     @BeforeEach
     void setUp() {
+        todoTxt = new RecordingTodoTxt();
+        taskService = new TaskService(taskRepository, events, todoTxt);
         sampleTask = new Task("Sample task", "A description");
         sampleTask.setId(1L);
         sampleTask.setUserId(OWNER);
@@ -91,7 +112,7 @@ class TaskServiceTest {
 
     @Test
     void createTask_ShouldStampOwnerAndPersist() {
-        TaskRequest request = new TaskRequest("Buy milk", null, null, null, null, null, null, null, null, null, null);
+        TaskRequest request = new TaskRequest("Buy milk", null, null, null, null, null, null, null, null, null, null, null);
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Task created = taskService.createTask(request, OWNER);
@@ -111,7 +132,7 @@ class TaskServiceTest {
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Task updated = taskService.updateTask(
-                1L, OWNER, new TaskRequest("Renamed", null, null, null, null, null, null, null, null, null, null));
+                1L, OWNER, new TaskRequest("Renamed", null, null, null, null, null, null, null, null, null, null, null));
 
         assertEquals("Renamed", updated.getTitle());
         assertEquals(Task.Priority.HIGH, updated.getPriority());
@@ -124,7 +145,7 @@ class TaskServiceTest {
         when(taskRepository.save(any(Task.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Task updated = taskService.updateTask(1L, OWNER,
-                new TaskRequest("T", "D", true, Task.Priority.LOW, LocalDate.of(2027, 1, 2), 9, null, null, null, null, null));
+                new TaskRequest("T", "D", true, Task.Priority.LOW, LocalDate.of(2027, 1, 2), null, 9, null, null, null, null, null));
 
         assertEquals(Task.Priority.LOW, updated.getPriority());
         assertEquals(LocalDate.of(2027, 1, 2), updated.getDueDate());
@@ -138,7 +159,7 @@ class TaskServiceTest {
 
         ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> taskService.updateTask(1L, OTHER,
-                        new TaskRequest("hijack", null, null, null, null, null, null, null, null, null, null)));
+                        new TaskRequest("hijack", null, null, null, null, null, null, null, null, null, null, null)));
 
         assertTrue(ex.getMessage().contains("1"));
         verify(taskRepository, never()).save(any(Task.class));
@@ -149,7 +170,7 @@ class TaskServiceTest {
         when(taskRepository.findByIdAndUserId(99L, OWNER)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                taskService.updateTask(99L, OWNER, new TaskRequest("x", null, null, null, null, null, null, null, null, null, null)));
+                taskService.updateTask(99L, OWNER, new TaskRequest("x", null, null, null, null, null, null, null, null, null, null, null)));
     }
 
     @Test
@@ -239,5 +260,35 @@ class TaskServiceTest {
         assertEquals(10, counts.all());
         assertEquals(6, counts.active());
         assertEquals(4, counts.completed());
+    }
+
+    /**
+     * A mutation through the REST API has to reach the file.
+     *
+     * <p>This was the gap: the browser patches its own mirror and PUTs the whole file, so
+     * every keyboard action ended up on disk. Anything the mirror cannot reach — a project
+     * typed into the edit form, the start date — changed the table and nothing else, and the
+     * table is not what anything else reads.
+     */
+    @Test
+    void mutations_RewriteTheFile() {
+        when(taskRepository.findByIdAndUserId(anyLong(), anyLong())).thenReturn(Optional.of(sampleTask));
+
+        taskService.updateTask(sampleTask.getId(), OWNER, new TaskRequest(
+                "Nuevo titulo", null, null, null, null, null, null, null, null, null, null, null));
+        taskService.toggleTaskCompletion(sampleTask.getId(), OWNER);
+        taskService.deleteTask(sampleTask.getId(), OWNER);
+
+        assertEquals(3, todoTxt.escrituras);
+    }
+
+    @Test
+    void createTask_RewritesTheFileToo() {
+        when(taskRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        taskService.createTask(new TaskRequest(
+                "Nueva", null, null, null, null, null, null, null, null, null, null, null), OWNER);
+
+        assertEquals(1, todoTxt.escrituras);
     }
 }

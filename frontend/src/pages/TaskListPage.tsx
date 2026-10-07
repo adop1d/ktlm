@@ -613,18 +613,9 @@ export const TaskListPage: FC = () => {
         )}
 
         {/* Cuerpo: panel izquierdo, lista, panel derecho */}
-        <div
-          className={`tui-body tui-with-status ${
-            showLeft && showRight
-              ? 'tui-body--both'
-              : showLeft
-                ? 'tui-body--left'
-                : showRight
-                  ? 'tui-body--right'
-                  : ''
-          }`}
-        >
+        <div className="tui-body tui-with-status">
           {showLeft ? (
+            <div className="tui-pane-float tui-pane-float--left">
             <FilterPane
               tasks={rows}
               activeProject={project}
@@ -638,6 +629,7 @@ export const TaskListPage: FC = () => {
                 setPage(0);
               }}
             />
+            </div>
           ) : null}
 
           <div>
@@ -690,6 +682,12 @@ export const TaskListPage: FC = () => {
           </div>
         ) : (
           <div className={`tui-list transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
+            <div className="tui-columns" aria-hidden="true">
+              <span>#</span>
+              <span>P</span>
+              <span>Tarea</span>
+              <span>meta</span>
+            </div>
             {rows.map((task, index) => (
               <TaskRow
                 key={task.id}
@@ -713,7 +711,13 @@ export const TaskListPage: FC = () => {
 
           </div>
 
-          {showRight ? <DetailPane task={rows[cursor]} /> : null}
+          {showRight ? (
+            <div
+              className={`tui-pane-float tui-pane-float--right${showLeft ? ' tui-pane-float--with-left' : ''}`}
+            >
+              <DetailPane task={rows[cursor]} />
+            </div>
+          ) : null}
         </div>
 
         {/* Pagination */}

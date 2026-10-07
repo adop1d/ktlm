@@ -148,6 +148,7 @@ public class TaskBatchService {
                 bool(raw.get("completed")),
                 enumValue(raw.get("priority"), Task.Priority.class),
                 raw.get("dueDate") == null ? null : java.time.LocalDate.parse(str(raw.get("dueDate"))),
+                raw.get("startDate") == null ? null : java.time.LocalDate.parse(str(raw.get("startDate"))),
                 raw.get("sortOrder") == null ? null : Integer.valueOf(str(raw.get("sortOrder"))),
                 str(raw.get("recurrence")),
                 str(raw.get("threshold")),

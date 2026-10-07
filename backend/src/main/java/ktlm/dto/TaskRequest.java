@@ -28,6 +28,8 @@ public record TaskRequest(
 
         LocalDate dueDate,
 
+        LocalDate startDate,
+
         Integer sortOrder,
 
         String recurrence,
@@ -58,6 +60,9 @@ public record TaskRequest(
         }
         if (dueDate != null) {
             task.setDueDate(dueDate);
+        }
+        if (startDate != null) {
+            task.setStartDate(startDate);
         }
         if (sortOrder != null) {
             task.setSortOrder(sortOrder);

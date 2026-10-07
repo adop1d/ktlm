@@ -63,6 +63,15 @@ public class Task {
     private String threshold;
 
     /**
+     * Start date, without the prefix of the `start:` token.
+     *
+     * <p>It is not part of the todo.txt format and does not pretend to be. tuxedo preserves
+     * what it does not know, which is exactly what makes the `uid:` work, so the token
+     * survives being edited in tuxedo and being written by this app.
+     */
+    private LocalDate startDate;
+
+    /**
      * Long body of the task, without the `note:` token prefix.
      *
      * <p>It is what opens in the editor with `O` and what gets written with `o`. It fits in
@@ -214,6 +223,14 @@ public class Task {
 
     public void setThreshold(String threshold) {
         this.threshold = threshold;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
     }
 
     public String getNote() {

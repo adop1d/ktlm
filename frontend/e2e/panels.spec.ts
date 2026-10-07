@@ -16,9 +16,34 @@ test.describe('paneles laterales', () => {
     await page.keyboard.press(']');
     await expect(page.getByRole('complementary', { name: 'Detalle' })).toBeVisible();
 
-    // both at once: three columns
+    // Both at once, floating over the list rather than taking a column from it.
     const clases = await page.locator('.tui-body').getAttribute('class');
-    expect(clases).toContain('tui-body--both');
+    expect(clases).not.toContain('tui-body--both');
+    await expect(page.locator('.tui-pane-float')).toHaveCount(2);
+  });
+
+  /**
+   * The list used to shrink from full width to 384px as soon as a panel opened, because the
+   * panels were grid columns and the title column is `1fr`. A filter that reflows the thing
+   * it filters moves the target out from under the cursor, so the width is the thing to
+   * assert — not the class name, which only says how it was done.
+   */
+  test('abrir un panel no estrecha la lista', async ({ page }) => {
+    const ancho = async () =>
+      (await page.locator('.tui-list').boundingBox())?.width ?? 0;
+
+    const antes = await ancho();
+    expect(antes).toBeGreaterThan(0);
+
+    await page.keyboard.press('[');
+    await expect(page.getByRole('complementary', { name: 'Filtros' })).toBeVisible();
+    // Close to, not equal: the widths come back as subpixels and a layout that shifts by
+    // 0.16px has not moved.
+    expect(await ancho()).toBeCloseTo(antes, 0);
+
+    await page.keyboard.press(']');
+    await expect(page.locator('.tui-pane-float')).toHaveCount(2);
+    expect(await ancho()).toBeCloseTo(antes, 0);
   });
 
   test('el panel de filtros lista proyectos y contextos con su cuenta', async ({ page }) => {

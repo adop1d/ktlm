@@ -5,7 +5,7 @@ import { TaskListPage } from './pages/TaskListPage';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { useAuthStore } from './stores/authStore';
-import { useUIStore } from './stores/uiStore';
+import { accentVars, useUIStore } from './stores/uiStore';
 import { ToastContainer } from './components/common/ToastContainer';
 import { FC, ReactNode, useEffect } from 'react';
 
@@ -23,6 +23,7 @@ const AppearanceSync: FC = () => {
   const theme = useUIStore(state => state.theme);
   const density = useUIStore(state => state.density);
   const lineNumbers = useUIStore(state => state.lineNumbers);
+  const accent = useUIStore(state => state.accent);
   const root = document.documentElement;
 
   useEffect(() => {
@@ -36,6 +37,15 @@ const AppearanceSync: FC = () => {
   useEffect(() => {
     root.setAttribute('data-density', density);
   }, [density]);
+
+  // The accent goes on the document rather than into the theme blocks in the stylesheet:
+  // six themes each redefining four shades is twenty-four declarations to keep in sync with
+  // one colour picker, and inline properties win over all of them without a single `!important`.
+  useEffect(() => {
+    for (const [nombre, valor] of Object.entries(accentVars(accent, theme))) {
+      root.style.setProperty(nombre, valor);
+    }
+  }, [accent, theme]);
 
   useEffect(() => {
     root.toggleAttribute('data-line-numbers', lineNumbers);

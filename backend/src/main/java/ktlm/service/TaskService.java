@@ -16,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,18 +30,43 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final ApplicationEventPublisher events;
+    private final TodoTxtService todoTxt;
 
-    public TaskService(TaskRepository taskRepository, ApplicationEventPublisher events) {
+    public TaskService(
+            TaskRepository taskRepository,
+            ApplicationEventPublisher events,
+            TodoTxtService todoTxt) {
         this.taskRepository = taskRepository;
         this.events = events;
+        this.todoTxt = todoTxt;
     }
 
     /**
      * Notifies this user's open sessions. It is published inside the transaction,
      * but the TaskEventStream listener waits for the commit before pushing the event.
+     *
+     * <p>It also rewrites the file, after the commit rather than inside the transaction.
+     * Every field the file cares about comes through here — the ones the browser patches in
+     * its mirror and then PUTs, and also the ones it cannot reach from the mirror, like the
+     * start date or a project typed into the edit form. Without this, a change made through
+     * the REST API landed in the table and never showed up in the todo.txt, which is the
+     * file everything else reads. Doing it here rather than in each caller means there is
+     * one place to forget, and it is this one.
      */
     private void notifyChanged(Long userId) {
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    todoTxt.persistToFile(userId);
+                }
+            });
+        } else {
+            // No transaction to wait for. Still write the file: a caller outside one would
+            // otherwise get a change that only exists in the table.
+            todoTxt.persistToFile(userId);
+        }
     }
 
     /**

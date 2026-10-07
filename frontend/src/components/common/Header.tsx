@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { ServiceTokensModal } from './ServiceTokensModal';
+import { AccentPicker } from './AccentPicker';
 
 /**
  * The top bar. It used to be a card header with rounded buttons; here it is a single line,
@@ -14,6 +15,7 @@ export const Header: FC = () => {
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const [tokensAbiertos, setTokensAbiertos] = useState(false);
+  const [colorAbierto, setColorAbierto] = useState(false);
 
   return (
     <header className="tui-titlebar">
@@ -38,6 +40,19 @@ export const Header: FC = () => {
           <>
             <button
               type="button"
+              onClick={() => setColorAbierto(true)}
+              className="tui-titlebar-button flex items-center gap-1"
+              title="Color de acento"
+              aria-label="Color de acento"
+            >
+              <span
+                className="inline-block w-3 h-3 rounded-full"
+                style={{ background: 'var(--color-accent)' }}
+              />
+              color
+            </button>
+            <button
+              type="button"
               onClick={() => setTokensAbiertos(true)}
               className="tui-titlebar-button"
               title="Tokens para automatizaciones y el servidor MCP"
@@ -52,6 +67,7 @@ export const Header: FC = () => {
       </nav>
 
       {tokensAbiertos ? <ServiceTokensModal onClose={() => setTokensAbiertos(false)} /> : null}
+      {colorAbierto ? <AccentPicker onClose={() => setColorAbierto(false)} /> : null}
     </header>
   );
 };

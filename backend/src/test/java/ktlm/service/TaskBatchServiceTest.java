@@ -33,7 +33,7 @@ class TaskBatchServiceTest {
         int failAtCall = -1;
 
         FakeTasks() {
-            super(null, null);
+            super(null, null, null);
         }
 
         /** Fails only on the indicated call: so you can see where the batch stops. */
