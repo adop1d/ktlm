@@ -1,6 +1,4 @@
-<img width="128" alt="favicon" src="https://github.com/user-attachments/assets/2b9e7761-bdfd-4e0d-af9f-4ffe89b5213e" />
-
-# tareas
+# Kelvin's tuxedo like manager
 
 A `todo.txt` manager that speaks your file's language and is driven by terminal keys.
 
