@@ -34,6 +34,8 @@ public record TaskRequest(
 
         String threshold,
 
+        String note,
+
         List<String> projects,
 
         List<String> contexts) {
@@ -65,6 +67,9 @@ public record TaskRequest(
         }
         if (threshold != null) {
             task.setThreshold(threshold.isBlank() ? null : threshold.trim());
+        }
+        if (note != null) {
+            task.setNote(note.isBlank() ? null : note.trim());
         }
         if (projects != null) {
             task.setProjects(new LinkedHashSet<>(projects));

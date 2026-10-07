@@ -66,6 +66,21 @@ export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
       return route.fulfill({ json: { all: total, active: total - completed, completed } });
     }
 
+    //done.txt y el todo.txt no son la lista de tareas. Sin esto caen en la rama de
+    // abajo y devuelven un objeto de página donde se espera un array o un texto, que
+    // revienta el render en vez de fallar la aserción.
+    if (url.pathname.endsWith('/archived')) {
+      return route.fulfill({ json: [] as string[] });
+    }
+    if (url.pathname.endsWith('/file')) {
+      const body = state.tasks.map((task) => `${task.title} uid:${task.id}`).join('\n');
+      return route.fulfill({ status: 200, contentType: 'text/plain', body });
+    }
+    if (url.pathname.endsWith('/note')) {
+      if (method === 'GET') return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
+      return route.fulfill({ json: { ok: true, vacia: !(request.postData() ?? '').trim() } });
+    }
+
     if (method === 'GET') {
       const wanted = Number(url.searchParams.get('page') ?? '0');
       const size = Number(url.searchParams.get('size') ?? '20');

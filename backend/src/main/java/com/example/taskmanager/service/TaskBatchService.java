@@ -136,6 +136,10 @@ public class TaskBatchService {
     /**
      * Solo los campos presentes. Los ausentes van a null y {@code applyTo} los deja como
      * están: un lote de reordenación no debe ir borrando proyectos por el camino.
+     *
+     * <p>La nota no está aquí a propósito. Es una ruta dentro del directorio del usuario y
+     * por lo tanto hay que validarla; ponerla en el lote dejaría esa puerta abierta.
+     * Las notas entran por {@code PUT /api/tasks/{id}/note}.
      */
     static TaskRequest toRequest(Map<?, ?> raw) {
         return new TaskRequest(
@@ -147,6 +151,7 @@ public class TaskBatchService {
                 raw.get("sortOrder") == null ? null : Integer.valueOf(str(raw.get("sortOrder"))),
                 str(raw.get("recurrence")),
                 str(raw.get("threshold")),
+                null, // la nota no se escribe desde aquí: es una ruta y hay que validarla
                 strList(raw.get("projects")),
                 strList(raw.get("contexts")));
     }

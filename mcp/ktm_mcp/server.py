@@ -10,7 +10,6 @@ El token no puede archivar: esa operación se decidió que es de una persona.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any, Literal
 
@@ -48,6 +47,8 @@ def _task_dict(task: api.Task) -> dict[str, Any]:
         "completada": task.completed,
         "vence": task.due,
         "prioridad": task.priority,
+        "recurrencia": task.recurrence,
+        "nota": task.note,
         "proyectos": task.projects,
         "contextos": task.contexts,
     }
@@ -102,9 +103,27 @@ def actualizar(
     contextos: list[str] | None = None,
     prioridad: Literal["LOW", "MEDIUM", "HIGH"] | None = None,
     vence: str | None = None,
+    recurrencia: str | None = None,
 ) -> dict[str, Any]:
-    """Cambia una tarea. Lo que no digas se queda como está."""
-    return _task_dict(api.update_task(uid, titulo, proyectos, contextos, prioridad, vence))
+    """Cambia una tarea. Lo que no digas se queda como está.
+
+    `recurrencia` es el literal del token `rec:`: "daily", "+1m", "+2w", "eom".
+    Para las notas usa `escribir_nota`, no esta: aquí la nota sería una ruta sin validar.
+    """
+    return _task_dict(api.update_task(uid, titulo, proyectos, contextos, prioridad, vence,
+                                      recurrencia))
+
+
+@server.tool()
+def leer_nota(uid: int) -> str:
+    """El texto de la nota de una tarea. Vacío si no tiene."""
+    return api.read_note(uid)
+
+
+@server.tool()
+def escribir_nota(uid: int, texto: str) -> dict[str, Any]:
+    """Guarda la nota de una tarea. Texto vacío la borra y quita el token `note:`."""
+    return api.write_note(uid, texto)
 
 
 @server.tool()

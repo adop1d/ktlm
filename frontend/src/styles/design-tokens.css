@@ -318,3 +318,112 @@
 .crt-flicker { animation: crt-flicker 0.15s infinite; }
 
 /* ======================== DISABLED VIEW TRANSITIONS ======================== */
+/* ======================== TEMAS ======================== */
+
+/*
+ * Los cinco de tuxedo, más noir, que es el de serie. Se aplican sobre `dark` o sobre la
+ * raíz, así que un tema claro tiene que apagar `dark` — no vale con tener colores claros,
+ * porque el resto de la hoja sigue leyendo `.dark` para sombras y bordes.
+ *
+ * Solo se redefinen lo que cambia de verdad: fondo, texto y acento. Redefinir los cuatro
+ * backgrounds y los cuatro bordes por tema serían casi quinientas líneas para que se note
+ * poco.
+ */
+
+[data-theme='dawn'] {
+  --bg-base: #eff1f5;
+  --bg-surface: #f5f6fa;
+  --bg-elevated: #e6e9f0;
+  --surface-base: #f5f6fa;
+  --surface-elevated: #e6e9f0;
+  --surface-overlay: #ffffff;
+  --text-primary: #4c4f69;
+  --text-secondary: #6c6f85;
+  --text-tertiary: #8c8fa1;
+  --text-muted: #9ca0b0;
+  --border-default: rgba(76, 79, 105, 0.12);
+  --border-emphasis: rgba(76, 79, 105, 0.22);
+  --color-accent: #7287fd;
+}
+
+[data-theme='muted-slate'] {
+  --bg-base: #12141a;
+  --bg-surface: #181b23;
+  --bg-elevated: #1f232d;
+  --surface-base: #15171e;
+  --surface-elevated: #1c202a;
+  --surface-overlay: #242833;
+  --text-primary: #cbd2e0;
+  --text-secondary: #9aa3b2;
+  --text-tertiary: #6b7280;
+  --text-muted: #4b5563;
+  --border-default: rgba(203, 210, 224, 0.10);
+  --border-emphasis: rgba(203, 210, 224, 0.18);
+  --color-accent: #7dd3fc;
+}
+
+[data-theme='nord'] {
+  --bg-base: #2e3440;
+  --bg-surface: #3b4252;
+  --bg-elevated: #434c5e;
+  --surface-base: #353b47;
+  --surface-elevated: #3f4757;
+  --surface-overlay: #4c566a;
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-tertiary: #a9b1c1;
+  --text-muted: #7b8494;
+  --border-default: rgba(236, 239, 244, 0.10);
+  --border-emphasis: rgba(236, 239, 244, 0.18);
+  --color-accent: #88c0d0;
+}
+
+[data-theme='catppuccin'] {
+  --bg-base: #1e1e2e;
+  --bg-surface: #26263a;
+  --bg-elevated: #313244;
+  --surface-base: #242438;
+  --surface-elevated: #2e2e42;
+  --surface-overlay: #38384d;
+  --text-primary: #cdd6f4;
+  --text-secondary: #bac2de;
+  --text-tertiary: #a6adc8;
+  --text-muted: #7f849c;
+  --border-default: rgba(205, 214, 244, 0.10);
+  --border-emphasis: rgba(205, 214, 244, 0.18);
+  --color-accent: #cba6f7;
+}
+
+[data-theme='gruvbox'] {
+  --bg-base: #282828;
+  --bg-surface: #32302f;
+  --bg-elevated: #3c3836;
+  --surface-base: #2d2b2a;
+  --surface-elevated: #353231;
+  --surface-overlay: #403e3c;
+  --text-primary: #ebdbb2;
+  --text-secondary: #d5c4a1;
+  --text-tertiary: #bdae93;
+  --text-muted: #928374;
+  --border-default: rgba(235, 219, 178, 0.10);
+  --border-emphasis: rgba(235, 219, 178, 0.18);
+  --color-accent: #fabd2f;
+}
+
+/* ======================== DENSIDAD ======================== */
+
+/*
+ * Tres pasos, como en tuxedo. Se ajusta el alto de fila y no el tamaño de la letra: con
+ * letra más pequeña el texto se lee peor de lo que parece al.reduce la fila.
+ */
+
+[data-density='compact'] { --cell: 0.3rem; --row-height: 1.6rem; --font-scale: 0.9; }
+[data-density='comfortable'] { --cell: 0.6rem; --row-height: 2rem; --font-scale: 1; }
+[data-density='cozy'] { --cell: 1rem; --row-height: 2.6rem; --font-scale: 1; }
+
+.tui-row { min-height: var(--row-height, 2rem); }
+
+/* Números de línea. Apagados de serie como en tuxedo, y `L` los enciende. El orden de
+   estas dos reglas importa: la que gana es la última, así que la condición va después. */
+.tui-row-index { display: none; }
+[data-line-numbers] .tui-row-index { display: inline-block; }

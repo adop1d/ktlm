@@ -40,6 +40,8 @@ class Task:
     completed: str | None
     due: str | None
     priority: str
+    recurrence: str | None
+    note: str | None
     projects: list[str]
     contexts: list[str]
 
@@ -75,6 +77,8 @@ def _to_task(raw: dict[str, Any]) -> Task:
         completed=raw.get("completedAt"),
         due=raw.get("dueDate"),
         priority=raw.get("priority", "MEDIUM"),
+        recurrence=raw.get("recurrence"),
+        note=raw.get("note"),
         projects=list(raw.get("projects") or []),
         contexts=list(raw.get("contexts") or []),
     )
@@ -139,6 +143,7 @@ def update_task(
     contexts: list[str] | None = None,
     priority: str | None = None,
     due_date: str | None = None,
+    recurrence: str | None = None,
 ) -> Task:
     """Cambia solo lo que se informa; lo demás se queda. Va por el lote y por tanto escribe el archivo."""
     operation: dict[str, Any] = {"op": "update", "uid": uid}
@@ -152,6 +157,8 @@ def update_task(
         operation["priority"] = priority
     if due_date is not None:
         operation["dueDate"] = due_date
+    if recurrence is not None:
+        operation["recurrence"] = recurrence
     batch([operation])
     return get_task(uid)
 
@@ -169,3 +176,23 @@ def read_file() -> str:
     """El todo.txt tal cual, con comentarios y formato. Para leer, no para editar."""
     with httpx.Client(timeout=20.0) as client:
         return _check(client.get(f"{BASE_URL}/api/tasks/file", headers=_headers())).text
+
+def read_note(uid: int) -> str:
+    """El texto de la nota. Vacío si la tarea no tiene."""
+    with httpx.Client(timeout=20.0) as client:
+        return _check(client.get(f"{BASE_URL}/api/tasks/{uid}/note", headers=_headers())).text
+
+
+def write_note(uid: int, text: str) -> dict[str, Any]:
+    """Guarda la nota. Vaciar borra el archivo y quita el token `note:` de la línea.
+
+    Va por su endpoint y no por el lote a propósito: la nota es una ruta dentro del
+    directorio del usuario, y el endpoint es donde se valida que no se salga.
+    """
+    with httpx.Client(timeout=20.0) as client:
+        res = _check(client.put(
+            f"{BASE_URL}/api/tasks/{uid}/note",
+            content=text.encode("utf-8"),
+            headers={**_headers(), "Content-Type": "text/plain;charset=UTF-8"},
+        ))
+    return res.json()

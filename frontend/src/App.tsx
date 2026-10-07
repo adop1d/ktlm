@@ -12,19 +12,35 @@ import { FC, ReactNode, useEffect } from 'react';
 const queryClient = new QueryClient();
 
 /**
- * Syncs dark mode state to HTML element
+ * Pone en el `<html>` lo que decide el store: el modo claro/oscuro y el tema, la densidad y
+ * los números de línea. Todo por atributo, porque es lo que lee el CSS.
+ *
+ * <p>El tema se pone siempre, incluso el de serie: si se omitiera, al borrar el atributo
+ * de la lista guardada el color de acento se quedaría en el del tema anterior.
  */
-const DarkModeSync: FC = () => {
+const AppearanceSync: FC = () => {
   const darkMode = useUIStore(state => state.darkMode);
-  
+  const theme = useUIStore(state => state.theme);
+  const density = useUIStore(state => state.density);
+  const lineNumbers = useUIStore(state => state.lineNumbers);
+  const root = document.documentElement;
+
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    root.classList.toggle('dark', darkMode);
   }, [darkMode]);
-  
+
+  useEffect(() => {
+    root.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    root.setAttribute('data-density', density);
+  }, [density]);
+
+  useEffect(() => {
+    root.toggleAttribute('data-line-numbers', lineNumbers);
+  }, [lineNumbers]);
+
   return null;
 };
 
@@ -58,7 +74,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <DarkModeSync />
+        <AppearanceSync />
         <ToastContainer />
         {/* CRT Effects */}
         <div className="noise-overlay" />

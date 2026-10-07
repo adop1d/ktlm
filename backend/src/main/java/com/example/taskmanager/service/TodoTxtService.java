@@ -5,7 +5,8 @@ import com.example.taskmanager.repository.TaskRepository;
 import com.example.taskmanager.todotxt.ParsedTask;
 import com.example.taskmanager.todotxt.TodoTxtCodec;
 import org.springframework.context.ApplicationEventPublisher;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -31,6 +32,9 @@ public class TodoTxtService {
 
     // MEDIUM no emite prioridad: es el estado por defecto y el archivo es del usuario.
     // Escribir "(B)" en cada línea contaminaría el todo.txt entero.
+    /** Token de la nota en el archivo. Vive en extras, pero con columna propia. */
+    private static final String KEY_NOTE = "note";
+
     private static final Map<Task.Priority, Character> PRIORITY_TO_TODO = Map.of(
             Task.Priority.HIGH, 'A',
             Task.Priority.LOW, 'C');
@@ -95,13 +99,55 @@ public class TodoTxtService {
      * cada cambio. Un cliente sin espejo —el servidor MCP, un script— sí: si no, el cambio
      * llegaba a la base y no se notaba nunca en el todo.txt.
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String persistToFile(Long userId) {
-        String content = codec.serialize(taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
-                .map(this::toParsed)
-                .toList());
+        List<Task> tasks = taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId);
+        prepararParaEscribir(tasks);
+        String content = codec.serialize(tasks.stream().map(this::toParsed).toList());
         writeFile(userId, content);
         events.publishEvent(new TaskEventStream.TasksChanged(userId));
         return content;
+    }
+
+    /**
+     * Le da a cada tarea el uid y el orden que el archivo necesita y la base aún no tiene.
+     *
+     * <p>El importador asigna esas cosas al leer, pero hay cambios que no pasan por ahí:
+     * un lote del servidor MCP, una nota. Si el archivo se escribiera tal cual, la línea
+     * saldría sin {@code uid:} y con el orden a cero —y el cliente, que llama a la API con
+     * el uid, apuntaría a la tarea 0. El cambio se perdería sin error, que es lo peor que
+     * puede pasar.
+     *
+     * <p>El uid es el id de la fila: un número que el servidor ya tiene, no uno que hay que
+     * inventar y mantener en su sitio.
+     *
+     * <p>Y aquí no se llama al importador, aunque podría: serializaría líneas sin uid y él
+     * no podría emparejarlas con las tareas que son suyas. Con cinco tareas de igual
+     * título no hay coincidencia única, así que crearía cinco tareas nuevas y dejaría las
+     * viejas huérfanas. Es un bucle, no una ayuda.
+     */
+    private void prepararParaEscribir(List<Task> tasks) {
+        List<Task> sucias = new ArrayList<>();
+        for (int i = 0; i < tasks.size(); i++) {
+            Task task = tasks.get(i);
+            boolean sucia = false;
+            if (task.getSortOrder() == null || task.getSortOrder() != i) {
+                task.setSortOrder(i);
+                sucia = true;
+            }
+            if (task.getId() != null && (task.getTodoUid() == null || task.getTodoUid().isBlank())) {
+                task.setTodoUid(String.valueOf(task.getId()));
+                sucia = true;
+            }
+            if (sucia) {
+                task.updateTimestamp();
+                sucias.add(task);
+            }
+        }
+        if (!sucias.isEmpty()) {
+            taskRepository.saveAll(sucias);
+            taskRepository.flush();
+        }
     }
 
     /** Reconstruye el archivo desde la base. Para cuando alguien edita el archivo a mano y se rompe. */
@@ -286,11 +332,16 @@ public class TodoTxtService {
                 task.isCompleted(),
                 task.getCompletedAt() == null ? null : task.getCompletedAt().toLocalDate(),
                 task.getTodoUid(),
-                parseExtras(task.getExtras()),
+                conNota(parseExtras(task.getExtras()), task.getNote()),
                 "");
     }
 
     private void apply(Task task, ParsedTask line) {
+        Map<String, String> extras = new LinkedHashMap<>(line.extras() == null ? Map.of() : line.extras());
+        // `note` tiene columna propia. Si además se queda en extras, al reescribir el
+        // archivo saldría dos veces en la misma línea.
+        String note = extras.remove(KEY_NOTE);
+        task.setNote(note == null || note.isBlank() ? null : note);
         task.setTitle(line.body());
         task.setPriority(toPriority(line.priority()));
         task.setDueDate(line.due());
@@ -298,7 +349,7 @@ public class TodoTxtService {
         task.setThreshold(line.threshold());
         task.setProjects(new LinkedHashSet<>(line.projects()));
         task.setContexts(new LinkedHashSet<>(line.contexts()));
-        task.setExtras(formatExtras(line.extras()));
+        task.setExtras(formatExtras(extras));
         task.setCompleted(line.done());
         task.setCompletedAt(line.done()
                 ? LocalDateTime.of(line.completed() == null ? LocalDate.now() : line.completed(), LocalTime.MIDNIGHT)
@@ -321,6 +372,16 @@ public class TodoTxtService {
         }
         // B y cualquier letra restante colapsan a la única prioridad intermedia del dominio.
         return Task.Priority.MEDIUM;
+    }
+
+    /** La nota vuelve a los extras, que es donde el codec la escribe como `note:`. */
+    private static Map<String, String> conNota(Map<String, String> extras, String note) {
+        if (note == null || note.isBlank()) {
+            return extras;
+        }
+        Map<String, String> conNota = new LinkedHashMap<>(extras);
+        conNota.put(KEY_NOTE, note);
+        return conNota;
     }
 
     /** Los extras se guardan como tokens "clave:valor" separados por espacios. */

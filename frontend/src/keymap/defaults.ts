@@ -10,6 +10,8 @@ export const DEFAULT_NORMAL_KEYMAP: Record<string, readonly string[]> = {
   begin_edit: ['e'],
   begin_edit_insert: ['i'],
   toggle_complete: ['x'],
+  note_new: ['o'],
+  note_open: ['O'],
   delete: ['dd'],
   reschedule: ['r'],
   cycle_priority: ['p'],

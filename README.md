@@ -42,7 +42,7 @@ Requisitos: Java 21, Node 22 y PostgreSQL.
 
 ---
 
-## El atajo de las teclas
+## Las teclas
 
 Los atajos son **los de tuxedo**, no un juego inventado. Si ya tienes tu
 `~/.config/tuxedo/keybinds.toml` con ajustes, la web los lee.
@@ -115,6 +115,8 @@ La app lo drena en cada sondeo, le aplica la misma gramática de lenguaje natura
 | `PUT` | `/api/tasks/file` | Reemplaza el archivo entero y devuelve la versión reconciliada |
 | `GET` | `/api/tasks/archived` | Lo que hay en `done.txt` |
 | `GET` | `/api/tasks/stream` | Cambios de esta cuenta por SSE |
+| `GET` | `/api/tasks/{id}/note` | El texto de la nota (`text/plain`) |
+| `PUT` | `/api/tasks/{id}/note` | Guarda la nota. Vaciar borra el archivo y quita `note:` |
 | `POST` | `/api/auth/service-tokens` | Emite un token de servicio. Se devuelve **una sola vez** |
 
 ---
@@ -173,10 +175,10 @@ estado fija abajo con el modo, la posición, los contadores y el líder del chor
 ## Tests
 
 ```bash
-cd backend  && ./mvnw test          # 63 tests
+cd backend  && ./mvnw test          # 68 tests
 cd frontend && npm run typecheck    # TypeScript en modo estricto
 cd frontend && npm test            # 55 tests
-cd frontend && npm run test:e2e    # Playwright, 42
+cd frontend && npm run test:e2e    # Playwright, 44
 
 # El servidor MCP, de punta a punta contra el backend levantado:
 cd mcp && KTM_SERVICE_TOKEN=ktm_... .venv/bin/python smoke.py
@@ -192,14 +194,47 @@ cuatro, con el typecheck y los e2e antes del build.
 - **Una línea sin `uid:` se duplica** si el archivo se edita por fuera dos veces antes de que la
   app escriba de vuelta. Cuando no hay ambigüedad se reconoce por contenido; con dos tareas
   idénticas no se adivina. En cuanto la app escribe, el ciclo es estable.
-- Notas (`o` / `O`) y algunas acciones puramente decorativas de tuxedo —temas, densidad,
-  números de línea, captura por QR— no están implementadas.
+- La captura por QR es un **generador**, no un lector: muestra la dirección de la app para
+  abrirla en el móvil. Es lo que hace tuxedo y es lo que se puede hacer sin pedirle a la app
+  que use la cámara.
+
+### Notas
+
+`o` escribe la nota de la tarea del cursor; `O` abre la que ya tiene. En el archivo
+`note:` **no guarda el texto, guarda una ruta** —igual que en tuxedo—, y el texto vive en
+un archivo del directorio del usuario.
+
+No es una decisión de gusto. El token se separa por espacios, así que un texto de varias
+palabras se truncaría en la primera; y una nota de verdad suele tener varias líneas. Con un
+archivo de por medio caben las dos cosas.
+
+```
+2026-10-07 Llamar a pagos +trabajo note:notas/nota-46.md uid:46
+```
+
+La ruta es relativa al directorio del usuario y se valida antes de tocarla: sin `..` y
+comprobando que el archivo resuelto sigue dentro, incluidos los enlaces simbólicos, que
+salen del directorio aunque la ruta «parezca» interna.
+
+Las notas no se escriben desde `/batch` a propósito: son una ruta y por lo tanto hay que
+validarlas, y meterlas en el lote dejaría esa puerta abierta.
+
+### Temas, densidad y números de línea
+
+`T` abre el selector, `D` cambia la densidad y `L` enciende los números de línea. Los seis
+temas son los de tuxedo —noir, dawn, muted-slate, nord, catppuccin, gruvbox— y dawn es el
+único claro: cambiar a él apaga el modo oscuro, porque pedir un tema claro sobre sombras de
+oscuro queda peor que no tener temas.
+
+`?` muestra un QR con la dirección de la app para abrirla en el móvil.
+
+---
 
 ## Servidor MCP
 
-`mcp/` es un servidor MCP que habla con la API y expone diez herramientas: `listar`, `obtener`,
-`agregar`, `actualizar`, `completar`, `deshacer`, `borrar`, `reorganizar`, `archivo` y
-`quien_soy`.
+`mcp/` es un servidor MCP que habla con la API y expone doce herramientas: `listar`,
+`obtener`, `agregar`, `actualizar`, `completar`, `deshacer`, `borrar`, `reorganizar`,
+`archivo`, `quien_soy`, `leer_nota` y `escribir_nota`.
 
 No reimplementa nada: las reglas de formato, los `uid` y la escritura del archivo son los del
 servidor, así que no puede desincronizarse de la web.

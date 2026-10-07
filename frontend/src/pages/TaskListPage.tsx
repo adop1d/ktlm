@@ -1,4 +1,7 @@
 import { FC, useState, useEffect, useRef } from 'react';
+import { NoteEditor } from '../components/task/NoteEditor';
+import { ShareQr } from '../components/common/ShareQr';
+import { THEMES, THEME_LABELS, useUIStore } from '../stores/uiStore';
 import { useTasks } from '../hooks/useTasks';
 import { useTaskStream } from '../hooks/useTaskStream';
 import { DEFAULT_NORMAL_KEYMAP } from '../keymap/defaults';
@@ -214,6 +217,39 @@ export const TaskListPage: FC = () => {
       case 'open_help':
         setShowHelp(true);
         return;
+      case 'open_share':
+        setShowQr(true);
+        return;
+      // Apariencia: son globales, así que van al store y no a estado de esta página.
+      case 'cycle_theme':
+        cycleTheme();
+        return;
+      case 'open_theme_picker':
+        setThemeMenu((open) => !open);
+        return;
+      case 'cycle_density':
+        cycleDensity();
+        return;
+      case 'toggle_line_num':
+        toggleLineNumbers();
+        return;
+      case 'note_new':
+      case 'note_open': {
+        const task = rows[cursor];
+        if (!task) {
+          addToast('info', 'No hay ninguna tarea debajo del cursor');
+          return;
+        }
+        // `O` en tuxedo abre la nota que ya existe; aquí las dos teclas abren el editor,
+        // que con una nota vacía es un editor vacío. Un aviso, no un no-op.
+        if (action === 'note_open' && !task.note) {
+          addToast('info', 'Esa tarea todavía no tiene nota');
+        }
+        // id, no sortOrder: sortOrder es la posición en la línea y el endpoint de nota
+        // habla con la fila. Con la primera tarea, sortOrder es 0 y no hay tarea 0.
+        setNota({ uid: task.id, titulo: task.title });
+        return;
+      }
       case 'toggle_left_pane':
         setShowLeft((current) => !current);
         return;
@@ -254,6 +290,15 @@ export const TaskListPage: FC = () => {
   // Las acciones que mutan datos pasan por el todo.txt. Sin archivo vinculado no hay uid
   // sobre el que actuar, y fingir que funcionan es peor que mostrarlas apagadas.
   const isLinked = useTodoDoc((state) => state.status === 'linked' || state.status === 'in-memory');
+  const [nota, setNota] = useState<{ uid: number; titulo: string } | null>(null);
+  const [themeMenu, setThemeMenu] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+
+  const cycleTheme = useUIStore((state) => state.cycleTheme);
+  const setTheme = useUIStore((state) => state.setTheme);
+  const cycleDensity = useUIStore((state) => state.cycleDensity);
+  const toggleLineNumbers = useUIStore((state) => state.toggleLineNumbers);
+
   const fileBackedActions: readonly ActionName[] = [
     'toggle_complete',
     'delete',
@@ -331,6 +376,34 @@ export const TaskListPage: FC = () => {
     return (
       <>
         <Header />
+
+      {nota ? (
+        <NoteEditor
+          uid={nota.uid}
+          title={nota.titulo}
+          onClose={() => setNota(null)}
+        />
+      ) : null}
+
+      {showQr ? <ShareQr onClose={() => setShowQr(false)} /> : null}
+
+      {themeMenu ? (
+        <div className="fixed top-12 right-4 z-40 tui-panel p-2">
+          {THEMES.map((nombre) => (
+            <button
+              key={nombre}
+              type="button"
+              onClick={() => {
+                setTheme(nombre);
+                setThemeMenu(false);
+              }}
+              className="block w-full text-left text-xs px-2 py-1 btn-ghost"
+            >
+              {THEME_LABELS[nombre]}
+            </button>
+          ))}
+        </div>
+      ) : null}
         <section className="max-w-2xl mx-auto py-8 px-4">
           <PageHeaderSkeleton />
           <TaskFormSkeleton />
@@ -347,6 +420,34 @@ export const TaskListPage: FC = () => {
     return (
       <>
         <Header />
+
+      {nota ? (
+        <NoteEditor
+          uid={nota.uid}
+          title={nota.titulo}
+          onClose={() => setNota(null)}
+        />
+      ) : null}
+
+      {showQr ? <ShareQr onClose={() => setShowQr(false)} /> : null}
+
+      {themeMenu ? (
+        <div className="fixed top-12 right-4 z-40 tui-panel p-2">
+          {THEMES.map((nombre) => (
+            <button
+              key={nombre}
+              type="button"
+              onClick={() => {
+                setTheme(nombre);
+                setThemeMenu(false);
+              }}
+              className="block w-full text-left text-xs px-2 py-1 btn-ghost"
+            >
+              {THEME_LABELS[nombre]}
+            </button>
+          ))}
+        </div>
+      ) : null}
         <section className="max-w-2xl mx-auto py-8 px-4">
           <div className="flex flex-col items-center justify-center py-16 text-center animate-bounce-in">
             <div className="w-16 h-16 mb-4 rounded-full bg-[var(--color-danger-muted)] flex items-center justify-center">
@@ -373,6 +474,34 @@ export const TaskListPage: FC = () => {
   return (
     <>
       <Header />
+
+      {nota ? (
+        <NoteEditor
+          uid={nota.uid}
+          title={nota.titulo}
+          onClose={() => setNota(null)}
+        />
+      ) : null}
+
+      {showQr ? <ShareQr onClose={() => setShowQr(false)} /> : null}
+
+      {themeMenu ? (
+        <div className="fixed top-12 right-4 z-40 tui-panel p-2">
+          {THEMES.map((nombre) => (
+            <button
+              key={nombre}
+              type="button"
+              onClick={() => {
+                setTheme(nombre);
+                setThemeMenu(false);
+              }}
+              className="block w-full text-left text-xs px-2 py-1 btn-ghost"
+            >
+              {THEME_LABELS[nombre]}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <section className="max-w-2xl mx-auto py-8 px-4">
         <TodoFileBar
           onOpen={() => void todoFile.openAndLink()}
