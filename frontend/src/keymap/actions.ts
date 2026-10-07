@@ -12,6 +12,7 @@ export type ActionName =
   | 'toggle_show_done' | 'toggle_show_future'
   | 'toggle_left_pane' | 'toggle_right_pane' | 'open_theme_picker'
   | 'cycle_density' | 'toggle_line_num' | 'cycle_theme'
+  | 'note_new' | 'note_open'
   | 'open_command_palette' | 'open_share' | 'open_help' | 'open_settings'
   | 'escape_stack' | 'quit';
 
@@ -54,6 +55,8 @@ export const NORMAL_ACTIONS: readonly ActionName[] = [
   'go_list',
   'toggle_archive_view',
   'archive_completed',
+  'note_new',
+  'note_open',
   'toggle_show_done',
   'toggle_show_future',
   'toggle_left_pane',

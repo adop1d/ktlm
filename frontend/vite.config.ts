@@ -36,7 +36,14 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Sin `html` a propósito. Si el documento está en la precarga, el service worker
+        // sirve el index.html viejo hasta que se registra una versión nueva del worker, y
+        // durante esa ventana la app carga un bundle que el servidor ya no tiene. Parece
+        // que el build no llegó y no lo es: el documento va siempre a la red.
+        globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest}'],
+        cleanupOutdatedCaches: true,
+        // Sin fallback de navegación: las rutas las resuelve la red, no una copia en caché.
+        navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

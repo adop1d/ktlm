@@ -19,6 +19,7 @@ const KNOWN_NORMAL_ACTION: Record<string, true> = {
   cursor_down: true, cursor_up: true, cursor_top: true, cursor_bottom: true,
   half_page_down: true, half_page_up: true,
   begin_add: true, begin_edit: true, begin_edit_insert: true, toggle_complete: true,
+  note_new: true, note_open: true,
   delete: true, reschedule: true, cycle_priority: true,
   move_task_down: true, move_task_up: true,
   begin_prompt_context: true, begin_prompt_project: true,

@@ -86,3 +86,20 @@ export const readArchived = () => fetchJSON<string[]>(`${BASE}/archived`);
 
 export const archiveCompleted = () =>
   fetchJSON<{ archived: number; doneFile: string }>(`${BASE}/archive`, { method: 'POST' });
+/** El texto de la nota de una tarea. Vacío si no tiene. */
+export const readNote = (uid: number) =>
+  fetch(`${API_BASE}/api/tasks/${uid}/note`, { headers: authHeader() }).then(async (res) => {
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.text();
+  });
+
+/** Guarda la nota. Vaciar borra el archivo y quita el token `note:` de la línea. */
+export const writeNote = (uid: number, content: string) =>
+  fetch(`${API_BASE}/api/tasks/${uid}/note`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'text/plain;charset=UTF-8', ...authHeader() },
+    body: content,
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json();
+  });

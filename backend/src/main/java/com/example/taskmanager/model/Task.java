@@ -63,6 +63,15 @@ public class Task {
     private String threshold;
 
     /**
+     * Cuerpo largo de la tarea, sin el prefijo del token `note:`.
+     *
+     * <p>Es lo que se abre en el editor con `O` y lo que se escribe con `o`. Cabe en una
+     * línea del archivo pero no en el título, así que va aparte.
+     */
+    @Size(max = 4000)
+    private String note;
+
+    /**
      * Identidad estable para el round-trip archivo <-> base de datos. Se escribe como el
      * token `uid:` de la línea, que tuxedo conserva sin alterar. Único por cuenta.
      */
@@ -205,6 +214,14 @@ public class Task {
 
     public void setThreshold(String threshold) {
         this.threshold = threshold;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 
     public String getTodoUid() {

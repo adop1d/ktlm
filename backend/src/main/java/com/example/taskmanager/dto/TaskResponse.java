@@ -19,6 +19,7 @@ public record TaskResponse(
         LocalDateTime completedAt,
         String recurrence,
         String threshold,
+        String note,
         String todoUid,
         List<String> projects,
         List<String> contexts) {
@@ -37,6 +38,7 @@ public record TaskResponse(
                 task.getCompletedAt(),
                 task.getRecurrence(),
                 task.getThreshold(),
+                task.getNote(),
                 task.getTodoUid(),
                 List.copyOf(task.getProjects()),
                 List.copyOf(task.getContexts()));

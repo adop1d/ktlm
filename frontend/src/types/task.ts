@@ -17,6 +17,8 @@ export interface Task {
   recurrence?: string | null;
   /** Literal del token `t:` sin el prefijo, p. ej. "-3d". */
   threshold?: string | null;
+  /** Ruta del archivo de nota, tal cual va en el token `note:`. */
+  note?: string | null;
   /** Identidad estable en el archivo, la que hace de clave del round-trip. */
   todoUid?: string | null;
   projects: string[];

@@ -49,6 +49,8 @@ const LABELS: Record<ActionName, string> = {
   go_list: 'vista de lista',
   toggle_archive_view: 'ver el archivo',
   archive_completed: 'archivar completadas',
+  note_new: 'nota nueva',
+  note_open: 'abrir nota',
   toggle_show_done: 'mostrar completadas',
   toggle_show_future: 'mostrar futuras',
   toggle_left_pane: 'panel izquierdo',
