@@ -124,25 +124,29 @@ La app lo drena en cada sondeo, le aplica la misma gramática de lenguaje natura
 ## Arquitectura
 
 ```
-┌─ navegador ────────────────────┐      ┌─ Spring Boot ──────────┐
-│  TodoDoc   espejo del archivo   │      │  TodoTxtCodec          │
-│  useKeymap motor vim/chords     │─────▶│  /import /export       │
-│  FileHandlePort  FSA            │      │  /archive              │
-└───────────────────────────────┘      └───────────┬────────────┘
-                                                       │
+┌─ navegador ────────────────────┐      ┌─ Spring Boot ─────────────────┐
+│  TodoDoc   espejo del archivo   │      │  TodoTxtCodec                 │
+│  useKeymap motor vim/chords     │─────▶│  TodoStore      el archivo    │
+│  FileHandlePort  importar disco │      │  TodoFileWatcher vigilante    │
+└───────────────────────────────┘      └───────────┬────────────────────┘
+                                                       │ índice
                                               ┌────────▼────────┐
                                               │ Postgres + Flyway│
                                               └─────────────────┘
 ```
 
-- **La base de datos es la fuente de verdad; el archivo es el espejo.** Al abrir un archivo se
-  importa, y a partir de ahí cada cambio local va a la API, se parchea la línea y se vuelca al
-  disco con escritura agrupada.
-- **Cambios externos**: cada 400 ms se compara el contenido con lo último visto. Si no coincide,
-  **gana el archivo** y se recarga, descartando el historial de undo, igual que hace tuxedo.
-- **Escritura pendiente**: un parche local marca el hash como inválido; el sondeo no reconcilia
-  hasta que el volcado termina, o se desharía lo recién escrito.
-- **Flyway** es la única fuente del esquema. `V1` es el baseline, `V2` los campos de todo.txt.
+- **El archivo es la fuente de verdad; la base de datos es el índice.** El servidor guarda
+  el `todo.txt` de cada usuario en su directorio y solo lo reconstruye desde la base cuando
+  hace falta. Así el móvil, el escritorio y el servidor MCP ven lo mismo, y escribir desde
+  fuera no es un caso especial: es el camino normal.
+- **Cambios externos**: un vigilante del sistema de ficheros lo detecta; cada 30 s un barrido
+  compara el hash por si el sistema no avisó —Docker usa overlayfs y no siempre avisa—. Si no
+  coincide, **gana el archivo** y se recarga, descartando el historial de undo, igual que
+  hace tuxedo.
+- **Escritura pendiente**: un parche local marca el hash como inválido; el vigilante no
+  reconcilia hasta que el volcado termina, o se desharía lo recién escrito.
+- **Flyway** es la única fuente del esquema: `V1` el baseline, `V2` los campos de todo.txt,
+  `V3` los tokens de servicio y `V4` las notas.
 
 ### Stack
 
@@ -282,7 +286,7 @@ operación: el navegador lleva su propio espejo del archivo, este cliente no, y 
   `./backend` y `./frontend`, así que hay uno en cada uno. Sin eso, un `.env` se iba a la
   capa del builder con `COPY . .`.
 - **Postgres no se publica.** El backend llega a la base por la red de compose. Antes
-  estaba en `0.0.0.0:5432` con la contraseña `PLACEHOLDER_LEE_EL_ENV` escrita en el fichero.
+  estaba en `0.0.0.0:5432` con una contraseña escrita en el propio fichero.
 - **Login y registro limitados**: diez intentos por cuenta cada quince minutos. El login
   se cuenta por nombre de usuario —una IP se rota en un segundo, un nombre no— y el
   registro por IP, porque al revés sería un arma para bloquear la cuenta de otro.
