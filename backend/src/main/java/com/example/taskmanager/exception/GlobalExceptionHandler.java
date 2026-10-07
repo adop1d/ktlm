@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -64,6 +65,22 @@ public class GlobalExceptionHandler {
     /**
      * Handles bad credentials exception for authentication failures.
      */
+    /**
+     * Autenticado pero sin permiso: 403, no 500. Un token de servicio que intenta archivar
+     * cae aquí, y un 500 lo haría parecer un fallo del servidor en vez de una negativa.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException e) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("timestamp", java.time.LocalDateTime.now().toString());
+        response.put("status", HttpStatus.FORBIDDEN.value());
+        response.put("error", "Forbidden");
+        response.put("message", "tu credencial no permite esta operación");
+        log.warn("Acceso denegado: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, Object>> handleBadCredentialsException(BadCredentialsException ex) {
         Map<String, Object> response = new HashMap<>();

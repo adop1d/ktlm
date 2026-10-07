@@ -1,7 +1,8 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
+import { ServiceTokensModal } from './ServiceTokensModal';
 
 /**
  * La barra superior. Antes era una cabecera de tarjeta con botones redondeados; aquí es
@@ -13,6 +14,7 @@ export const Header: FC = () => {
   const logout = useAuthStore((state) => state.logout);
   const darkMode = useUIStore((state) => state.darkMode);
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
+  const [tokensAbiertos, setTokensAbiertos] = useState(false);
 
   return (
     <header className="tui-titlebar">
@@ -34,11 +36,23 @@ export const Header: FC = () => {
         </button>
 
         {username ? (
-          <button type="button" onClick={logout} className="tui-titlebar-button">
-            salir
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setTokensAbiertos(true)}
+              className="tui-titlebar-button"
+              title="Tokens para automatizaciones y el servidor MCP"
+            >
+              tokens
+            </button>
+            <button type="button" onClick={logout} className="tui-titlebar-button">
+              salir
+            </button>
+          </>
         ) : null}
       </nav>
+
+      {tokensAbiertos ? <ServiceTokensModal onClose={() => setTokensAbiertos(false)} /> : null}
     </header>
   );
 };

@@ -1,0 +1,16 @@
+[project]
+name = "ktm-mcp"
+version = "1.0.0"
+description = "Servidor MCP para KTM"
+requires-python = ">=3.11"
+dependencies = ["mcp>=2.3", "httpx>=0.27"]
+
+[project.scripts]
+ktm-mcp = "ktm_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ktm_mcp"]

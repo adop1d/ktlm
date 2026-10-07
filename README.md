@@ -109,7 +109,13 @@ La app lo drena en cada sondeo, le aplica la misma gramática de lenguaje natura
 |---|---|---|
 | `POST` | `/api/tasks/import` | `text/plain` → upsert por `uid`, devuelve el archivo reconciliado |
 | `GET` | `/api/tasks/export` | El `todo.txt` completo del usuario |
+| `POST` | `/api/tasks/batch` | Varias operaciones en una transacción. O entran todas, o ninguna |
 | `POST` | `/api/tasks/archive` | Manda las completadas a `done.txt` |
+| `GET` | `/api/tasks/file` | El `todo.txt` del usuario, tal cual (`text/plain`) |
+| `PUT` | `/api/tasks/file` | Reemplaza el archivo entero y devuelve la versión reconciliada |
+| `GET` | `/api/tasks/archived` | Lo que hay en `done.txt` |
+| `GET` | `/api/tasks/stream` | Cambios de esta cuenta por SSE |
+| `POST` | `/api/auth/service-tokens` | Emite un token de servicio. Se devuelve **una sola vez** |
 
 ---
 
@@ -167,10 +173,13 @@ estado fija abajo con el modo, la posición, los contadores y el líder del chor
 ## Tests
 
 ```bash
-cd backend  && ./mvnw test          # 41 tests
+cd backend  && ./mvnw test          # 63 tests
 cd frontend && npm run typecheck    # TypeScript en modo estricto
-cd frontend && npm test            # 58 tests
-cd frontend && npm run test:e2e    # Playwright
+cd frontend && npm test            # 55 tests
+cd frontend && npm run test:e2e    # Playwright, 42
+
+# El servidor MCP, de punta a punta contra el backend levantado:
+cd mcp && KTM_SERVICE_TOKEN=ktm_... .venv/bin/python smoke.py
 ```
 
 Los e2e interceptan la API, así que no necesitan el backend levantado. En el CI corren los
@@ -180,16 +189,54 @@ cuatro, con el typecheck y los e2e antes del build.
 
 ## Limitaciones conocidas
 
-- **El archivo solo se sincroniza desde el navegador en Chromium.** Es lo que soporta la File
-  System Access API. Fuera de ahí la app funciona igual contra el servidor, pero el espejo no
-  escribe en disco y la interfaz lo dice.
 - **Una línea sin `uid:` se duplica** si el archivo se edita por fuera dos veces antes de que la
   app escriba de vuelta. Cuando no hay ambigüedad se reconoce por contenido; con dos tareas
   idénticas no se adivina. En cuanto la app escribe, el ciclo es estable.
-- **La lista se sincroniza desde el navegador, no desde el móvil.** El móvil puede escribir por
-  `inbox.txt`, pero no refleja cambios hechos en el escritorio hasta que el navegador sondea.
 - Notas (`o` / `O`) y algunas acciones puramente decorativas de tuxedo —temas, densidad,
   números de línea, captura por QR— no están implementadas.
+
+## Servidor MCP
+
+`mcp/` es un servidor MCP que habla con la API y expone diez herramientas: `listar`, `obtener`,
+`agregar`, `actualizar`, `completar`, `deshacer`, `borrar`, `reorganizar`, `archivo` y
+`quien_soy`.
+
+No reimplementa nada: las reglas de formato, los `uid` y la escritura del archivo son los del
+servidor, así que no puede desincronizarse de la web.
+
+```bash
+cd mcp
+python3 -m venv .venv && .venv/bin/pip install -e .
+export KTM_SERVICE_TOKEN=ktm_...      # se crea en la app, en la barra: «tokens»
+.venv/bin/python -m ktm_mcp.server    # stdio, por defecto
+```
+
+### Credenciales
+
+Usa **tokens de servicio**, no JWT. Uno por usuario y por herramienta, que se revocan sin
+invalidar la sesión de quien los creó, y que no pueden archivar tareas: esa decisión es de
+una persona.
+
+### Por qué `/batch`
+
+`reorganizar` no es azúcar sobre n llamadas. Sin él, un agente que mueve veinte tareas hace
+veinte peticiones y el `todo.txt` se reescribe veinte veces, con la posibilidad de que otra
+cosa se cuele entremedias. El lote es una transacción —o entra todo, o nada— y escribe el
+archivo una sola vez al final. También evita tener que cargar el `todo.txt` entero en cada paso.
+
+Por eso **toda** escritura del servidor MCP pasa por `/batch`, incluso la de una sola
+operación: el navegador lleva su propio espejo del archivo, este cliente no, y el lote es el
+único camino que lo escribe.
+
+### Configuración
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `KTM_API_URL` | `http://localhost:8080` | Dónde está la API |
+| `KTM_SERVICE_TOKEN` | — | Obligatoria. El token de servicio |
+| `KTM_MCP_TRANSPORT` | `stdio` | `http` para streamable-http en el puerto `KTM_MCP_PORT` |
+
+---
 
 ## Licencia
 
