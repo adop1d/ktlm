@@ -1,6 +1,7 @@
 package com.example.taskmanager.config;
 
 import com.example.taskmanager.security.JwtAuthenticationFilter;
+import com.example.taskmanager.security.ServiceTokenFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,10 +29,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ServiceTokenFilter serviceTokenFilter;
     private final UserDetailsService userDetailsService;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, UserDetailsService userDetailsService) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            ServiceTokenFilter serviceTokenFilter,
+            UserDetailsService userDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.serviceTokenFilter = serviceTokenFilter;
         this.userDetailsService = userDetailsService;
     }
 
@@ -47,7 +53,9 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // El token de servicio se prueba antes que el JWT: si no hay, deja pasar al de JWT.
+            .addFilterBefore(serviceTokenFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

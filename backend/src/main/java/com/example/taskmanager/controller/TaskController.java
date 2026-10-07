@@ -50,13 +50,13 @@ public class TaskController {
      * pantalla se entera.
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public SseEmitter stream() {
         return events.subscribe(currentUser.id());
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public TaskPageResponse getTasks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -70,13 +70,13 @@ public class TaskController {
     }
 
     @GetMapping("/counts")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public TaskCounts getCounts() {
         return taskService.getCounts(currentUser.id());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public ResponseEntity<TaskResponse> getTaskById(@PathVariable Long id) {
         return taskService.getTaskById(id, currentUser.id())
                 .map(TaskResponse::from)
@@ -85,39 +85,39 @@ public class TaskController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody TaskRequest task) {
         TaskResponse created = TaskResponse.from(taskService.createTask(task, currentUser.id()));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public TaskResponse updateTask(@PathVariable Long id, @Valid @RequestBody TaskRequest taskDetails) {
         return TaskResponse.from(taskService.updateTask(id, currentUser.id(), taskDetails));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
         taskService.deleteTask(id, currentUser.id());
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public TaskResponse toggleTaskCompletion(@PathVariable Long id) {
         return TaskResponse.from(taskService.toggleTaskCompletion(id, currentUser.id()));
     }
 
     @GetMapping(value = "/export", produces = "text/plain; charset=UTF-8")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public ResponseEntity<String> export() {
         return ResponseEntity.ok(todoTxtService.export(currentUser.id()));
     }
 
     @PostMapping(value = "/import", consumes = "text/plain", produces = "application/json")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public TodoTxtService.ImportResult importFile(@RequestBody String todoTxt) {
         return todoTxtService.importFile(currentUser.id(), todoTxt);
     }
@@ -129,7 +129,7 @@ public class TaskController {
      * lo que leería un servidor MCP: mismo archivo, mismos bytes.
      */
     @GetMapping(value = "/file", produces = "text/plain; charset=UTF-8")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public ResponseEntity<String> readFile() {
         Long userId = currentUser.id();
         todoTxtService.ensureFile(userId);
@@ -144,21 +144,21 @@ public class TaskController {
      * los uid antiguos.
      */
     @PutMapping(value = "/file", consumes = "text/plain", produces = MediaType.TEXT_PLAIN_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public String replaceFile(@RequestBody String todoTxt) {
         return todoTxtService.importFile(currentUser.id(), todoTxt).file();
     }
 
     /** Reconstruye el archivo desde la base. Para cuando se edita a mano y se rompe. */
     @PostMapping(value = "/file/rebuild", produces = MediaType.TEXT_PLAIN_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public String rebuildFile() {
         return todoTxtService.rebuildFile(currentUser.id());
     }
 
     /** Lo que hay en done.txt: la vista de archivo, ahora servida por el servidor. */
     @GetMapping("/archived")
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public List<String> archived() {
         return todoStore.readDoneLines(currentUser.id());
     }
@@ -168,7 +168,7 @@ public class TaskController {
      * tarea: un atajo de iOS, un cron, un `echo`.
      */
     @PostMapping(value = "/inbox", consumes = "text/plain", produces = MediaType.TEXT_PLAIN_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public String appendToInbox(@RequestBody String line) {
         Long userId = currentUser.id();
         todoTxtService.appendInbox(userId, line);
@@ -180,13 +180,15 @@ public class TaskController {
      * próximo ciclo; esto lo resuelve ya, que es lo que hace el servidor MCP.
      */
     @PostMapping(value = "/inbox/drain", produces = MediaType.TEXT_PLAIN_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN', 'ROLE_MCP')")
     public String drainInbox() {
         Long userId = currentUser.id();
         todoTxtService.drainInbox(userId);
         return todoTxtService.export(userId);
     }
 
+    // Sin ROLE_MCP a propósito: archivar es irreversible desde la app y se decidió que lo
+    // haga una persona. El resto de la API sí acepta un token de servicio.
     @PostMapping("/archive")
     @PreAuthorize("hasAnyRole('ROLE_USER', 'ROLE_ADMIN')")
     public TodoTxtService.ArchiveResult archive() {

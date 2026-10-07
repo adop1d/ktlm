@@ -88,6 +88,22 @@ public class TodoTxtService {
         watcher.watch(userId);
     }
 
+    /**
+     * Vuelca a disco el estado actual y avisa a las sesiones abiertas.
+     *
+     * <p>El navegador no lo necesita: lleva su propio espejo y manda el archivo entero con
+     * cada cambio. Un cliente sin espejo —el servidor MCP, un script— sí: si no, el cambio
+     * llegaba a la base y no se notaba nunca en el todo.txt.
+     */
+    public String persistToFile(Long userId) {
+        String content = codec.serialize(taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
+                .map(this::toParsed)
+                .toList());
+        writeFile(userId, content);
+        events.publishEvent(new TaskEventStream.TasksChanged(userId));
+        return content;
+    }
+
     /** Reconstruye el archivo desde la base. Para cuando alguien edita el archivo a mano y se rompe. */
     public String rebuildFile(Long userId) {
         String content = codec.serialize(taskRepository.findByUserIdOrderBySortOrderAscIdAsc(userId).stream()
