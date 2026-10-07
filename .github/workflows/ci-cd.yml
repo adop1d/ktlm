@@ -45,7 +45,39 @@ jobs:
     needs: [test-backend, test-frontend]
     steps:
       - uses: actions/checkout@v4
+      # `docker build` y no `docker compose build`, a propósito. Compose interpola el
+      # fichero entero antes de hacer nada —incluido `build`— y se niega a arrancar si
+      # JWT_SECRET o DB_PASSWORD no están. Para construir imágenes eso no viene al caso:
+      # los Dockerfile copian código, y ninguna variable de entorno llega a la imagen.
+      #
+      # La alternativa era inventar valores en el paso para que la interpolación pase.
+      # Funciona, pero ata el build a unos secretos que no usa y que nadie debería
+      # guardar en el repositorio para que un build funcione.
       - name: Build Docker images
         run: |
-          docker compose build
-          # docker compose push  # uncomment to push to registry
+          docker build -t ktlm-backend:latest ./backend
+          docker build -t ktlm-frontend:latest ./frontend
+          # Para subir a un registro, haría falta un login previo:
+          #   echo "${{ secrets.REGISTRY_TOKEN }}" | docker login -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+          #   docker push ktlm-backend:latest
+          #   docker push ktlm-frontend:latest
+
+      # El .dockerignore es lo único que impide que un .env con secretos acabe en una
+      # capa, y en una capa da igual borrarlo después. Merece un paso que lo compruebe.
+      #
+      # Se mira la etapa `builder` del frontend y no la imagen final porque es la que hace
+      # `COPY . .`: es donde se colaría. La imagen final solo lleva el dist, así que
+      # mirarla daría verde siempre, que es la forma más fácil de tener un test que no
+      # comprueba nada.
+      - name: Verify no .env reached the images
+        run: |
+          docker build --target builder -t ktlm-frontend-builder ./frontend
+          if docker run --rm --entrypoint sh ktlm-frontend-builder -c 'test -e /app/.env'; then
+            echo "::error::el .env acabó en la imagen del frontend"
+            exit 1
+          fi
+          if docker run --rm --entrypoint sh ktlm-backend:latest -c 'test -e /app/.env'; then
+            echo "::error::el .env acabó en la imagen del backend"
+            exit 1
+          fi
+          echo "ninguna imagen lleva un .env"
