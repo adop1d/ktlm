@@ -1,0 +1,60 @@
+# Lo que no debe acabar en la imagen. BuildKit manda el contexto entero, así que sin esto
+# un .env o unas llaves se copian a la imagen aunque el Dockerfile no los mencione: y en el
+# historial de capas siguen ahí aunque luego los borres.
+
+# Secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Datos de ejecución
+data/
+logs/
+*.log
+
+# Versiones
+.git
+.gitignore
+.github
+
+# Dependencias: las reinstala la imagen
+node_modules/
+.venv/
+venv/
+
+# Compilados de la máquina: se rehacen dentro
+dist/
+build/
+target/
+frontend/dist/
+backend/target/
+
+# Pruebas y sus resultados
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# Editores y sistema
+.idea/
+.vscode/
+.factorypath
+.classpath
+.project
+.settings/
+.DS_Store
+*.swp
+
+# Documentación y ficheros que no hacen falta en runtime
+README.md
+**/*.md
+!mcp/README.md
+docker-compose.yml
+Dockerfile
+.dockerignore
+.gitignore

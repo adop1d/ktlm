@@ -1,0 +1,28 @@
+# El contexto de este build es ./backend, así que este fichero —y no el de la raíz— es el
+# que manda. BuildKit manda el contexto entero a la máquina que construye, y lo que no esté
+# aquí acaba en una capa: borrarlo después no lo saca del historial.
+
+# Secretos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Datos de ejecución
+data/
+*.log
+
+# Compilados de la máquina: los rehace el build
+target/
+*.class
+*.jar
+
+# Tests y herramientas: no hacen falta para producir el jar
+src/test/
+.factorypath
+.classpath
+.project
+.settings/

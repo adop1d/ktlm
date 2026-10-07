@@ -38,7 +38,7 @@ export const LandingPage: FC = () => (
     <header className="tui-titlebar">
       <span className="tui-titlebar-brand">
         <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={18} height={18} />
-        <span>ktm</span>
+        <span>ktlm</span>
       </span>
       <nav className="tui-titlebar-actions">
         <Link to="/app" className="tui-titlebar-button">
