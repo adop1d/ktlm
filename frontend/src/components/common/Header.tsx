@@ -4,6 +4,7 @@ import { useUIStore } from '../../stores/uiStore';
 import { useAuthStore } from '../../stores/authStore';
 import { ServiceTokensModal } from './ServiceTokensModal';
 import { AccentPicker } from './AccentPicker';
+import { useI18nStore, useT } from '../../i18n';
 
 /**
  * The top bar. It used to be a card header with rounded buttons; here it is a single line,
@@ -16,6 +17,9 @@ export const Header: FC = () => {
   const toggleDarkMode = useUIStore((state) => state.toggleDarkMode);
   const [tokensAbiertos, setTokensAbiertos] = useState(false);
   const [colorAbierto, setColorAbierto] = useState(false);
+  const t = useT();
+  const language = useI18nStore((state) => state.language);
+  const setLanguage = useI18nStore((state) => state.setLanguage);
 
   return (
     <header className="tui-titlebar">
@@ -31,7 +35,7 @@ export const Header: FC = () => {
           type="button"
           onClick={toggleDarkMode}
           className="tui-titlebar-button"
-          title={darkMode ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+          title={darkMode ? t('header.theme.light') : t('header.theme.dark')}
         >
           {darkMode ? '☾' : '☀'}
         </button>
@@ -40,27 +44,35 @@ export const Header: FC = () => {
           <>
             <button
               type="button"
+              onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+              className="tui-titlebar-button"
+              title={language === 'es' ? 'Switch to English' : 'Cambiar a español'}
+            >
+              {language === 'es' ? 'EN' : 'ES'}
+            </button>
+            <button
+              type="button"
               onClick={() => setColorAbierto(true)}
               className="tui-titlebar-button flex items-center gap-1"
-              title="Color de acento"
-              aria-label="Color de acento"
+              title={t('header.accent.label')}
+              aria-label={t('header.accent.label')}
             >
               <span
                 className="inline-block w-3 h-3 rounded-full"
                 style={{ background: 'var(--color-accent)' }}
               />
-              color
+              {t('header.accent.button')}
             </button>
             <button
               type="button"
               onClick={() => setTokensAbiertos(true)}
               className="tui-titlebar-button"
-              title="Tokens para automatizaciones y el servidor MCP"
+              title={t('header.tokens.title')}
             >
-              tokens
+              {t('header.tokens.button')}
             </button>
             <button type="button" onClick={logout} className="tui-titlebar-button">
-              salir
+              {t('header.logout')}
             </button>
           </>
         ) : null}

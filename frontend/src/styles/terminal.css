@@ -881,3 +881,102 @@ kbd {
   border-color: var(--color-danger);
   color: var(--color-danger);
 }
+
+/* ======================== EDITOR DE LÍNEA ======================== */
+
+/*
+ * La tarea escribiéndose como la línea que va a quedar, no como una tabla de casillas.
+ * Cada tramo enseña la tecla que lo escribe y se ilumina cuando es el que está el cursor:
+ * que se vea «qué pulsa para tocar esto» es lo que acopla el editor al keymap en vez de
+ * dejar dos maneras de hacer lo mismo que no se hablan.
+ */
+.tui-editor {
+  border: 1px solid var(--border-emphasis);
+  background: var(--surface-elevated);
+  padding: 0.5rem 0.65rem;
+}
+
+.tui-editor-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.tui-editor-seg {
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tui-editor-seg:hover {
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.tui-editor-seg.is-focused {
+  color: var(--color-accent-legible, var(--color-accent));
+  border-color: var(--color-accent);
+  background: var(--color-accent-muted);
+}
+
+.tui-editor-seg--title {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+}
+
+.tui-editor-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font: inherit;
+  padding: 0.1rem 0.15rem;
+}
+
+.tui-editor-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.tui-editor-hint button {
+  color: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tui-editor-hint button.is-focused {
+  color: var(--color-accent-legible, var(--color-accent));
+}
+
+.tui-editor-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border-default);
+  font-family: var(--font-mono);
+}
+
+.tui-editor-prompt-label {
+  color: var(--color-accent-legible, var(--color-accent));
+  white-space: nowrap;
+}
+
+.tui-editor-prompt input {
+  flex: 1;
+}

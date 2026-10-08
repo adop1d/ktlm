@@ -10,7 +10,8 @@ test('los campos que solo se podían poner con el teclado también están a la v
   await page.goto('/app');
   await waitForList(page);
   await page.locator('h1').click();
-  await page.keyboard.press('e');
+  // `E`, not `e`: `e` opens the line editor. The form is the long way round, on purpose.
+  await page.keyboard.press('E');
   await page.locator('#task-start-date').waitFor();
 
   await page.locator('#task-start-date').fill('2026-11-15');

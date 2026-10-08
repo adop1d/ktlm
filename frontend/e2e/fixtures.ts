@@ -163,6 +163,21 @@ const seedSession = (page: Page, token = 'fake-jwt') =>
         version: 0,
       })
     );
+    // The language is pinned rather than left to the browser.
+    //
+    // Playwright runs with an en-US locale, so without this every assertion on a Spanish
+    // string would fail — and worse, they would pass on a machine configured in Spanish and
+    // fail in CI, which is the kind of difference that gets blamed on flakiness.
+    //
+    // Only when it is absent. This script runs on every navigation including reloads, and
+    // overwriting unconditionally would make the stored choice impossible to observe: a
+    // test for "the choice survives a reload" could never pass against its own fixture.
+    if (!window.localStorage.getItem('i18n-store')) {
+      window.localStorage.setItem(
+        'i18n-store',
+        JSON.stringify({ state: { language: 'es' }, version: 1 })
+      );
+    }
   }, token);
 
 /** Test with the task API mocked and the session already seeded. */

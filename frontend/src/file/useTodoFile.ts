@@ -182,6 +182,37 @@ export const useTodoFile = () => {
    * The done file lives on disk, not in the database: completed tasks are archived and leave
    * the list. That is why the file view is built by reading the sibling.
    */
+  /**
+   * Saves what the line editor touched.
+   *
+   * <p>It goes through the doc mirror and not straight to the API, like every other change
+   * from the keyboard: the mirror is what makes Ctrl-Z work, and going around it would mean
+   * an edit that the undo stack never heard of.
+   */
+  const updateFromLine = useCallback(
+    async (patch: {
+      uid: number;
+      title: string;
+      priority: string;
+      projects: string[];
+      contexts: string[];
+      dueDate: string;
+      recurrence: string;
+    }) => {
+      todoDocMutations.updateFromLine(patch);
+      const { serialize } = useTodoDoc.getState();
+      markPendingWrite();
+      try {
+        await api.replaceTodoFile(serialize());
+      } catch (error) {
+        addToast('error', `No se pudo guardar: ${(error as Error).message}`);
+      } finally {
+        clearPendingWrite();
+      }
+    },
+    [addToast]
+  );
+
   const readArchive = useCallback(async (): Promise<string[]> => {
     return api.readArchived().catch(() => []);
   }, []);
@@ -197,6 +228,7 @@ export const useTodoFile = () => {
     undo,
     archive,
     readArchive,
+    updateFromLine,
     importFromDisk,
     isPersistent: isFileSystemAccessSupported(),
   };

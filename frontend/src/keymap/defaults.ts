@@ -9,6 +9,9 @@ export const DEFAULT_NORMAL_KEYMAP: Record<string, readonly string[]> = {
   begin_add: ['n'],
   begin_edit: ['e'],
   begin_edit_insert: ['i'],
+  // The box version of `e`. `e` edits the line itself; this one opens the form, for when
+  // clicking is the faster way.
+  begin_edit_form: ['E'],
   toggle_complete: ['x'],
   note_new: ['o'],
   note_open: ['O'],

@@ -256,6 +256,51 @@ export const todoDocMutations = {
     return uid;
   },
 
+  /**
+   * Applies what the line editor holds, addressed by uid rather than by line index.
+   *
+   * <p>Projects and contexts live inside the body as `+x` / `@y` tokens, so setting them
+   * means taking them out and putting back the ones the editor has. Going through the body
+   * rather than adding two fields to TodoLine is what keeps one code path for reading and
+   * one for writing the line.
+   */
+  updateFromLine(patch: {
+    uid: number;
+    title: string;
+    priority: string;
+    projects: string[];
+    contexts: string[];
+    dueDate: string;
+    recurrence: string;
+  }): string | null {
+    const state = useTodoDoc.getState();
+    const objetivo = String(patch.uid);
+    const index = state.uidByLine.indexOf(objetivo);
+    if (index < 0) return null;
+
+    const raw = state.lines[index];
+    if (raw === undefined) return null;
+    const line = parseTodoLine(raw);
+
+    const cuerpo = [patch.title.trim(), ...patch.projects.map((x) => `+${x}`), ...patch.contexts.map((x) => `@${x}`)]
+      .filter(Boolean)
+      .join(' ');
+
+    state.patch((current) => {
+      const lines = [...current.lines];
+      lines[index] = formatTodoLine({
+        ...line,
+        priority: patch.priority || null,
+        body: cuerpo,
+        due: patch.dueDate || null,
+        recurrence: patch.recurrence || null,
+        uid: objetivo,
+      });
+      return { lines, preamble: current.preamble, uidByLine: current.uidByLine };
+    });
+    return objetivo;
+  },
+
   cyclePriority(index: number): { uid: string | null; priority: string | null } {
     const state = useTodoDoc.getState();
     const raw = state.lines[index];

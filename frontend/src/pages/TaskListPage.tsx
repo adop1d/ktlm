@@ -1,5 +1,6 @@
-import { FC, useState, useEffect, useRef } from 'react';
+import { FC, useState, useEffect, useRef, useCallback } from 'react';
 import { NoteEditor } from '../components/task/NoteEditor';
+import { LineEditor, toEditable, type EditableTask, type SegmentId } from '../components/task/LineEditor';
 import { ShareQr } from '../components/common/ShareQr';
 import { THEMES, THEME_LABELS, useUIStore } from '../stores/uiStore';
 import { useTasks } from '../hooks/useTasks';
@@ -162,13 +163,18 @@ export const TaskListPage: FC = () => {
         setEditing(null);
         setShowForm(true);
         return;
-      case 'begin_edit':
-      case 'begin_edit_insert':
-        // e e i edit the task under the cursor. Opening a blank form here was opening
-        // a new task with the edit key.
+      // `E` is the long form of the same thing: the box, for when you would rather click.
+      case 'begin_edit_form':
         if (!task) return;
         setEditing(task);
         setShowForm(true);
+        return;
+      case 'begin_edit':
+      case 'begin_edit_insert':
+        // e and i edit the task under the cursor. Opening a blank form here was opening
+        // a new task with the edit key.
+        if (!task) return;
+        openLineEditor(task);
         return;
       case 'cycle_sort':
         setSort(SORT_CYCLE[sort]);
@@ -291,6 +297,20 @@ export const TaskListPage: FC = () => {
   // to act on, and pretending they work is worse than showing them dimmed.
   const isLinked = useTodoDoc((state) => state.status === 'linked' || state.status === 'in-memory');
   const [nota, setNota] = useState<{ uid: number; titulo: string } | null>(null);
+
+  // The line editor: the task as a todo.txt line, with the cursor on one of its parts.
+  const [linea, setLinea] = useState<EditableTask | null>(null);
+  const [segmento, setSegmento] = useState<SegmentId>('title');
+  const [prompt, setPrompt] = useState({ visible: false, label: '', value: '', kind: 'title' as SegmentId });
+
+  const openLineEditor = useCallback(
+    (task: Task) => {
+      setLinea(toEditable(task));
+      setSegmento('title');
+      setPrompt({ visible: false, label: '', value: '', kind: 'title' });
+    },
+    []
+  );
   const [themeMenu, setThemeMenu] = useState(false);
   const [showQr, setShowQr] = useState(false);
 
@@ -350,6 +370,37 @@ export const TaskListPage: FC = () => {
       : { actions: fileBackedActions, reason: 'Abre un todo.txt para editar sobre el archivo' },
   });
 
+  /**
+   * Saving the line editor.
+   *
+   * <p>Only the parts the line editor owns are sent. The fields the visual form has and this
+   * one does not — the start date, for one — are left out on purpose: a null in a patch means
+   * "unchanged" on the server, so leaving them out is how they survive.
+   */
+  const guardarLinea = useCallback(async () => {
+    if (!linea) return;
+    const uid = linea.uid;
+    if (!uid) {
+      addToast('error', 'Esa tarea no tiene uid: no se puede editar desde aquí');
+      return;
+    }
+    try {
+      await todoFile.updateFromLine({
+        uid,
+        title: linea.title,
+        priority: linea.priority,
+        projects: linea.projects,
+        contexts: linea.contexts,
+        dueDate: linea.due,
+        recurrence: linea.recurrence,
+      });
+      addToast('success', 'Guardado');
+      setLinea(null);
+    } catch (error) {
+      addToast('error', `No se pudo guardar: ${(error as Error).message}`);
+    }
+  }, [linea, addToast]);
+
   const handleSubmit = (data: Partial<Task>) => {
     if (editing) {
       updateTask(editing.id, data);
@@ -376,6 +427,41 @@ export const TaskListPage: FC = () => {
     return (
       <>
         <Header />
+
+      {linea ? (
+        <LineEditor
+          value={linea}
+          segment={segmento}
+          onSegment={setSegmento}
+          onChange={setLinea}
+          onCommit={() => void guardarLinea()}
+          onCancel={() => setLinea(null)}
+          prompt={prompt}
+          onPrompt={(label, kind, initial) => setPrompt({ visible: true, label, kind, value: initial })}
+          onPromptChange={(value) => setPrompt((current) => ({ ...current, value }))}
+          onPromptCancel={() => setPrompt((current) => ({ ...current, visible: false }))}
+          onPromptAccept={() => {
+            const { kind, value } = prompt;
+            setPrompt((current) => ({ ...current, visible: false }));
+            if (!value.trim()) return;
+            setLinea((current) => {
+              if (!current) return current;
+              switch (kind) {
+                case 'projects':
+                  return { ...current, projects: [...new Set([...current.projects, value.trim().replace(/^\+/, '')])] };
+                case 'contexts':
+                  return { ...current, contexts: [...new Set([...current.contexts, value.trim().replace(/^@/, '')])] };
+                case 'due':
+                  return { ...current, due: value.trim() };
+                case 'rec':
+                  return { ...current, recurrence: value.trim() };
+                default:
+                  return current;
+              }
+            });
+          }}
+        />
+      ) : null}
 
       {nota ? (
         <NoteEditor
@@ -420,6 +506,41 @@ export const TaskListPage: FC = () => {
     return (
       <>
         <Header />
+
+      {linea ? (
+        <LineEditor
+          value={linea}
+          segment={segmento}
+          onSegment={setSegmento}
+          onChange={setLinea}
+          onCommit={() => void guardarLinea()}
+          onCancel={() => setLinea(null)}
+          prompt={prompt}
+          onPrompt={(label, kind, initial) => setPrompt({ visible: true, label, kind, value: initial })}
+          onPromptChange={(value) => setPrompt((current) => ({ ...current, value }))}
+          onPromptCancel={() => setPrompt((current) => ({ ...current, visible: false }))}
+          onPromptAccept={() => {
+            const { kind, value } = prompt;
+            setPrompt((current) => ({ ...current, visible: false }));
+            if (!value.trim()) return;
+            setLinea((current) => {
+              if (!current) return current;
+              switch (kind) {
+                case 'projects':
+                  return { ...current, projects: [...new Set([...current.projects, value.trim().replace(/^\+/, '')])] };
+                case 'contexts':
+                  return { ...current, contexts: [...new Set([...current.contexts, value.trim().replace(/^@/, '')])] };
+                case 'due':
+                  return { ...current, due: value.trim() };
+                case 'rec':
+                  return { ...current, recurrence: value.trim() };
+                default:
+                  return current;
+              }
+            });
+          }}
+        />
+      ) : null}
 
       {nota ? (
         <NoteEditor
@@ -474,6 +595,41 @@ export const TaskListPage: FC = () => {
   return (
     <>
       <Header />
+
+      {linea ? (
+        <LineEditor
+          value={linea}
+          segment={segmento}
+          onSegment={setSegmento}
+          onChange={setLinea}
+          onCommit={() => void guardarLinea()}
+          onCancel={() => setLinea(null)}
+          prompt={prompt}
+          onPrompt={(label, kind, initial) => setPrompt({ visible: true, label, kind, value: initial })}
+          onPromptChange={(value) => setPrompt((current) => ({ ...current, value }))}
+          onPromptCancel={() => setPrompt((current) => ({ ...current, visible: false }))}
+          onPromptAccept={() => {
+            const { kind, value } = prompt;
+            setPrompt((current) => ({ ...current, visible: false }));
+            if (!value.trim()) return;
+            setLinea((current) => {
+              if (!current) return current;
+              switch (kind) {
+                case 'projects':
+                  return { ...current, projects: [...new Set([...current.projects, value.trim().replace(/^\+/, '')])] };
+                case 'contexts':
+                  return { ...current, contexts: [...new Set([...current.contexts, value.trim().replace(/^@/, '')])] };
+                case 'due':
+                  return { ...current, due: value.trim() };
+                case 'rec':
+                  return { ...current, recurrence: value.trim() };
+                default:
+                  return current;
+              }
+            });
+          }}
+        />
+      ) : null}
 
       {nota ? (
         <NoteEditor

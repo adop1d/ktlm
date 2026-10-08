@@ -27,12 +27,22 @@ test.describe('atajos que faltaban o estaban mal', () => {
     await expect(selector).toHaveValue('file');
   });
 
-  test('e abre el formulario con la tarea del cursor, no uno vacío', async ({ page }) => {
+  test('e edita la línea de la tarea del cursor, no una vacía', async ({ page }) => {
     await page.keyboard.press('e');
+
+    // `e` opens the line editor, which shows the line as the file will hold it rather than
+    // as labelled boxes. The title of the first row is the cursor's, and it is already
+    // there: opening blank under an edit key was the bug this replaced.
+    const titulo = page.getByLabel('Título de la tarea');
+    await expect(titulo).toBeVisible();
+    await expect(titulo).toHaveValue(seedTasks(3)[0].title);
+  });
+
+  test('E abre el formulario con la tarea del cursor, no uno vacío', async ({ page }) => {
+    await page.keyboard.press('E');
 
     const campo = page.getByPlaceholder('¿Qué necesitas hacer?');
     await expect(campo).toBeVisible();
-    // The first row is the cursor's, and its title is the seeded one.
     await expect(campo).toHaveValue(seedTasks(3)[0].title);
   });
 

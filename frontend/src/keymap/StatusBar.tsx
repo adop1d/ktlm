@@ -1,4 +1,5 @@
 import { FC } from 'react';
+import { useT } from '../i18n';
 import { KeymapMode } from './useKeymap';
 import { Portal } from '../components/common/Portal';
 
@@ -25,7 +26,9 @@ export const StatusBar: FC<{
   /** Name of the file in view when it is not the active list. */
   view?: string | null;
   hints: StatusHint[];
-}> = ({ mode, pendingChord, position, counts, linked, view, hints }) => (
+}> = ({ mode, pendingChord, position, counts, linked, view, hints }) => {
+  const t = useT();
+  return (
   <Portal>
     <div className="tui-status" role="status" aria-label="Barra de estado">
       <span className="tui-status-segment tui-status-segment--mode">{mode}</span>
@@ -42,7 +45,11 @@ export const StatusBar: FC<{
 
       {counts ? (
         <span className="tui-status-segment">
-          {counts.active} act · {counts.completed} hech · {counts.all} tot
+          {t('status.counts', {
+            active: counts.active,
+            completed: counts.completed,
+            total: counts.all,
+          })}
         </span>
       ) : null}
 
@@ -50,7 +57,7 @@ export const StatusBar: FC<{
 
       {!linked ? (
         <span className="tui-status-segment" style={{ color: 'var(--color-warning)' }}>
-          sin todo.txt · x p J dd u apagados
+          {t('status.unlinked')}
         </span>
       ) : null}
 
@@ -62,4 +69,5 @@ export const StatusBar: FC<{
       ))}
     </div>
   </Portal>
-);
+  );
+};

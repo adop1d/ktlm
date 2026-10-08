@@ -49,6 +49,7 @@ const LABELS: Record<ActionName, string> = {
   go_list: 'vista de lista',
   toggle_archive_view: 'ver el archivo',
   archive_completed: 'archivar completadas',
+  begin_edit_form: 'editar en el formulario',
   note_new: 'nota nueva',
   note_open: 'abrir nota',
   toggle_show_done: 'mostrar completadas',
