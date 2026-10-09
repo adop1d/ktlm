@@ -71,10 +71,6 @@ export const Header: FC = () => {
           {language === 'es' ? 'EN' : 'ES'}
         </button>
 
-        <Link to="/docs" className="tui-titlebar-button">
-          {t('landing.nav.docs')}
-        </Link>
-
         {username ? (
           <div className="tui-account" ref={menu}>
             <button
