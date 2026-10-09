@@ -30,7 +30,7 @@ async def main() -> int:
         env=env,
     )
 
-    fallos: list[str] = []
+    failures: list[str] = []
 
     async with stdio_client(servidor) as (lee, escribe):
         async with ClientSession(lee, escribe) as sesion:
@@ -40,12 +40,12 @@ async def main() -> int:
             print("tools: ", ", ".join(herramientas))
             for esperada in ("listar", "agregar", "reorganizar", "completar", "archivo"):
                 if esperada not in herramientas:
-                    failures.append(f"falta la herramienta {esperada}")
+                    failures.append(f"missing tool: {esperada}")
 
             quien = texto(await sesion.call_tool("quien_soy", {}))
             print("token:", quien)
             if "token valid" not in quien:
-                failures.append("el token de servicio no vale")
+                failures.append("the service token does not work")
 
             antes = await sesion.call_tool("listar", {"tamano": 1})
             total_antes = antes.structured_content["total"]
@@ -57,14 +57,14 @@ async def main() -> int:
             uid = creada.structured_content["uid"] if creada.structured_content else 0
             print("created with uid", uid)
             if not uid:
-                failures.append(f"agregar no devolvió uid: {creada.content}")
+                failures.append(f"add returned no uid: {creada.content}")
 
             # It has to be in the file: that's the whole point, that the MCP writes.
             archivo = texto(await sesion.call_tool("archivo", {}))
             if "smoke task" not in archivo:
-                failures.append("la tarea no llegó al todo.txt")
+                failures.append("the task never reached the todo.txt")
             if "+smoke" not in archivo:
-                failures.append("el proyecto no llegó al todo.txt")
+                failures.append("the project never reached the todo.txt")
 
             await sesion.call_tool("completar", {"uid": uid})
             await sesion.call_tool("borrar", {"uid": uid})
@@ -72,7 +72,7 @@ async def main() -> int:
             despues = await sesion.call_tool("listar", {"tamano": 1})
             total_despues = despues.structured_content["total"]
             if total_despues != total_antes:
-                failures.append(f"el script dejó rastro: {total_antes} → {total_despues}")
+                failures.append(f"the script left a trace: {total_antes} -> {total_despues}")
             else:
                 print(f"clean: {total_antes} tasks before and after")
 
