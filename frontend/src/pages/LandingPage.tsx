@@ -55,16 +55,20 @@ export const LandingPage: FC = () => {
   return (
   <div className="lp">
     <header className="tui-titlebar">
-      <span className="tui-titlebar-brand">
+      {/* The mark is the icon alone. The word beside it was saying what the favicon
+          already says, and the width it took was the width the docs link needed. */}
+      <Link to="/" className="tui-titlebar-brand" aria-label="KTM">
         <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={18} height={18} />
-        <span>ktm</span>
-      </span>
+      </Link>
       <nav className="tui-titlebar-actions">
         {/* Before logging in, not after. The landing page is the first thing anyone sees
             and it is in the wrong language if the switch is behind the login. */}
         <LanguageSwitch />
+        <Link to="/docs" className="tui-titlebar-button">
+          {t('landing.nav.docs')}
+        </Link>
         <Link to="/app" className="tui-titlebar-button">
-          entrar
+          {t('landing.nav.signIn')}
         </Link>
       </nav>
     </header>
@@ -170,8 +174,8 @@ export const LandingPage: FC = () => {
     </main>
 
     <footer className="lp-footer">
-      <span>todo.txt es un formato abierto, de Gina Trapani</span>
-      <Link to="/login">entrar</Link>
+      <span>{t('landing.footer.note')}</span>
+      <Link to="/docs">{t('landing.footer.docs')}</Link>
     </footer>
   </div>
   );

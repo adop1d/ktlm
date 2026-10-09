@@ -471,6 +471,14 @@ export const CATALOGUE = {
   'login.switch.login': { es: 'Inicia sesión', en: 'Sign in' },
 
   // --- landing page -------------------------------------------------------------------------
+  'landing.nav.docs': { es: 'docs', en: 'docs' },
+  'landing.footer.docs': { es: 'documentación', en: 'documentation' },
+  'landing.footer.note': {
+    es: 'todo.txt es un formato abierto, de Gina Trapani',
+    en: 'todo.txt is an open format, by Gina Trapani',
+  },
+  'menu.theme.label': { es: 'Tema', en: 'Theme' },
+  'menu.accent.label': { es: 'Color de acento', en: 'Accent colour' },
   'landing.nav.signIn': { es: 'entrar', en: 'sign in' },
   'landing.footer.signIn': { es: 'entrar', en: 'sign in' },
   'landing.eyebrow': { es: 'todo.txt · en el navegador · sin cuentas ajenas', en: 'todo.txt · in the browser · no third-party accounts' },

@@ -62,20 +62,27 @@ test.describe('editor de línea', () => {
 });
 
 test.describe('idioma', () => {
-  test('el conmutador cambia los textos de la barra', async ({ page }) => {
+  test('el conmutador cambia los textos de la cuenta', async ({ page }) => {
     await page.goto('/app');
     await waitForList(page);
 
-    // Pinned to Spanish by the fixture; the button is the way out of it.
-    await expect(page.locator('.tui-titlebar-button', { hasText: 'salir' })).toBeVisible();
+    const menu = page.getByRole('button', { name: /^@/ });
 
-    // Exact match on purpose: `hasText: 'EN'` also matches `tokens`, which is one
-    // of the other buttons in the bar.
+    // Pinned to Spanish by the fixture; the button is the way out of it. The text that
+    // changes lives in the account menu, so that is what gets checked.
+    await menu.click();
+    await expect(page.getByRole('menuitem', { name: 'salir' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Exact match on purpose: `hasText: 'EN'` also matches `tokens`.
     await page.getByRole('button', { name: 'EN', exact: true }).click();
-    await expect(page.locator('.tui-titlebar-button', { hasText: 'log out' })).toBeVisible();
+    await menu.click();
+    await expect(page.getByRole('menuitem', { name: 'log out' })).toBeVisible();
+    await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'ES', exact: true }).click();
-    await expect(page.locator('.tui-titlebar-button', { hasText: 'salir' })).toBeVisible();
+    await menu.click();
+    await expect(page.getByRole('menuitem', { name: 'salir' })).toBeVisible();
   });
 
   test('la elección se recuerda al recargar', async ({ page }) => {
@@ -84,12 +91,13 @@ test.describe('idioma', () => {
     // Exact match on purpose: `hasText: 'EN'` also matches `tokens`, which is one
     // of the other buttons in the bar.
     await page.getByRole('button', { name: 'EN', exact: true }).click();
-    await expect(page.locator('.tui-titlebar-button', { hasText: 'log out' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^@/ })).toBeVisible();
 
     await page.reload();
     await waitForList(page);
     // Without the store it would fall back to the browser locale, which in CI is English
     // for the wrong reason and would pass here and fail on a Spanish machine.
-    await expect(page.locator('.tui-titlebar-button', { hasText: 'log out' })).toBeVisible();
+    await page.getByRole('button', { name: /^@/ }).click();
+    await expect(page.getByRole('menuitem', { name: 'log out' })).toBeVisible();
   });
 });

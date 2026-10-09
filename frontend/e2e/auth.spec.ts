@@ -77,7 +77,10 @@ test.describe('con sesión', () => {
     await page.goto('/app');
     await expect(page.locator('.tui-titlebar')).toBeVisible();
 
-    await page.getByRole('button', { name: 'salir' }).click();
+    // `salir` vive en el menú de cuenta, no suelto en la barra: es una decisión de
+    // sesión, y la barra se reserva para lo que cambia mientras trabajas.
+    await page.getByRole('button', { name: /^@/ }).click();
+    await page.getByRole('menuitem', { name: 'salir' }).click();
 
     await expect(page).toHaveURL(/\/login$/);
   });
