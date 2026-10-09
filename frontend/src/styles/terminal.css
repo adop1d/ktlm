@@ -187,15 +187,32 @@ body {
   border: 1px solid var(--border-default);
 }
 
+/*
+ * The row adapts to its container, not to the window.
+ *
+ * A viewport media query would have been the obvious thing and it would have been wrong
+ * twice over: the landing page's mockup lives in a card about 28rem wide inside a window
+ * of any size, and the side panes float over the list without changing the window at all.
+ * A container query is what actually describes the situation — "this list is this narrow" —
+ * so the same rule fixes the app and the mockup, which is where the same symptom showed up.
+ */
+.tui-list,
+.tui-example {
+  container-type: inline-size;
+  container-name: list;
+}
+
 .tui-row {
   display: grid;
+  /* The cells pin their own columns, so hiding one does not shift the rest. */
+  align-items: baseline;
   /* index · priority · body · meta. The widths are fixed: that is a terminal column,
      and it is what makes the eyes drop vertically instead of diagonally. */
   /* meta gets a floor, not `auto`. With `auto` the title column is `1fr` and absorbs every
      pixel the window loses, so the title is what collapses — and the row stops reading as a
      row. The floor keeps the dates visible and truncates the title instead, which is the
      thing you can afford to lose. */
-  grid-template-columns: 2.5rem 1.5rem minmax(0, 1fr) minmax(9rem, max-content);
+  grid-template-columns: 2.5rem 1.5rem minmax(12rem, 1fr) minmax(9rem, 16rem);
   column-gap: 0.75rem;
   align-items: baseline;
   padding: 0.35rem 0.6rem;
@@ -209,12 +226,48 @@ body {
 }
 
 /*
+ * Under about 34rem there is not enough width for four columns: the title is the one with
+ * `1fr`, so it is the one that collapses, and a task whose title is gone is a task you
+ * cannot work out what it is. So the meta drops to its own line under the title instead.
+ * The dates keep their row; the title stops being sacrificed for them.
+ */
+@container list (max-width: 34rem) {
+  .tui-row,
+  .tui-columns {
+    grid-template-columns: 2.5rem 1.5rem minmax(0, 1fr);
+  }
+
+  .tui-row-meta {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .tui-columns > :last-child {
+    display: none;
+  }
+
+  /* The index is the first thing nobody needs once the box is this narrow. */
+  .tui-row-index {
+    display: none;
+  }
+
+  .tui-row {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+  }
+
+  .tui-row-meta {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+}
+
+/*
  * Column headers. Without them the columns are a grid you have to infer; with them the
  * eye lands on a label instead of working out where the priority column ends.
  */
 .tui-columns {
   display: grid;
-  grid-template-columns: 2.5rem 1.5rem minmax(0, 1fr) minmax(9rem, max-content);
+  grid-template-columns: 2.5rem 1.5rem minmax(12rem, 1fr) minmax(9rem, 16rem);
   column-gap: 0.75rem;
   align-items: baseline;
   padding: 0.35rem 0.6rem;

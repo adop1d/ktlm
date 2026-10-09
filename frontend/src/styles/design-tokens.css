@@ -423,7 +423,13 @@
 
 .tui-row { min-height: var(--row-height, 2rem); }
 
-/* Line numbers. Off by default like in tuxedo, and `L` turns them on. The order of these
-   two rules matters: the last one wins, so the condition goes after. */
-.tui-row-index { display: none; }
-[data-line-numbers] .tui-row-index { display: inline-block; }
+/*
+ * Line numbers: off by default like in tuxedo, and `L` turns them on.
+ *
+ * `visibility`, not `display: none`. Removing the cell takes it out of the grid flow, so
+ * auto-placement gives the next cell — the title — the second track, which is the priority
+ * column's 1.5rem. Every task's title was rendered 24 pixels wide in a 1280 window, and it
+ * read as a narrow column rather than as a bug. The cell stays, empty.
+ */
+.tui-row-index { visibility: hidden; }
+[data-line-numbers] .tui-row-index { visibility: visible; }

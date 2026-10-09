@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { DocumentTextIcon, LinkIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useTodoDoc } from './todoDoc';
+import { useT } from '../i18n';
 
 /**
  * The link to the file. The server holds the file, so there are only three things here:
@@ -13,22 +14,23 @@ export const TodoFileBar: FC<{
   canImport: boolean;
 }> = ({ onOpen, onImport, onDetach, canImport }) => {
   const { status, message } = useTodoDoc();
+  const t = useT();
 
   if (status === 'idle') {
     return (
       <div className="flex items-center justify-between gap-3 mb-4 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-elevated)] dark:bg-[var(--dark-surface-elevated)]">
         <span className="text-xs text-[var(--text-muted)] dark:text-[var(--dark-text-muted)]">
-          Sin todo.txt vinculado
+          {t('file.unlinked')}
         </span>
         <div className="flex items-center gap-2">
           {canImport ? (
             <button onClick={onImport} className="btn-ghost text-xs flex items-center gap-1.5">
               <DocumentTextIcon className="w-4 h-4" />
-              Importar del disco
+              {t('file.import')}
             </button>
           ) : null}
           <button onClick={onOpen} className="btn-secondary text-xs">
-            Conectar todo.txt
+            {t('file.connect')}
           </button>
         </div>
       </div>
@@ -49,7 +51,7 @@ export const TodoFileBar: FC<{
               : 'text-[var(--text-muted)] dark:text-[var(--dark-text-muted)]'
           }`}
         >
-          {message ?? (status === 'syncing' ? 'guardando…' : 'sincronizado')}
+          {message ?? (status === 'syncing' ? t('file.saving') : t('file.synced'))}
         </span>
       </div>
       <button onClick={onDetach} className="btn-ghost text-xs" aria-label="Desvincular archivo">

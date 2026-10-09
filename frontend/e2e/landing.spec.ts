@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, publicTest as test } from './fixtures';
 
 /**
  * The landing page is the first screen: entering should not mean landing on a contextless login.
@@ -41,7 +41,14 @@ test.describe('portada', () => {
     await expect(tabla).toContainText('Ctrl-d');
   });
 
-  test('avisa de que el archivo solo se sincroniza en Chromium', async ({ page }) => {
-    await expect(page.getByText(/Fuera de ahí/)).toBeVisible();
+  /**
+   * The landing said the file only syncs in Chromium. That stopped being true when the file
+   * moved to the server, and the copy was corrected — so this used to assert a claim the app
+   * had stopped making. It now pins the replacement, which is the one worth keeping: the
+   * file is the server's, and that is what makes the phone and an MCP agent agree.
+   */
+  test('avisa de que el archivo es del servidor', async ({ page }) => {
+    await expect(page.getByText(/El archivo es del servidor/)).toBeVisible();
+    await expect(page.getByText(/MCP/)).toBeVisible();
   });
 });

@@ -1,5 +1,6 @@
 import { FC, useMemo } from 'react';
 import { Task } from '../types/task';
+import { useT } from '../i18n';
 
 /**
  * Left pane: the same filters tuxedo shows in its sidebar — projects, contexts and saved
@@ -42,13 +43,14 @@ export const FilterPane: FC<PaneProps> = ({
   onPickProject,
   onPickContext,
 }) => {
+  const t = useT();
   const projects = useMemo(() => tally(tasks, (task) => task.projects ?? []), [tasks]);
   const contexts = useMemo(() => tally(tasks, (task) => task.contexts ?? []), [tasks]);
   const nothing = projects.length === 0 && contexts.length === 0;
 
   return (
-    <aside className="tui-panel p-3" aria-label="Filtros">
-      <span className="tui-panel-title">filtros</span>
+    <aside className="tui-panel p-3" aria-label={t('filter.aria')}>
+      <span className="tui-panel-title">{t('filter.title')}</span>
 
       {nothing ? (
         <p className="tui-empty">
@@ -57,7 +59,7 @@ export const FilterPane: FC<PaneProps> = ({
       ) : null}
 
       <section className="tui-pane-section">
-        <span className="tui-pane-section-title">proyectos</span>
+        <span className="tui-pane-section-title">{t('filter.projects.title')}</span>
         <div className="tui-pane-list">
           <button
             type="button"
@@ -65,7 +67,7 @@ export const FilterPane: FC<PaneProps> = ({
             aria-pressed={activeProject === null}
             onClick={() => onPickProject(null)}
           >
-            <span>(todos)</span>
+            <span>{t('filter.all')}</span>
           </button>
           {projects.map((project) => (
             <button
@@ -85,7 +87,7 @@ export const FilterPane: FC<PaneProps> = ({
       </section>
 
       <section className="tui-pane-section">
-        <span className="tui-pane-section-title">contextos</span>
+        <span className="tui-pane-section-title">{t('filter.contexts.title')}</span>
         <div className="tui-pane-list">
           <button
             type="button"
@@ -93,7 +95,7 @@ export const FilterPane: FC<PaneProps> = ({
             aria-pressed={activeContext === null}
             onClick={() => onPickContext(null)}
           >
-            <span>(todos)</span>
+            <span>{t('filter.all')}</span>
           </button>
           {contexts.map((context) => (
             <button

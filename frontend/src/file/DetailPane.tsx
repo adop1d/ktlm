@@ -1,4 +1,5 @@
 import { FC } from 'react';
+import { useT } from '../i18n';
 import { Task } from '../types/task';
 
 /**
@@ -15,10 +16,11 @@ const field = (label: string, value: string) => (
 );
 
 export const DetailPane: FC<{ task: Task | null | undefined }> = ({ task }) => {
+  const t = useT();
   if (!task) {
     return (
-      <aside className="tui-panel p-3" aria-label="Detalle">
-        <span className="tui-panel-title">detalle</span>
+      <aside className="tui-panel p-3" aria-label={t('detail.aria')}>
+        <span className="tui-panel-title">{t('detail.title')}</span>
         <p className="tui-empty">Sin tarea bajo el cursor.</p>
       </aside>
     );
@@ -47,8 +49,8 @@ export const DetailPane: FC<{ task: Task | null | undefined }> = ({ task }) => {
     .join(' ');
 
   return (
-    <aside className="tui-panel p-3" aria-label="Detalle">
-      <span className="tui-panel-title">detalle</span>
+    <aside className="tui-panel p-3" aria-label={t('detail.aria')}>
+      <span className="tui-panel-title">{t('detail.title')}</span>
 
       <div className="flex flex-col gap-1 text-xs">
         {field('prio', priority)}
@@ -59,7 +61,7 @@ export const DetailPane: FC<{ task: Task | null | undefined }> = ({ task }) => {
       </div>
 
       <section className="tui-pane-section">
-        <span className="tui-pane-section-title">línea en el archivo</span>
+        <span className="tui-pane-section-title">{t('detail.line.title')}</span>
         <pre className="whitespace-pre-wrap break-all text-xs text-[var(--color-primary)] bg-[var(--surface-elevated)] p-2 border border-[var(--border-default)]">
           {raw}
         </pre>

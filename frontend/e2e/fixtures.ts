@@ -154,6 +154,27 @@ export const mockTasks = async (page: Page, state: ApiState): Promise<void> => {
   });
 };
 
+/**
+ * The language is pinned to Spanish.
+ *
+ * Playwright runs with an en-US locale, so without this every assertion on a Spanish string
+ * would fail — and worse, they would pass on a machine configured in Spanish and fail in CI,
+ * which is the difference that ends up being blamed on flakiness.
+ *
+ * Only when absent. The script runs on every navigation including reloads, and overwriting
+ * unconditionally would make the stored choice impossible to observe: a test for "the choice
+ * survives a reload" could never pass against its own fixture.
+ */
+const seedLanguage = (page: Page) =>
+  page.addInitScript(() => {
+    if (!window.localStorage.getItem('i18n-store')) {
+      window.localStorage.setItem(
+        'i18n-store',
+        JSON.stringify({ state: { language: 'es' }, version: 1 })
+      );
+    }
+  });
+
 const seedSession = (page: Page, token = 'fake-jwt') =>
   page.addInitScript((value) => {
     window.localStorage.setItem(
@@ -163,21 +184,6 @@ const seedSession = (page: Page, token = 'fake-jwt') =>
         version: 0,
       })
     );
-    // The language is pinned rather than left to the browser.
-    //
-    // Playwright runs with an en-US locale, so without this every assertion on a Spanish
-    // string would fail — and worse, they would pass on a machine configured in Spanish and
-    // fail in CI, which is the kind of difference that gets blamed on flakiness.
-    //
-    // Only when it is absent. This script runs on every navigation including reloads, and
-    // overwriting unconditionally would make the stored choice impossible to observe: a
-    // test for "the choice survives a reload" could never pass against its own fixture.
-    if (!window.localStorage.getItem('i18n-store')) {
-      window.localStorage.setItem(
-        'i18n-store',
-        JSON.stringify({ state: { language: 'es' }, version: 1 })
-      );
-    }
   }, token);
 
 /** Test with the task API mocked and the session already seeded. */
@@ -189,14 +195,26 @@ export const test = base.extend<{ api: ApiState }>({
     async ({ page }, use) => {
       const state: ApiState = { tasks: seedTasks(3) };
       await mockTasks(page, state);
-      await seedSession(page);
+      await seedSessionAndLanguage(page);
       await use(state);
     },
     { auto: true },
   ],
 });
 
-export { expect, seedSession };
+/**
+ * Seeds a session, for the specs that set one up by hand instead of through the fixture.
+ *
+ * The language goes in with it. It used to be seeded separately, and a spec that called
+ * this directly got a page in the browser's language while asserting on Spanish — which is
+ * the failure that does not reproduce on the machine that wrote it.
+ */
+const seedSessionAndLanguage = async (page: Page, token = 'fake-jwt') => {
+  await seedSession(page, token);
+  await seedLanguage(page);
+};
+
+export { expect, seedSessionAndLanguage as seedSession };
 
 /**
  * Waits until the list is painted. It anchors on the grid, not on a title: the title can
@@ -213,3 +231,18 @@ export const waitForList = async (page: Page) => {
         document.body.innerText.includes('No hay resultados'))
   );
 };
+
+/**
+ * For the pages that render without a session — the landing and the login.
+ *
+ * It exists because the language has to be pinned there too, and reaching for
+ * `@playwright/test` directly is what left the landing spec asserting Spanish strings against
+ * an English page: it skipped the fixture that pins it.
+ */
+export const publicTest = base.extend({
+  language: [async ({ page }, use) => {
+    await seedLanguage(page);
+    await use(null);
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+  }, { auto: true }],
+});

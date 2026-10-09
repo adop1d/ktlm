@@ -31,6 +31,18 @@ export const Header: FC = () => {
       <nav className="tui-titlebar-actions">
         {username ? <span className="tui-titlebar-user">@{username}</span> : null}
 
+        {/* The switch is outside the `username` block on purpose: the landing page has no
+            session, and a language you cannot change before logging in is a language you
+            only find out about after. */}
+        <button
+          type="button"
+          onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+          className="tui-titlebar-button"
+          title={language === 'es' ? 'Switch to English' : 'Cambiar a español'}
+        >
+          {language === 'es' ? 'EN' : 'ES'}
+        </button>
+
         <button
           type="button"
           onClick={toggleDarkMode}
@@ -42,14 +54,6 @@ export const Header: FC = () => {
 
         {username ? (
           <>
-            <button
-              type="button"
-              onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
-              className="tui-titlebar-button"
-              title={language === 'es' ? 'Switch to English' : 'Cambiar a español'}
-            >
-              {language === 'es' ? 'EN' : 'ES'}
-            </button>
             <button
               type="button"
               onClick={() => setColorAbierto(true)}

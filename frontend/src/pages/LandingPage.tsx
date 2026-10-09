@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { Link } from 'react-router-dom';
+import { useI18nStore, useT } from '../i18n';
 
 /**
  * The landing page. The product is a terminal that speaks the language of your todo.txt, so
@@ -18,22 +19,39 @@ const SAMPLE_ROWS = [
 ];
 
 const KEYMAP: [string, string][] = [
-  ['j k', 'mover el cursor'],
-  ['gg G', 'primera y última'],
-  ['Ctrl-d Ctrl-u', 'media página'],
-  ['n', 'tarea nueva'],
-  ['x', 'completar'],
-  ['dd', 'borrar'],
-  ['p', 'cambiar prioridad'],
-  ['J K', 'mover la tarea'],
-  ['u', 'deshacer, 50 pasos'],
-  ['[ ]', 'paneles de filtros y detalle'],
-  ['v espacio', 'selección múltiple'],
-  [':', 'paleta de comandos'],
-  ['?', 'todos los atajos'],
+  ['j k', 'landing.keys.cursor'],
+  ['gg G', 'landing.keys.firstLast'],
+  ['Ctrl-d Ctrl-u', 'landing.keys.halfPage'],
+  ['n', 'landing.keys.newTask'],
+  ['x', 'landing.keys.complete'],
+  ['dd', 'landing.keys.delete'],
+  ['p', 'landing.keys.priority'],
+  ['J K', 'landing.keys.moveTask'],
+  ['u', 'landing.keys.undo'],
+  ['[ ]', 'landing.keys.panes'],
+  ['v espacio', 'landing.keys.selection'],
+  [':', 'landing.keys.palette'],
+  ['?', 'landing.keys.all'],
 ];
 
-export const LandingPage: FC = () => (
+const LanguageSwitch: FC = () => {
+  const language = useI18nStore((state) => state.language);
+  const setLanguage = useI18nStore((state) => state.setLanguage);
+  return (
+    <button
+      type="button"
+      onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
+      className="tui-titlebar-button"
+      title={language === 'es' ? 'Switch to English' : 'Cambiar a español'}
+    >
+      {language === 'es' ? 'EN' : 'ES'}
+    </button>
+  );
+};
+
+export const LandingPage: FC = () => {
+  const t = useT();
+  return (
   <div className="lp">
     <header className="tui-titlebar">
       <span className="tui-titlebar-brand">
@@ -41,6 +59,9 @@ export const LandingPage: FC = () => (
         <span>ktlm</span>
       </span>
       <nav className="tui-titlebar-actions">
+        {/* Before logging in, not after. The landing page is the first thing anyone sees
+            and it is in the wrong language if the switch is behind the login. */}
+        <LanguageSwitch />
         <Link to="/app" className="tui-titlebar-button">
           entrar
         </Link>
@@ -51,36 +72,27 @@ export const LandingPage: FC = () => (
       {/* Deliberately asymmetric: the copy takes a narrow column and lets the terminal be
           what leads. A centered hero would have reduced it to an illustration. */}
       <section className="lp-copy">
-        <p className="lp-eyebrow">todo.txt · en el navegador · sin cuentas ajenas</p>
-        <h1 className="lp-title">
-          Tu <code>todo.txt</code>,
-          <br />
-          con teclas de terminal.
-        </h1>
-        <p className="lp-lead">
-          Lee y escribe <strong>el mismo archivo</strong> que ya usas, y se
-          mantiene sincronizado con quienquiera que lo edite desde fuera. Cada cambio se
-          reconoce por su <code>uid</code>: sin duplicar y sin pisar lo que otro acaba de
-          escribir.
-        </p>
+        <p className="lp-eyebrow">{t('landing.eyebrow')}</p>
+        {/* The markup is in the catalogue, not here: a title with a <code> in the middle
+            cannot come out of a string without going through innerHTML, and doing that from
+            two places means the two drift. */}
+        <h1 className="lp-title" dangerouslySetInnerHTML={{ __html: t('landing.title') }} />
+        <p className="lp-lead" dangerouslySetInnerHTML={{ __html: t('landing.lead') }} />
 
         <div className="lp-actions">
           <Link to="/app" className="lp-cta">
-            abrir la app
+            {t('landing.cta.open')}
           </Link>
           <a href="#teclas" className="lp-cta lp-cta--ghost">
-            ver las teclas
+            {t('landing.cta.keys')}
           </a>
         </div>
 
-        <p className="lp-note">
-          Funciona en Chromium. Fuera de ahí la app funciona igual contra el servidor, pero el
-          archivo no se sincroniza desde el navegador y la interfaz te lo dice.
-        </p>
+        <p className="lp-note">{t('landing.note')}</p>
       </section>
 
       {/* The signature: the real chrome of the product, not a pretty mock. */}
-      <section className="lp-window" aria-label="Vista de la aplicación">
+      <section className="lp-window" aria-label={t('landing.preview.aria')}>
         <div className="tui-titlebar">
           <span className="tui-titlebar-brand">
             <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={16} height={16} />
@@ -121,20 +133,15 @@ export const LandingPage: FC = () => (
       </section>
 
       <section className="lp-keys" id="teclas">
-        <h2 className="lp-section">Se maneja con el teclado</h2>
-        <p className="lp-lead">
-          Los mismos atajos que usan las TUI de tareas de la zona —<code>gg</code>,{' '}
-          <code>dd</code>, <code>fp</code>—, copiados de las TUI de tareas para que
-          quien ya los tenga en los dedos no tenga que reaprenderlos. Si tienes tu
-          <code> keybinds.toml</code> a mano, la web lo lee.
-        </p>
+        <h2 className="lp-section">{t('landing.keys.title')}</h2>
+        <p className="lp-lead" dangerouslySetInnerHTML={{ __html: t('landing.keys.lead') }} />
         <dl className="lp-keymap">
           {KEYMAP.map(([keys, label]) => (
             <div key={keys} className="lp-keymap-row">
               <dt>
                 <kbd>{keys}</kbd>
               </dt>
-              <dd>{label}</dd>
+              <dd>{t(label)}</dd>
             </div>
           ))}
         </dl>
@@ -173,4 +180,5 @@ export const LandingPage: FC = () => (
       <Link to="/login">entrar</Link>
     </footer>
   </div>
-);
+  );
+};

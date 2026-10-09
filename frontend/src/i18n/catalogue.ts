@@ -380,6 +380,7 @@ export const CATALOGUE = {
 
   // --- detail pane --------------------------------------------------------------------------
   'detail.aria': { es: 'Detalle', en: 'Detail' },
+  'filter.all': { es: '(todos)', en: '(all)' },
   'detail.title': { es: 'detalle', en: 'detail' },
   'detail.empty': { es: 'Sin tarea bajo el cursor.', en: 'No task under the cursor.' },
   'detail.field.priority': { es: 'prio', en: 'prio' },
@@ -476,8 +477,8 @@ export const CATALOGUE = {
   'landing.cta.open': { es: 'abrir la app', en: 'open the app' },
   'landing.cta.keys': { es: 'ver las teclas', en: 'see the keys' },
   'landing.note': {
-    es: 'Funciona en Chromium. Fuera de ahí la app funciona igual contra el servidor, pero el archivo no se sincroniza desde el navegador y la interfaz te lo dice.',
-    en: 'Works in Chromium. Anywhere else the app still works against the server, but the file does not sync from the browser and the interface says so.',
+    es: 'El archivo es del servidor, no del navegador: el móvil, el escritorio y un agente MCP ven lo mismo. El atajo es tocarlo una vez, o dejar que tuxedo lo escriba.',
+    en: 'The file belongs to the server, not the browser: the phone, the desktop and an MCP agent all see the same one. The shortcut is to open it once, or let tuxedo write it.',
   },
   'landing.preview.aria': { es: 'Vista de la aplicación', en: 'App view' },
   'landing.preview.mode': { es: 'NORMAL', en: 'NORMAL' },

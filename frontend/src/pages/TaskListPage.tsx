@@ -1,6 +1,7 @@
 import { FC, useState, useEffect, useRef, useCallback } from 'react';
 import { NoteEditor } from '../components/task/NoteEditor';
 import { LineEditor, toEditable, type EditableTask, type SegmentId } from '../components/task/LineEditor';
+import { useT } from '../i18n';
 import { ShareQr } from '../components/common/ShareQr';
 import { THEMES, THEME_LABELS, useUIStore } from '../stores/uiStore';
 import { useTasks } from '../hooks/useTasks';
@@ -45,19 +46,19 @@ const SORT_CYCLE: Record<TaskSort, TaskSort> = {
   alphabetical: 'file',
 };
 
-const FILTER_TABS: { value: TaskFilter; label: string }[] = [
-  { value: 'all', label: 'Todas' },
-  { value: 'active', label: 'Pendientes' },
-  { value: 'completed', label: 'Completadas' },
+const FILTER_TABS: { value: TaskFilter; key: string }[] = [
+  { value: 'all', key: 'filter.tab.all' },
+  { value: 'active', key: 'filter.tab.active' },
+  { value: 'completed', key: 'filter.tab.completed' },
 ];
 
-const SORT_OPTIONS: { value: TaskSort; label: string }[] = [
-  { value: 'file', label: 'Orden del archivo' },
-  { value: 'priority', label: 'Prioridad' },
-  { value: 'due', label: 'Vencimiento' },
-  { value: 'newest', label: 'Más recientes' },
-  { value: 'oldest', label: 'Más antiguas' },
-  { value: 'alphabetical', label: 'Alfabético' },
+const SORT_OPTIONS: { value: TaskSort; key: string }[] = [
+  { value: 'file', key: 'sort.file' },
+  { value: 'priority', key: 'sort.priority' },
+  { value: 'due', key: 'sort.due' },
+  { value: 'newest', key: 'sort.newest' },
+  { value: 'oldest', key: 'sort.oldest' },
+  { value: 'alphabetical', key: 'sort.alphabetical' },
 ];
 
 export const TaskListPage: FC = () => {
@@ -296,6 +297,7 @@ export const TaskListPage: FC = () => {
   // Actions that mutate data go through the todo.txt. With no linked file there is no uid
   // to act on, and pretending they work is worse than showing them dimmed.
   const isLinked = useTodoDoc((state) => state.status === 'linked' || state.status === 'in-memory');
+  const t = useT();
   const [nota, setNota] = useState<{ uid: number; titulo: string } | null>(null);
 
   // The line editor: the task as a todo.txt line, with the cursor on one of its parts.
@@ -668,9 +670,9 @@ export const TaskListPage: FC = () => {
         {/* Cabecera: una linea, como el titulo de una ventana de terminal */}
         <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[var(--border-default)]">
           <h1 className="text-sm font-bold tracking-wide text-[var(--text-primary)]">
-            tareas
+            {t('list.title')}
             <span className="ml-2 font-normal text-[var(--text-muted)]">
-              {data ? `${data.totalElements} en total` : ''}
+              {data ? t('list.total', { count: data.totalElements }) : ''}
             </span>
           </h1>
           <div className="flex items-center gap-2">
@@ -678,17 +680,17 @@ export const TaskListPage: FC = () => {
               onClick={() => setShowLeft((current) => !current)}
               aria-pressed={showLeft}
               className="btn-ghost text-xs"
-              title="Panel de filtros ( [ )"
+              title={t('list.filtersPanel.title')}
             >
-              [ filtros
+              {t('list.filtersPanel.button')}
             </button>
             <button
               onClick={() => setShowRight((current) => !current)}
               aria-pressed={showRight}
               className="btn-ghost text-xs"
-              title="Panel de detalle ( ] )"
+              title={t('list.detailPanel.title')}
             >
-              detalle ]
+              {t('list.detailPanel.button')}
             </button>
             <button
               onClick={() => {
@@ -697,7 +699,7 @@ export const TaskListPage: FC = () => {
               }}
               className="btn-primary text-xs"
             >
-              + nueva
+              {t('list.newTask')}
             </button>
           </div>
         </div>
@@ -709,7 +711,7 @@ export const TaskListPage: FC = () => {
             ref={searchInputRef}
             type="text"
             className="input-field pl-10"
-            placeholder="Buscar tareas... (/)"
+            placeholder={t('list.search.placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -731,7 +733,7 @@ export const TaskListPage: FC = () => {
                   }
                 `}
               >
-                {tab.label}
+                {t(tab.key)}
                 <span className="ml-1.5 text-xs opacity-70">
                   {counts?.[tab.value] ?? '–'}
                 </span>
@@ -747,7 +749,7 @@ export const TaskListPage: FC = () => {
               className="appearance-none pl-8 pr-3 py-1.5 text-sm bg-[var(--surface-elevated)] dark:bg-[var(--dark-surface-elevated)] text-[var(--text-secondary)] dark:text-[var(--dark-text-secondary)] rounded-[var(--radius-md)] border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
             >
               {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>{t(opt.key)}</option>
               ))}
             </select>
             <ArrowsUpDownIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
