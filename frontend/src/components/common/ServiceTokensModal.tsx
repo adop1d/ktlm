@@ -1,6 +1,7 @@
 import { FC, useCallback, useEffect, useState } from 'react';
 import { API_BASE } from '../../api/http';
 import { useAuthStore } from '../../stores/authStore';
+import { useT } from '../../i18n';
 
 interface ServiceToken {
   id: string;
@@ -29,6 +30,26 @@ export const ServiceTokensModal: FC<{ onClose: () => void }> = ({ onClose }) => 
   const [label, setLabel] = useState('');
   const [nuevo, setNuevo] = useState<IssuedToken | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const t = useT();
+
+  /**
+   * Copy, and say so on the button itself rather than in a toast.
+   *
+   * <p>The token is shown exactly once in the whole life of the account: if the copy failed
+   * and the panel closed, it is gone. Silent success — the button changing to "copiado" —
+   * is the only feedback that is still there a second later.
+   */
+  const copiar = async (valor: string) => {
+    try {
+      await navigator.clipboard.writeText(valor);
+      setCopiado(valor);
+      setTimeout(() => setCopiado((actual) => (actual === valor ? null : actual)), 1500);
+    } catch {
+      // Clipboard access can be refused; the value stays selectable on screen.
+      setError(t('tokens.copy.failed'));
+    }
+  };
 
   const headers = useCallback(
     () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
@@ -102,9 +123,19 @@ export const ServiceTokensModal: FC<{ onClose: () => void }> = ({ onClose }) => 
         {error ? <p className="text-xs text-red-400 mb-3">{error}</p> : null}
 
         {nuevo ? (
-          <div className="tui-panel mb-4 border-amber-500/40">
-            <p className="text-xs font-semibold mb-2">Cópialo ahora: {nuevo.aviso}</p>
-            <code className="block break-all text-xs bg-black/30 p-2 rounded">{nuevo.token}</code>
+          <div className="tui-token-fresh">
+            <p className="text-xs font-semibold mb-2">{t('tokens.fresh.note', { aviso: nuevo.aviso })}</p>
+            <div className="flex items-start gap-2">
+              <code className="tui-token-value">{nuevo.token}</code>
+              <button
+                type="button"
+                onClick={() => void copiar(nuevo.token)}
+                className="btn-ghost text-xs shrink-0"
+                aria-label={t('tokens.copy.aria')}
+              >
+                {copiado === nuevo.token ? t('tokens.copied') : t('tokens.copy')}
+              </button>
+            </div>
           </div>
         ) : null}
 

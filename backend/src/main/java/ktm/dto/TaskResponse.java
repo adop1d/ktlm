@@ -1,0 +1,48 @@
+package ktm.dto;
+
+import ktm.model.Task;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+/** Read-only representation of a task for the client. */
+public record TaskResponse(
+        Long id,
+        String title,
+        String description,
+        boolean completed,
+        Task.Priority priority,
+        LocalDate dueDate,
+        LocalDate startDate,
+        Integer sortOrder,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
+        LocalDateTime completedAt,
+        String recurrence,
+        String threshold,
+        String note,
+        String todoUid,
+        List<String> projects,
+        List<String> contexts) {
+
+    public static TaskResponse from(Task task) {
+        return new TaskResponse(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.isCompleted(),
+                task.getPriority(),
+                task.getDueDate(),
+                task.getStartDate(),
+                task.getSortOrder(),
+                task.getCreatedAt(),
+                task.getUpdatedAt(),
+                task.getCompletedAt(),
+                task.getRecurrence(),
+                task.getThreshold(),
+                task.getNote(),
+                task.getTodoUid(),
+                List.copyOf(task.getProjects()),
+                List.copyOf(task.getContexts()));
+    }
+}

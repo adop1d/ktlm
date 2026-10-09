@@ -183,7 +183,7 @@ cd frontend && npm test            # 55 tests
 cd frontend && npm run test:e2e    # Playwright, 44
 
 # The MCP server, end to end against a running backend:
-cd mcp && KTLM_SERVICE_TOKEN=ktlm_... .venv/bin/python smoke.py
+cd mcp && KTM_SERVICE_TOKEN=ktm_... .venv/bin/python smoke.py
 ```
 
 The e2e intercept the API, so they don't need the backend running. In CI all four run,
@@ -244,8 +244,8 @@ server's, so it can't drift out of sync with the web.
 ```bash
 cd mcp
 python3 -m venv .venv && .venv/bin/pip install -e .
-export KTLM_SERVICE_TOKEN=ktlm_...      # created in the app, in the bar: "tokens"
-.venv/bin/python -m ktlm_mcp.server    # stdio, the default
+export KTM_SERVICE_TOKEN=ktm_...      # created in the app, in the bar: "tokens"
+.venv/bin/python -m ktm_mcp.server    # stdio, the default
 ```
 
 ### Credentials
@@ -270,9 +270,9 @@ doesn't, and the batch is the only path that writes it.
 
 | Variable | Default | What it's for |
 |---|---|---|
-| `KTLM_API_URL` | `http://localhost:8080` | Where the API is |
-| `KTLM_SERVICE_TOKEN` | — | Required. The service token |
-| `KTLM_MCP_TRANSPORT` | `stdio` | `http` for streamable-http on the `KTLM_MCP_PORT` port |
+| `KTM_API_URL` | `http://localhost:8080` | Where the API is |
+| `KTM_SERVICE_TOKEN` | — | Required. The service token |
+| `KTM_MCP_TRANSPORT` | `stdio` | `http` for streamable-http on the `KTM_MCP_PORT` port |
 
 ---
 

@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'KTLM',
-        short_name: 'KTLM',
-        description: 'KTLM, gestor de tareas compatible con todo.txt',
+        name: 'KTM',
+        short_name: 'KTM',
+        description: 'KTM, gestor de tareas compatible con todo.txt',
         theme_color: '#6366f1',
         background_color: '#ffffff',
         display: 'standalone',

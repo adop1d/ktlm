@@ -1,11 +1,11 @@
-# Plan: KTLM ↔ [tuxedo](https://github.com/webstonehq/tuxedo) compatibility
+# Plan: KTM ↔ [tuxedo](https://github.com/webstonehq/tuxedo) compatibility
 
 
 > **Status: Phase 0 COMPLETE (verified by running it).** Table 0.1–0.7 was applied and
 > checked against the running app. A finding from the smoke test was added on the fly:
 > a body with a malformed date returned **500** and `GlobalExceptionHandler` logged
 > nothing; it now returns 400 and logs the unhandled ones. See "Execution log" at the end.
-Goal: to let the KTLM app (Spring Boot + React) **open a real `todo.txt` from disk**,
+Goal: to let the KTM app (Spring Boot + React) **open a real `todo.txt` from disk**,
 keep it synced both ways with tuxedo, **paginate on the server**, and expose the
 **same vim/chord keybindings** as tuxedo.
 
@@ -41,7 +41,7 @@ Decisions already made by the user:
   `{"n":1,"raw":"...","done":false,"priority":"A","created":"2026-04-28","completed":null,
     "projects":["health"],"contexts":["phone"],"due":"2026-05-08","rec":null,"t":null}`
 
-\*\*KTLM (current state, with exact paths)**
+\*\*KTM (current state, with exact paths)**
 
 | Area | Current state | File |
 | --- | --- | --- |
@@ -295,7 +295,7 @@ Engine requirements:
 
 ### Parity map (core + chords)
 
-| Action | Key | State in KTLM today | Work |
+| Action | Key | State in KTM today | Work |
 | --- | --- | --- | --- |
 | `cursor_down` / `cursor_up` | `j` `k` / `↓` `↑` | — | row cursor + `Ctrl-d`/`Ctrl-u` per page |
 | `cursor_top` / `cursor_bottom` | `gg` `G` | — | chord |

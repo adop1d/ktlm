@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18nStore, useT } from '../i18n';
+import { McpSection } from '../components/common/McpSection';
 
 /**
  * The landing page. The product is a terminal that speaks the language of your todo.txt, so
@@ -56,7 +57,7 @@ export const LandingPage: FC = () => {
     <header className="tui-titlebar">
       <span className="tui-titlebar-brand">
         <img src="/favicon.png" alt="" className="tui-titlebar-logo" width={18} height={18} />
-        <span>ktlm</span>
+        <span>ktm</span>
       </span>
       <nav className="tui-titlebar-actions">
         {/* Before logging in, not after. The landing page is the first thing anyone sees
@@ -147,29 +148,22 @@ export const LandingPage: FC = () => {
         </dl>
       </section>
 
+      <McpSection />
+
       <section className="lp-why">
-        <h2 className="lp-section">Por qué esto y no otra app de tareas</h2>
+        <h2 className="lp-section">{t('landing.why.title')}</h2>
         <div className="lp-reasons">
           <article>
-            <h3>El archivo es tuyo</h3>
-            <p>
-              No hay base de datos proprietary de por medio ni formato de exportación. Lo que
-              edites con <code>vim</code> el Saturday, aquí aparece.
-            </p>
+            <h3>{t('landing.why.file.title')}</h3>
+            <p dangerouslySetInnerHTML={{ __html: t('landing.why.file.body') }} />
           </article>
           <article>
-            <h3>Dos escritores, un archivo</h3>
-            <p>
-              Un proceso que cambia el disco por fuera se detecta y recarga. Si lo cambias
-              desde la TUI, la TUI lo ve en el siguiente ciclo.
-            </p>
+            <h3>{t('landing.why.writers.title')}</h3>
+            <p dangerouslySetInnerHTML={{ __html: t('landing.why.writers.body') }} />
           </article>
           <article>
-            <h3>Se lee en el móvil</h3>
-            <p>
-              Mismo archivo, pantalla pequeña. Y{' '}
-              <code>inbox.txt</code> convierte cualquier <code>echo</code> en una tarea nueva.
-            </p>
+            <h3>{t('landing.why.mobile.title')}</h3>
+            <p dangerouslySetInnerHTML={{ __html: t('landing.why.mobile.body') }} />
           </article>
         </div>
       </section>

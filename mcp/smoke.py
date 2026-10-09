@@ -3,7 +3,7 @@
 Not a unit test: it starts the real server and asks it for tools over the protocol.
 It's the only thing that proves it starts, announces itself and answers.
 
-    KTLM_SERVICE_TOKEN=ktlm_... .venv/bin/python smoke.py
+    KTM_SERVICE_TOKEN=ktm_... .venv/bin/python smoke.py
 """
 
 from __future__ import annotations
@@ -22,11 +22,11 @@ def texto(resultado) -> str:
 
 async def main() -> int:
     env = dict(os.environ)
-    env.setdefault("KTLM_API_URL", "http://localhost:8080")
+    env.setdefault("KTM_API_URL", "http://localhost:8080")
 
     servidor = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "ktlm_mcp.server"],
+        args=["-m", "ktm_mcp.server"],
         env=env,
     )
 

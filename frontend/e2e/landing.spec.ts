@@ -26,6 +26,16 @@ test.describe('portada', () => {
     await expect(ventana.locator('.tui-row--done')).toHaveCount(1);
   });
 
+  test('el MCP tiene su sección y enlaza a la documentación', async ({ page }) => {
+    const seccion = page.locator('.lp-mcp');
+    await expect(seccion).toBeVisible();
+    // The three steps are the content: somebody who runs them has it working.
+    await expect(seccion.locator('li')).toHaveCount(3);
+    await seccion.getByRole('link').click();
+    await expect(page).toHaveURL(/\/docs$/);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/MCP/);
+  });
+
   test('el botón de entrar lleva a la app', async ({ page }) => {
     await page.getByRole('link', { name: 'abrir la app' }).click();
 
@@ -49,6 +59,5 @@ test.describe('portada', () => {
    */
   test('avisa de que el archivo es del servidor', async ({ page }) => {
     await expect(page.getByText(/El archivo es del servidor/)).toBeVisible();
-    await expect(page.getByText(/MCP/)).toBeVisible();
   });
 });

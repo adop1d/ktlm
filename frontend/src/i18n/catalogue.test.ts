@@ -81,3 +81,39 @@ describe('translate', () => {
     expect(format('Tienes {n} tareas', {})).toBe('Tienes {n} tareas');
   });
 });
+/**
+ * Every literal key asked for in the source must exist.
+ *
+ * <p>This is the check that was missing, and it is the one that matters: a key that does not
+ * exist renders as the key itself, which looks like a bug in the copy and is actually a bug
+ * in the wiring — and nothing else in the suite noticed, because the tests run in Spanish
+ * where the missing key was in a section they did not look at.
+ */
+describe('claves que la aplicación pide', () => {
+  it('todas existen', async () => {
+    const { readdirSync, readFileSync, statSync } = await import('node:fs');
+    const { join } = await import('node:path');
+
+    const raiz = 'src';
+    const archivos: string[] = [];
+    const recorrer = (dir: string) => {
+      for ( const nombre of readdirSync(dir) ) {
+        const ruta = join(dir, nombre);
+        if (statSync(ruta).isDirectory()) recorrer(ruta);
+        else if (/\.tsx?$/.test(ruta)) archivos.push(ruta);
+      }
+    };
+    recorrer(raiz);
+
+    const pedidas = new Set<string>();
+    for ( const archivo of archivos ) {
+      const texto = readFileSync(archivo, 'utf-8');
+      for (const coincidencia of texto.matchAll(/\bt\(\s*'([a-z][\w.]+)'/g)) {
+        pedidas.add(coincidencia[1]);
+      }
+    }
+
+    const faltan = [...pedidas].filter((clave) => !(clave in CATALOGUE)).sort();
+    expect(faltan).toEqual([]);
+  });
+});

@@ -55,12 +55,12 @@ jobs:
       # store in the repository just to make a build work.
       - name: Build Docker images
         run: |
-          docker build -t ktlm-backend:latest ./backend
-          docker build -t ktlm-frontend:latest ./frontend
+          docker build -t ktm-backend:latest ./backend
+          docker build -t ktm-frontend:latest ./frontend
           # To push to a registry you would need a prior login:
           #   echo "${{ secrets.REGISTRY_TOKEN }}" | docker login -u "${{ secrets.REGISTRY_USER }}" --password-stdin
-          #   docker push ktlm-backend:latest
-          #   docker push ktlm-frontend:latest
+          #   docker push ktm-backend:latest
+          #   docker push ktm-frontend:latest
 
       # The .dockerignore is the only thing stopping a .env full of secrets from ending
       # up in a layer, and once it's in a layer, deleting it afterwards is pointless.
@@ -72,12 +72,12 @@ jobs:
       # way to have a test that checks nothing.
       - name: Verify no .env reached the images
         run: |
-          docker build --target builder -t ktlm-frontend-builder ./frontend
-          if docker run --rm --entrypoint sh ktlm-frontend-builder -c 'test -e /app/.env'; then
+          docker build --target builder -t ktm-frontend-builder ./frontend
+          if docker run --rm --entrypoint sh ktm-frontend-builder -c 'test -e /app/.env'; then
             echo "::error::the .env ended up inside the frontend image"
             exit 1
           fi
-          if docker run --rm --entrypoint sh ktlm-backend:latest -c 'test -e /app/.env'; then
+          if docker run --rm --entrypoint sh ktm-backend:latest -c 'test -e /app/.env'; then
             echo "::error::the .env ended up inside the backend image"
             exit 1
           fi

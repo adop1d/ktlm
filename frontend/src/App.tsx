@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { TaskListPage } from './pages/TaskListPage';
 import { LandingPage } from './pages/LandingPage';
+import { DocsPage } from './pages/DocsPage';
 import { LoginPage } from './pages/LoginPage';
 import { useAuthStore } from './stores/authStore';
 import { accentVars, useUIStore } from './stores/uiStore';
@@ -107,6 +108,7 @@ function App() {
             }
           />
           <Route path="/" element={<LandingPage />} />
+          <Route path="/docs" element={<DocsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

@@ -1,5 +1,5 @@
 /**
- * KTLM - base styles.
+ * KTM - base styles.
  *
  * The terminal chrome goes after Tailwind so it can override its utilities; the color
  * and typography tokens live separately in design-tokens.css.
