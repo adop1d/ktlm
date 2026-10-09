@@ -33,7 +33,12 @@ test.describe('portada', () => {
     await expect(seccion.locator('li')).toHaveCount(3);
     await seccion.getByRole('link').click();
     await expect(page).toHaveURL(/\/docs$/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/MCP/);
+
+    // The docs cover the whole application, not only the MCP: somebody arriving with no
+    // account has not got as far as a token yet, and a page that opens with one is a wall.
+    const secciones = page.locator('.docs section');
+    await expect(secciones).toHaveCount(7);
+    await expect(page.locator('#mcp')).toBeVisible();
   });
 
   test('el botón de entrar lleva a la app', async ({ page }) => {

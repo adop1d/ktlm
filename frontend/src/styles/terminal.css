@@ -882,8 +882,12 @@ kbd {
     grid-column: 2;
   }
 
+  /* Todo lo que no va en la cabecera se estira. `.lp-mcp` entró aquí después de
+     aparecer en la rejilla: sin esta línea el autollenado lo metía en la columna de
+     20rem y quedaba encajonado en 144+144, que es justo lo que se veía. */
   .lp-keys,
-  .lp-why {
+  .lp-why,
+  .lp-mcp {
     grid-column: 1 / -1;
   }
 }
@@ -1106,16 +1110,22 @@ kbd {
  * the content: a reader who runs them has the thing working, which is more than a paragraph
  * about what it could do for them.
  */
+/*
+ * Full width, one measure, the same rhythm as the rest of the page.
+ *
+ * <p>It was a two-column grid inside the two-column page grid, which put it in a 20rem
+ * column and then split what was left into two 144rem ones — a stack of narrow vertical
+ * strips. It is copy and then steps; both want a measure, not a column.
+ */
 .lp-mcp {
-  display: grid;
-  gap: 2rem;
-  align-items: start;
+  display: block;
   padding-top: 1rem;
   border-top: 1px solid var(--border-subtle);
 }
 
 .lp-mcp-copy {
   max-width: 34rem;
+  margin-bottom: 1.75rem;
 }
 
 .lp-mcp-steps {
@@ -1125,8 +1135,8 @@ kbd {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  max-width: 30rem;
+  gap: 1.4rem;
+  max-width: 44rem;
 }
 
 .lp-mcp-steps li {
@@ -1177,9 +1187,10 @@ kbd {
   overflow-x: auto;
 }
 
-@media (min-width: 60rem) {
-  .lp-mcp {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+/* The code block can be wider than the prose without the prose having to be. */
+@media (min-width: 64rem) {
+  .lp-mcp-steps {
+    max-width: 52rem;
   }
 }
 

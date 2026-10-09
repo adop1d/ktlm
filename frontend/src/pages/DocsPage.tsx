@@ -3,12 +3,16 @@ import { Link } from 'react-router-dom';
 import { useT } from '../i18n';
 
 /**
- * The MCP documentation.
+ * The documentation.
  *
  * <p>A long document, not a page of cards: one column, a fixed measure, and the commands
- * where the reader expects them. The whole point of the page is that somebody can follow it
- * top to bottom with a terminal open and end up with a working agent — anything that
+ * where the reader expects them. The whole point of a docs page is that somebody can follow
+ * it top to bottom with a terminal open and end up with something working — anything that
  * interrupts that is decoration.
+ *
+ * <p>It covers the whole application, not only the MCP. The MCP is the part you cannot
+ * discover by using the app for five minutes, but someone arriving at the docs has usually
+ * not got that far yet, and a page that starts with a token they do not have is a wall.
  */
 export const DocsPage: FC = () => {
   const t = useT();
@@ -25,40 +29,64 @@ export const DocsPage: FC = () => {
 
       <nav className="docs-toc" aria-label={t('docs.toc.aria')}>
         <ol>
-          <li><a href="#que-es">{t('docs.toc.what')}</a></li>
-          <li><a href="#token">{t('docs.toc.token')}</a></li>
-          <li><a href="#instalar">{t('docs.toc.install')}</a></li>
-          <li><a href="#clientes">{t('docs.toc.clients')}</a></li>
+          <li><a href="#arrancar">{t('docs.toc.start')}</a></li>
+          <li><a href="#archivo">{t('docs.toc.file')}</a></li>
+          <li><a href="#teclas">{t('docs.toc.keys')}</a></li>
+          <li><a href="#notas">{t('docs.toc.notes')}</a></li>
+          <li><a href="#mcp">{t('docs.toc.mcp')}</a></li>
           <li><a href="#herramientas">{t('docs.toc.tools')}</a></li>
           <li><a href="#problemas">{t('docs.toc.trouble')}</a></li>
         </ol>
       </nav>
 
-      <section id="que-es">
-        <h2>{t('docs.what.title')}</h2>
-        <p dangerouslySetInnerHTML={{ __html: t('docs.what.body') }} />
-        <p dangerouslySetInnerHTML={{ __html: t('docs.what.not') }} />
+      <section id="arrancar">
+        <h2>{t('docs.start.title')}</h2>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.start.body') }} />
+        <pre className="docs-code"><code>{t('docs.start.code')}</code></pre>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.start.note') }} />
       </section>
 
-      <section id="token">
-        <h2>{t('docs.token.title')}</h2>
+      <section id="archivo">
+        <h2>{t('docs.file.title')}</h2>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.file.body') }} />
+        <pre className="docs-code"><code>{t('docs.file.code')}</code></pre>
+        <h3>{t('docs.file.inbox')}</h3>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.file.inboxBody') }} />
+        <pre className="docs-code"><code>{t('docs.file.inboxCode')}</code></pre>
+      </section>
+
+      <section id="teclas">
+        <h2>{t('docs.keys.title')}</h2>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.keys.body') }} />
+        <pre className="docs-code"><code>{t('docs.keys.code')}</code></pre>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.keys.disable') }} />
+      </section>
+
+      <section id="notas">
+        <h2>{t('docs.notes.title')}</h2>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.notes.body') }} />
+        <pre className="docs-code"><code>{t('docs.notes.code')}</code></pre>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.notes.why') }} />
+      </section>
+
+      <section id="mcp">
+        <h2>{t('docs.mcp.title')}</h2>
+        <p dangerouslySetInnerHTML={{ __html: t('docs.mcp.body') }} />
+
+        <h3>{t('docs.token.title')}</h3>
         <p dangerouslySetInnerHTML={{ __html: t('docs.token.body') }} />
         <ol className="docs-steps">
           <li dangerouslySetInnerHTML={{ __html: t('docs.token.step1') }} />
           <li dangerouslySetInnerHTML={{ __html: t('docs.token.step2') }} />
         </ol>
         <p className="docs-note" dangerouslySetInnerHTML={{ __html: t('docs.token.note') }} />
-      </section>
 
-      <section id="instalar">
-        <h2>{t('docs.install.title')}</h2>
+        <h3>{t('docs.install.title')}</h3>
         <pre className="docs-code"><code>{t('docs.install.code')}</code></pre>
         <p dangerouslySetInnerHTML={{ __html: t('docs.install.check') }} />
         <pre className="docs-code docs-code--out"><code>{t('docs.install.output')}</code></pre>
-      </section>
 
-      <section id="clientes">
-        <h2>{t('docs.clients.title')}</h2>
+        <h3>{t('docs.clients.title')}</h3>
         <p dangerouslySetInnerHTML={{ __html: t('docs.clients.body') }} />
         <pre className="docs-code"><code>{t('docs.clients.json')}</code></pre>
         <p dangerouslySetInnerHTML={{ __html: t('docs.clients.restart') }} />
@@ -95,6 +123,10 @@ export const DocsPage: FC = () => {
           <div>
             <dt>{t('docs.trouble.archivo.title')}</dt>
             <dd dangerouslySetInnerHTML={{ __html: t('docs.trouble.archivo.body') }} />
+          </div>
+          <div>
+            <dt>{t('docs.trouble.file.title')}</dt>
+            <dd dangerouslySetInnerHTML={{ __html: t('docs.trouble.file.body') }} />
           </div>
         </dl>
       </section>
